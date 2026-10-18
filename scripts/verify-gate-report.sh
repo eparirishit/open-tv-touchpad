@@ -29,7 +29,7 @@ function trim(text) {
 }
 
 function reject(message) {
-    print "invalid " expected_gate " report: " message > "/dev/stderr"
+    print "invalid " expected_gate " report: " message
     invalid = 1
 }
 
@@ -80,6 +80,7 @@ BEGIN {
     value = trim(substr($0, separator + 1))
 
     if (name !~ /^[A-Za-z][A-Za-z0-9-]*$/) {
+        reject("malformed field name " name)
         next
     }
 
@@ -100,7 +101,7 @@ BEGIN {
 
     upper_value = toupper(value)
     if (value ~ /[<>]/ || value ~ /\{\{|\}\}/ ||
-        upper_value ~ /(^|[^A-Z])(TBD|TODO|PLACEHOLDER|REPLACE|CHANGEME|UNKNOWN)([^A-Z]|$)/) {
+        upper_value ~ /(^|[^A-Z])(TBD|TODO|FIXME|PLACEHOLDER|REPLACE|CHANGEME|UNKNOWN)([^A-Z]|$)/) {
         reject("unresolved placeholder in " name)
         next
     }
