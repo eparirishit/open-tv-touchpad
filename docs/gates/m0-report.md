@@ -2,7 +2,7 @@
 
 This template is intentionally invalid. Replace every bracketed value with
 observations from the certified device before running the verifier. Do not
-record `Decision: PASS` unless every required observation is `PASS`.
+record a PASS decision unless every required observation is `PASS`.
 
 Gate: M0
 Decision: <REPLACE-WITH-PASS-OR-FAIL>

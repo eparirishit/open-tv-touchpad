@@ -1,6 +1,10 @@
-# Synthetic M0 Verifier Fixture
+# M0 Hardware Gate Report
 
-This file is test data only. It is not hardware evidence.
+This template is intentionally invalid. Replace every bracketed value with
+observations from the certified device before running the verifier. Do not
+record a PASS decision unless every required observation is `PASS`.
+
+This completed copy contains synthetic test data only. It is not hardware evidence.
 
 Gate: M0
 Decision: PASS
