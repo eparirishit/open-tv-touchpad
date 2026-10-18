@@ -38,7 +38,7 @@ class GestureCoordinator(
             object : GestureCallback {
                 override fun onCompleted() = finish(token)
 
-                override fun onCancelled() = cancel(token, CancelReason.ANDROID)
+                override fun onCancelled() = finish(token)
             },
         )
 
@@ -70,7 +70,12 @@ class GestureCoordinator(
 
     @Suppress("UNUSED_PARAMETER")
     @Synchronized
-    private fun cancel(token: Long, reason: CancelReason) = finish(token)
+    private fun cancel(token: Long, reason: CancelReason) {
+        if (inFlight?.token != token) return
+
+        port.cancelActiveGesture()
+        finish(token)
+    }
 
     private data class InFlight(
         val spec: GestureSpec,

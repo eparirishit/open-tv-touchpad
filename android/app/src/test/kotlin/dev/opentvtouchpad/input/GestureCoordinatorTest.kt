@@ -79,6 +79,23 @@ class GestureCoordinatorTest {
     }
 
     @Test
+    fun explicitCancellationSignalsPortBeforeAdmittingSuccessor() {
+        val port = FakeGesturePort()
+        val coordinator = coordinator(port)
+        coordinator.submit(firstTap)
+        var resultDuringCancellation: SubmitResult? = null
+        port.onCancelActiveGesture = {
+            resultDuringCancellation = coordinator.submit(secondTap)
+        }
+
+        coordinator.cancel(CancelReason.EXPLICIT)
+
+        assertEquals(1, port.cancellationCount)
+        assertEquals(SubmitResult.IN_FLIGHT, resultDuringCancellation)
+        assertEquals(SubmitResult.ACCEPTED, coordinator.submit(secondTap))
+    }
+
+    @Test
     fun callbackTimeoutReturnsToIdleWithoutSleepOrAutomaticDispatch() {
         val port = FakeGesturePort()
         val clock = FakeMonotonicClock()
@@ -134,11 +151,18 @@ class GestureCoordinatorTest {
     ) : GesturePort {
         val dispatched = mutableListOf<GestureSpec>()
         val callbacks = mutableListOf<GestureCallback>()
+        var cancellationCount = 0
+        var onCancelActiveGesture: (() -> Unit)? = null
 
         override fun dispatch(spec: GestureSpec, callback: GestureCallback): Boolean {
             dispatched += spec
             callbacks += callback
             return acceptDispatch
+        }
+
+        override fun cancelActiveGesture() {
+            cancellationCount += 1
+            onCancelActiveGesture?.invoke()
         }
     }
 
