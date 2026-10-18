@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Open TV Touchpad</string>
+    <string name="gate_instructions">M0 hardware gate baseline. Use the projector D-pad. Gesture controls are added in a later M0 task.</string>
+</resources>
