@@ -13,7 +13,6 @@ class BuildConfigurationTest {
         assertEquals("dev.opentvtouchpad", BuildConfig.APPLICATION_ID)
         assertEquals(26, BuildConfig.MIN_SDK)
         assertEquals(36, BuildConfig.TARGET_SDK)
-        assertFalse(BuildConfig.RELEASE_DEBUGGABLE)
 
         val manifest = Path.of(requireNotNull(System.getProperty("mainManifest")))
         val document = manifest.inputStream().use {

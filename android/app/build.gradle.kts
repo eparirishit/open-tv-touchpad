@@ -5,7 +5,6 @@ plugins {
 val baselineApplicationId = "dev.opentvtouchpad"
 val baselineMinSdk = 26
 val baselineTargetSdk = 36
-val releaseDebuggable = false
 
 android {
     namespace = baselineApplicationId
@@ -20,12 +19,11 @@ android {
 
         buildConfigField("int", "MIN_SDK", baselineMinSdk.toString())
         buildConfigField("int", "TARGET_SDK", baselineTargetSdk.toString())
-        buildConfigField("boolean", "RELEASE_DEBUGGABLE", releaseDebuggable.toString())
     }
 
     buildTypes {
         release {
-            isDebuggable = releaseDebuggable
+            isDebuggable = false
             isMinifyEnabled = false
         }
     }
@@ -40,11 +38,23 @@ android {
     }
 }
 
+val verifyReleaseBuildConfiguration = tasks.register("verifyReleaseBuildConfiguration") {
+    group = "verification"
+    description = "Verifies the actual Android release build-type model."
+
+    doLast {
+        check(!android.buildTypes.getByName("release").isDebuggable) {
+            "Release build type must be non-debuggable."
+        }
+    }
+}
+
 dependencies {
     testImplementation(libs.junit4)
 }
 
 tasks.withType<Test>().configureEach {
+    dependsOn(verifyReleaseBuildConfiguration)
     systemProperty(
         "mainManifest",
         layout.projectDirectory.file("src/main/AndroidManifest.xml").asFile.absolutePath,
