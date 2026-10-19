@@ -125,10 +125,14 @@ END {
         reject("Decision must be PASS")
     }
 
+    if (("Projector" in values) && values["Projector"] != "XGIMI Horizon XK03H") {
+        reject("Projector must be XGIMI Horizon XK03H")
+    }
+
     if ("Commit" in values) {
         commit = values["Commit"]
-        if (commit !~ /^[[:xdigit:]]+$/ || length(commit) < 7 || length(commit) > 40) {
-            reject("Commit must be a 7-40 character hexadecimal revision")
+        if (commit !~ /^[[:xdigit:]]+$/ || length(commit) != 40) {
+            reject("Commit must be exactly 40 hexadecimal characters")
         }
     }
 

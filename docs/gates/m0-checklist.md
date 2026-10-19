@@ -7,10 +7,10 @@ M0.
 
 ## Evidence Identity
 
-- Record the exact Git commit used to build the APK.
+- Record the full 40-character Git commit used to build the APK.
 - Build a clean APK and record its 64-character SHA-256 digest before install.
-- Record the projector model, Android TV version, firmware version, and Netflix
-  version shown by the device.
+- Confirm the projector reports model `XGIMI Horizon XK03H`, then record the
+  Android TV version, firmware version, and Netflix version shown by the device.
 - Confirm the target application is `com.netflix.mediaclient`.
 
 ## Manual Observations
