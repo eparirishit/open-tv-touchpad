@@ -37,7 +37,8 @@ class TouchAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit
 
     override fun onInterrupt() {
-        shutdownRuntime(CancelReason.ANDROID)
+        gestureCoordinator?.cancel(CancelReason.ANDROID)
+        cursorOverlay?.hide()
     }
 
     override fun onUnbind(intent: Intent?): Boolean {

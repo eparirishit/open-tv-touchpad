@@ -173,6 +173,43 @@ class AndroidGesturePortTest {
         }
     }
 
+    @Test
+    fun interruptCancelsGestureWithoutDisconnectingServiceRuntime() {
+        val service = TouchAccessibilityService()
+        val port = RecordingGesturePort()
+        val coordinator = GestureCoordinator(
+            port = port,
+            clock = { 0L },
+            callbackTimeoutMillis = 2_000,
+        )
+        service.javaClass.getDeclaredField("gestureCoordinator").apply {
+            isAccessible = true
+            set(service, coordinator)
+        }
+        val timeoutCheck = service.javaClass.getDeclaredField("timeoutCheck").run {
+            isAccessible = true
+            get(service) as Runnable
+        }
+        val mainHandler = service.javaClass.getDeclaredField("mainHandler").run {
+            isAccessible = true
+            get(service) as Handler
+        }
+        val firstTap = GestureSpec.Tap(PointF(10f, 10f), durationMillis = 80)
+        val secondTap = GestureSpec.Tap(PointF(20f, 20f), durationMillis = 80)
+
+        try {
+            assertEquals(SubmitResult.ACCEPTED, service.submitGesture(firstTap))
+
+            service.onInterrupt()
+
+            assertEquals(1, port.cancellationCount)
+            port.callbacks.single().onCancelled()
+            assertEquals(SubmitResult.ACCEPTED, service.submitGesture(secondTap))
+        } finally {
+            mainHandler.removeCallbacks(timeoutCheck)
+        }
+    }
+
     private fun newPort(
         dispatcher: RecordingDispatcher,
         bounds: DisplayBounds,
@@ -252,8 +289,12 @@ class AndroidGesturePortTest {
 
     private class RecordingGesturePort : GesturePort {
         var cancellationCount = 0
+        val callbacks = mutableListOf<GestureCallback>()
 
-        override fun dispatch(spec: GestureSpec, callback: GestureCallback): Boolean = true
+        override fun dispatch(spec: GestureSpec, callback: GestureCallback): Boolean {
+            callbacks += callback
+            return true
+        }
 
         override fun cancelActiveGesture() {
             cancellationCount += 1
