@@ -26,7 +26,7 @@
 - **Display rotation or size changes:** cursor clamps to current real display bounds and never uses cached 1920x1080 values; covered by `CursorBoundsTest`.
 - **Accessibility disabled mid-drag:** active gesture state cancels and the overlay hides; covered by `GestureCoordinatorTest` and a device trial.
 - **Repeated D-pad activation:** button key-repeat cannot dispatch duplicate taps or concurrent gestures; covered by `GateViewModelTest`.
-- **Gesture callback never arrives:** timeout returns the gate UI to an actionable degraded state; covered by `GestureCoordinatorTest`.
+- **Gesture callback never arrives:** timeout fails closed and requires an accessibility-service restart before another gesture; covered by `GestureCoordinatorTest`.
 - **Partial prior report:** the report verifier rejects a PASS without every required observation, APK hash, and commit; covered by verifier fixtures.
 
 ---
@@ -137,7 +137,7 @@ git commit -m "test: define M0 gate report contract"
 
 - [ ] **Step 1: Write failing geometry and coordinator tests**
 
-Cover clamping at every edge, changed display bounds, one in-flight gesture, duplicate submit rejection, completion, Android cancellation, explicit cancellation, and callback timeout. Assert cancellation returns to `Idle` and no queued gesture starts automatically.
+Cover clamping at every edge, changed display bounds, one in-flight gesture, duplicate submit rejection, completion, Android cancellation, explicit cancellation, and callback timeout. Assert ordinary cancellation returns to `Idle`, timeout requires coordinator recreation, and no queued gesture starts automatically.
 
 - [ ] **Step 2: Run focused unit tests**
 

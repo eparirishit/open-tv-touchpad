@@ -409,7 +409,7 @@ Clients never provide absolute screen coordinates.
 
 - Accessibility gestures are dispatched one at a time.
 - The next gesture waits for Android's completion or cancellation callback.
-- A gesture callback timeout cancels the input state and enters a degraded state until a health check succeeds.
+- A gesture callback timeout cancels the input state and enters a degraded state. The M0 gate fails closed and requires an accessibility-service restart before accepting another gesture; a later product-runtime health-check recovery path requires separate design and validation before use.
 - There is no automatic retry because retrying could duplicate an input.
 
 ## 11. Errors and Recovery

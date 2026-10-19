@@ -25,11 +25,11 @@ class GestureCoordinator(
     private var nextToken = 0L
     private var inFlight: InFlight? = null
     private var cancellationRequested = false
-    private var degraded = false
+    private var restartRequired = false
 
     @Synchronized
     fun submit(spec: GestureSpec): SubmitResult {
-        if (degraded) return SubmitResult.REJECTED
+        if (restartRequired) return SubmitResult.REJECTED
 
         inFlight?.let {
             return if (it.spec == spec) SubmitResult.DUPLICATE else SubmitResult.IN_FLIGHT
@@ -70,12 +70,7 @@ class GestureCoordinator(
     }
 
     @Synchronized
-    fun recoverAfterHealthCheck(): Boolean {
-        if (!degraded || inFlight != null) return false
-
-        degraded = false
-        return true
-    }
+    fun requiresRestart(): Boolean = restartRequired
 
     @Synchronized
     private fun finish(token: Long) {
@@ -89,7 +84,7 @@ class GestureCoordinator(
     private fun cancel(token: Long, reason: CancelReason) {
         if (inFlight?.token != token) return
 
-        if (reason == CancelReason.TIMEOUT) degraded = true
+        if (reason == CancelReason.TIMEOUT) restartRequired = true
         if (!cancellationRequested) {
             cancellationRequested = true
             port.cancelActiveGesture()
