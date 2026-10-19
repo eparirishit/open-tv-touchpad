@@ -96,7 +96,7 @@ git commit -m "build: create Android TV gate project"
 
 - [ ] **Step 1: Write verifier fixtures and expected shell assertions**
 
-The PASS fixture must contain exact fields `Gate`, `Decision`, `Commit`, `APK-SHA256`, `Projector`, `Android-TV`, `Firmware`, `Netflix-Version`, `Overlay`, `Tap`, `Vertical-Scroll`, `Horizontal-Scroll`, `Drag`, `Cancel`, `Playback-1080p`, and `Investigation-Count`. The missing-observation fixture omits `Cancel`.
+The PASS fixture must contain exact fields `Gate`, `Decision`, `Commit`, `APK-SHA256`, `Projector`, `Android-TV`, `Firmware`, `Netflix-Version`, `Tested-Application`, `Overlay`, `Tap`, `Vertical-Scroll`, `Horizontal-Scroll`, `Drag`, `Cancel`, `Playback-1080p`, `Investigation-Count`, and `Investigation-Details`. The missing-observation fixture omits `Cancel`.
 
 - [ ] **Step 2: Run the verifier before implementation**
 

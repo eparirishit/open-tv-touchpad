@@ -10,6 +10,7 @@ Projector: TEST-FIXTURE-ONLY
 Android-TV: TEST-FIXTURE-ONLY
 Firmware: TEST-FIXTURE-ONLY
 Netflix-Version: TEST-FIXTURE-ONLY
+Tested-Application: com.netflix.mediaclient
 Overlay: PASS
 Tap: PASS
 Vertical-Scroll: PASS

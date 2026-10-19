@@ -11,7 +11,8 @@ M0.
 - Build a clean APK and record its 64-character SHA-256 digest before install.
 - Confirm the projector reports model `XGIMI Horizon XK03H`, then record the
   Android TV version, firmware version, and Netflix version shown by the device.
-- Confirm the target application is `com.netflix.mediaclient`.
+- Confirm the target application is `com.netflix.mediaclient` and record that
+  exact package in `Tested-Application`.
 
 ## Manual Observations
 

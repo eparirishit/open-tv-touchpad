@@ -12,6 +12,7 @@ Projector: XGIMI Horizon XK03H
 Android-TV: <REPLACE-WITH-ANDROID-TV-VERSION>
 Firmware: <REPLACE-WITH-FIRMWARE-VERSION>
 Netflix-Version: <REPLACE-WITH-NETFLIX-VERSION>
+Tested-Application: com.netflix.mediaclient
 Overlay: <REPLACE-WITH-PASS-OR-FAIL>
 Tap: <REPLACE-WITH-PASS-OR-FAIL>
 Vertical-Scroll: <REPLACE-WITH-PASS-OR-FAIL>

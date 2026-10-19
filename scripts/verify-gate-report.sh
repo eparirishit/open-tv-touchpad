@@ -51,8 +51,9 @@ BEGIN {
     required[15] = "Playback-1080p"
     required[16] = "Investigation-Count"
     required[17] = "Investigation-Details"
+    required[18] = "Tested-Application"
 
-    for (field_number = 1; field_number <= 17; field_number++) {
+    for (field_number = 1; field_number <= 18; field_number++) {
         known[required[field_number]] = 1
     }
 
@@ -117,7 +118,7 @@ BEGIN {
 }
 
 END {
-    for (field_number = 1; field_number <= 17; field_number++) {
+    for (field_number = 1; field_number <= 18; field_number++) {
         name = required[field_number]
         if (!(name in seen)) {
             reject("missing field " name)
@@ -134,6 +135,10 @@ END {
 
     if (("Projector" in values) && values["Projector"] != "XGIMI Horizon XK03H") {
         reject("Projector must be XGIMI Horizon XK03H")
+    }
+
+    if (("Tested-Application" in values) && values["Tested-Application"] != "com.netflix.mediaclient") {
+        reject("Tested-Application must be com.netflix.mediaclient")
     }
 
     if ("Commit" in values) {
