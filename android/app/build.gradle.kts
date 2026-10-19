@@ -16,6 +16,7 @@ android {
         targetSdk = baselineTargetSdk
         versionCode = 1
         versionName = "0.1.0-m0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("int", "MIN_SDK", baselineMinSdk.toString())
         buildConfigField("int", "TARGET_SDK", baselineTargetSdk.toString())
@@ -50,6 +51,8 @@ val verifyReleaseBuildConfiguration = tasks.register("verifyReleaseBuildConfigur
 }
 
 dependencies {
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
     testImplementation(libs.junit4)
 }
 
