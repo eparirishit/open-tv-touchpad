@@ -50,8 +50,9 @@ BEGIN {
     required[14] = "Cancel"
     required[15] = "Playback-1080p"
     required[16] = "Investigation-Count"
+    required[17] = "Investigation-Details"
 
-    for (field_number = 1; field_number <= 16; field_number++) {
+    for (field_number = 1; field_number <= 17; field_number++) {
         known[required[field_number]] = 1
     }
 
@@ -110,7 +111,7 @@ BEGIN {
 }
 
 END {
-    for (field_number = 1; field_number <= 16; field_number++) {
+    for (field_number = 1; field_number <= 17; field_number++) {
         name = required[field_number]
         if (!(name in seen)) {
             reject("missing field " name)
@@ -156,6 +157,10 @@ END {
             reject("Investigation-Count must be 0 or 1")
         } else if ((investigation_count + 0) > 1) {
             reject("Investigation-Count must not exceed 1")
+        } else if ((investigation_count + 0) == 0 && values["Investigation-Details"] != "NONE") {
+            reject("Investigation-Details must be NONE when Investigation-Count is 0")
+        } else if ((investigation_count + 0) == 1 && values["Investigation-Details"] == "NONE") {
+            reject("Investigation-Details must document the compatibility investigation")
         }
     }
 

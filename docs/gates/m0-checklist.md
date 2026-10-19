@@ -30,7 +30,9 @@ Record each result as `PASS` or `FAIL` in `m0-report.md`.
 
 ## Decision
 
-- Allow at most one documented compatibility investigation.
+- Allow at most one compatibility investigation. Record `NONE` when no
+  investigation occurred; otherwise document what failed, what changed, and
+  the observed result in `Investigation-Details`.
 - Set `Decision` to `PASS` only when every required observation is `PASS` and
   `Investigation-Count` is `0` or `1`.
 - Leave the report invalid and stop on any failed observation; do not claim M0

@@ -22,3 +22,4 @@ Drag: PASS
 Cancel: PASS
 Playback-1080p: PASS
 Investigation-Count: 1
+Investigation-Details: Synthetic compatibility investigation for verifier testing only.
