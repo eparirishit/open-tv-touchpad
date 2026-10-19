@@ -5,7 +5,9 @@ import android.accessibilityservice.GestureDescription
 import android.graphics.PathMeasure
 import android.graphics.RectF
 import android.os.Handler
+import android.view.View
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import dev.opentvtouchpad.input.DisplayBounds
 import dev.opentvtouchpad.input.GestureCallback
 import dev.opentvtouchpad.input.GestureCoordinator
@@ -16,6 +18,8 @@ import dev.opentvtouchpad.input.SubmitResult
 import kotlin.jvm.functions.Function0
 import kotlin.jvm.functions.Function2
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -207,6 +211,90 @@ class AndroidGesturePortTest {
             assertEquals(SubmitResult.ACCEPTED, service.submitGesture(secondTap))
         } finally {
             mainHandler.removeCallbacks(timeoutCheck)
+        }
+    }
+
+    @Test
+    fun unbindCancelsInFlightDragAndTearsDownRuntime() {
+        assertDragLifecycleTeardown { service -> service.onUnbind(null) }
+    }
+
+    @Test
+    fun destroyCancelsInFlightDragAndTearsDownRuntime() {
+        assertDragLifecycleTeardown(TouchAccessibilityService::onDestroy)
+    }
+
+    private fun assertDragLifecycleTeardown(
+        lifecycleEvent: (TouchAccessibilityService) -> Unit,
+    ) {
+        val service = TouchAccessibilityService()
+        val port = RecordingGesturePort()
+        val coordinator = GestureCoordinator(
+            port = port,
+            clock = { 0L },
+            callbackTimeoutMillis = 2_000,
+        )
+        val windowManager = RecordingWindowManager()
+        val overlay = CursorOverlay(
+            InstrumentationRegistry.getInstrumentation().targetContext,
+            windowManager.instance,
+        ) { DisplayBounds(width = 1920, height = 1080) }
+        val timeoutCheck = service.javaClass.getDeclaredField("timeoutCheck").run {
+            isAccessible = true
+            get(service) as Runnable
+        }
+        val mainHandler = service.javaClass.getDeclaredField("mainHandler").run {
+            isAccessible = true
+            get(service) as Handler
+        }
+        val drag = GestureSpec.Drag(
+            points = listOf(PointF(10f, 10f), PointF(100f, 100f)),
+            durationMillis = 500,
+        )
+        service.setPrivateField("gestureCoordinator", coordinator)
+        service.setPrivateField("cursorOverlay", overlay)
+        setConnectedService(service)
+        overlay.showAt(10, 10)
+
+        try {
+            assertEquals(SubmitResult.ACCEPTED, service.submitGesture(drag))
+            assertTrue(mainHandler.hasCallbacks(timeoutCheck))
+            assertEquals(View.VISIBLE, windowManager.view!!.visibility)
+
+            lifecycleEvent(service)
+
+            assertEquals(1, port.cancellationCount)
+            assertFalse(mainHandler.hasCallbacks(timeoutCheck))
+            assertEquals(View.GONE, windowManager.view!!.visibility)
+            assertEquals(1, windowManager.removeCount)
+            assertNull(service.privateField("gestureCoordinator"))
+            assertNull(service.privateField("cursorOverlay"))
+            assertNull(TouchAccessibilityService.connectedService)
+            assertEquals(SubmitResult.REJECTED, service.submitGesture(drag))
+        } finally {
+            mainHandler.removeCallbacks(timeoutCheck)
+            setConnectedService(null)
+            if (windowManager.removeCount == 0) overlay.remove()
+        }
+    }
+
+    private fun TouchAccessibilityService.setPrivateField(name: String, value: Any?) {
+        javaClass.getDeclaredField(name).apply {
+            isAccessible = true
+            set(this@setPrivateField, value)
+        }
+    }
+
+    private fun TouchAccessibilityService.privateField(name: String): Any? =
+        javaClass.getDeclaredField(name).run {
+            isAccessible = true
+            get(this@privateField)
+        }
+
+    private fun setConnectedService(service: TouchAccessibilityService?) {
+        TouchAccessibilityService::class.java.getDeclaredField("connectedService").apply {
+            isAccessible = true
+            set(null, service)
         }
     }
 

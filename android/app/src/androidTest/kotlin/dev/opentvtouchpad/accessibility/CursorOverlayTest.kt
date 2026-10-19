@@ -77,59 +77,59 @@ class CursorOverlayTest {
         val parameterTypes = arguments.map { Int::class.javaPrimitiveType }.toTypedArray()
         target.javaClass.getMethod(methodName, *parameterTypes).invoke(target, *arguments)
     }
+}
 
-    private data class CapturedLayoutParams(
-        val type: Int,
-        val flags: Int,
-        val width: Int,
-        val height: Int,
-        val x: Int,
-        val y: Int,
+internal data class CapturedLayoutParams(
+    val type: Int,
+    val flags: Int,
+    val width: Int,
+    val height: Int,
+    val x: Int,
+    val y: Int,
+)
+
+internal class RecordingWindowManager : InvocationHandler {
+    val added = mutableListOf<CapturedLayoutParams>()
+    val updated = mutableListOf<CapturedLayoutParams>()
+    var view: View? = null
+    var removeCount = 0
+
+    val instance: WindowManager = Proxy.newProxyInstance(
+        WindowManager::class.java.classLoader,
+        arrayOf(WindowManager::class.java),
+        this,
+    ) as WindowManager
+
+    override fun invoke(proxy: Any, method: Method, arguments: Array<out Any>?): Any? {
+        when (method.name) {
+            "addView" -> {
+                view = arguments!![0] as View
+                added += capture(arguments[1] as WindowManager.LayoutParams)
+            }
+            "updateViewLayout" -> {
+                updated += capture(arguments!![1] as WindowManager.LayoutParams)
+            }
+            "removeViewImmediate" -> removeCount += 1
+            "removeView" -> removeCount += 1
+        }
+        return defaultValue(method.returnType)
+    }
+
+    private fun capture(params: WindowManager.LayoutParams) = CapturedLayoutParams(
+        type = params.type,
+        flags = params.flags,
+        width = params.width,
+        height = params.height,
+        x = params.x,
+        y = params.y,
     )
 
-    private class RecordingWindowManager : InvocationHandler {
-        val added = mutableListOf<CapturedLayoutParams>()
-        val updated = mutableListOf<CapturedLayoutParams>()
-        var view: View? = null
-        var removeCount = 0
-
-        val instance: WindowManager = Proxy.newProxyInstance(
-            WindowManager::class.java.classLoader,
-            arrayOf(WindowManager::class.java),
-            this,
-        ) as WindowManager
-
-        override fun invoke(proxy: Any, method: Method, arguments: Array<out Any>?): Any? {
-            when (method.name) {
-                "addView" -> {
-                    view = arguments!![0] as View
-                    added += capture(arguments[1] as WindowManager.LayoutParams)
-                }
-                "updateViewLayout" -> {
-                    updated += capture(arguments!![1] as WindowManager.LayoutParams)
-                }
-                "removeViewImmediate" -> removeCount += 1
-                "removeView" -> removeCount += 1
-            }
-            return defaultValue(method.returnType)
-        }
-
-        private fun capture(params: WindowManager.LayoutParams) = CapturedLayoutParams(
-            type = params.type,
-            flags = params.flags,
-            width = params.width,
-            height = params.height,
-            x = params.x,
-            y = params.y,
-        )
-
-        private fun defaultValue(type: Class<*>): Any? = when (type) {
-            Boolean::class.javaPrimitiveType -> false
-            Int::class.javaPrimitiveType -> 0
-            Long::class.javaPrimitiveType -> 0L
-            Float::class.javaPrimitiveType -> 0f
-            Double::class.javaPrimitiveType -> 0.0
-            else -> null
-        }
+    private fun defaultValue(type: Class<*>): Any? = when (type) {
+        Boolean::class.javaPrimitiveType -> false
+        Int::class.javaPrimitiveType -> 0
+        Long::class.javaPrimitiveType -> 0L
+        Float::class.javaPrimitiveType -> 0f
+        Double::class.javaPrimitiveType -> 0.0
+        else -> null
     }
 }

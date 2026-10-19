@@ -65,7 +65,10 @@ class AccessibilityManifestTest {
         val packageManager = context.packageManager
         val packageInfo = packageManager.getPackageInfo(
             context.packageName,
-            PackageManager.GET_ACTIVITIES or PackageManager.GET_SERVICES,
+            PackageManager.GET_ACTIVITIES or
+                PackageManager.GET_SERVICES or
+                PackageManager.GET_RECEIVERS or
+                PackageManager.GET_PROVIDERS,
         )
         val launchers = packageManager.queryIntentActivities(
             Intent(Intent.ACTION_MAIN).apply {
@@ -83,6 +86,12 @@ class AccessibilityManifestTest {
                 .filter { it.exported && ComponentName(it.packageName, it.name) != launcherComponent }
                 .mapTo(this) { it.name }
             packageInfo.services.orEmpty()
+                .filter { it.exported }
+                .mapTo(this) { it.name }
+            packageInfo.receivers.orEmpty()
+                .filter { it.exported }
+                .mapTo(this) { it.name }
+            packageInfo.providers.orEmpty()
                 .filter { it.exported }
                 .mapTo(this) { it.name }
         }
