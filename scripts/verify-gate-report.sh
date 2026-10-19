@@ -74,6 +74,12 @@ BEGIN {
 
     separator = index($0, ":")
     if (separator == 0) {
+        malformed_name = $0
+        sub(/^[[:space:]]*/, "", malformed_name)
+        sub(/[[:space:]=].*$/, "", malformed_name)
+        if (malformed_name in known) {
+            reject("malformed field " malformed_name)
+        }
         next
     }
 
