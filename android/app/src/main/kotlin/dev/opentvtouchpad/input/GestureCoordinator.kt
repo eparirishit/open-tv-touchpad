@@ -65,6 +65,7 @@ class GestureCoordinator(
         if (clock.nowMillis() - current.startedAtMillis < callbackTimeoutMillis) return false
 
         cancel(current.token, CancelReason.TIMEOUT)
+        finish(current.token)
         return true
     }
 

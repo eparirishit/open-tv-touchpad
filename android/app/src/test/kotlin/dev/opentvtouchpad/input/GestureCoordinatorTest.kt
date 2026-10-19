@@ -117,13 +117,26 @@ class GestureCoordinatorTest {
 
         assertEquals(listOf(firstTap), port.dispatched)
         assertEquals(SubmitResult.REJECTED, coordinator.submit(secondTap))
-        assertFalse(coordinator.recoverAfterHealthCheck())
-
-        port.callbacks.single().onCancelled()
-
-        assertEquals(SubmitResult.REJECTED, coordinator.submit(secondTap))
         assertTrue(coordinator.recoverAfterHealthCheck())
         assertEquals(SubmitResult.ACCEPTED, coordinator.submit(secondTap))
+    }
+
+    @Test
+    fun lateTimedOutCallbackCannotCompleteSuccessorGesture() {
+        val port = FakeGesturePort()
+        val clock = FakeMonotonicClock()
+        val coordinator = coordinator(port, clock)
+        coordinator.submit(firstTap)
+        val timedOutCallback = port.callbacks.single()
+
+        clock.advanceBy(1_000)
+        coordinator.checkTimeout()
+        coordinator.recoverAfterHealthCheck()
+        coordinator.submit(secondTap)
+
+        timedOutCallback.onCancelled()
+
+        assertEquals(SubmitResult.DUPLICATE, coordinator.submit(secondTap))
     }
 
     @Test
