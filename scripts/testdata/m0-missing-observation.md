@@ -1,0 +1,19 @@
+# Synthetic Incomplete M0 Verifier Fixture
+
+This file is test data only. It is not hardware evidence.
+
+Gate: M0
+Decision: PASS
+Commit: 0123456789abcdef0123456789abcdef01234567
+APK-SHA256: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+Projector: TEST-FIXTURE-ONLY
+Android-TV: TEST-FIXTURE-ONLY
+Firmware: TEST-FIXTURE-ONLY
+Netflix-Version: TEST-FIXTURE-ONLY
+Overlay: PASS
+Tap: PASS
+Vertical-Scroll: PASS
+Horizontal-Scroll: PASS
+Drag: PASS
+Playback-1080p: PASS
+Investigation-Count: 1
