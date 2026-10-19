@@ -109,7 +109,7 @@ BEGIN {
 
     upper_value = toupper(value)
     if (value ~ /[<>]/ || value ~ /\{\{|\}\}/ ||
-        upper_value ~ /(^|[^A-Z])(TBD|TODO|FIXME|PLACEHOLDER|REPLACE|CHANGEME|UNKNOWN)([^A-Z]|$)/) {
+        upper_value ~ /(^|[^A-Z])(TBD|TODO|FIXME|PLACEHOLDER|REPLACE|CHANGEME|UNKNOWN|TEST-FIXTURE-ONLY)([^A-Z]|$)/) {
         reject("unresolved placeholder in " name)
         next
     }

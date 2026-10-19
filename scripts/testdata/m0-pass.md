@@ -1,19 +1,16 @@
-# M0 Hardware Gate Report
+# Synthetic M0 Verifier Fixture
 
-This template is intentionally invalid. Replace every bracketed value with
-observations from the certified device before running the verifier. Do not
-record a PASS decision unless every required observation is `PASS`.
-
-This completed copy contains synthetic test data only. It is not hardware evidence.
+This completed copy is valid only for testing the report verifier. It is not
+hardware evidence and must never replace `docs/gates/m0-report.md`.
 
 Gate: M0
 Decision: PASS
 Commit: 0123456789abcdef0123456789abcdef01234567
 APK-SHA256: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
 Projector: XGIMI Horizon XK03H
-Android-TV: TEST-FIXTURE-ONLY
-Firmware: TEST-FIXTURE-ONLY
-Netflix-Version: TEST-FIXTURE-ONLY
+Android-TV: 11
+Firmware: 2026.10.18-test
+Netflix-Version: 8.112.1-test
 Tested-Application: com.netflix.mediaclient
 Overlay: PASS
 Tap: PASS
