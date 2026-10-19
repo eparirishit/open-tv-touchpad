@@ -24,15 +24,20 @@ class GestureCoordinator(
 ) {
     private var nextToken = 0L
     private var inFlight: InFlight? = null
+    private var cancellationRequested = false
+    private var degraded = false
 
     @Synchronized
     fun submit(spec: GestureSpec): SubmitResult {
+        if (degraded) return SubmitResult.REJECTED
+
         inFlight?.let {
             return if (it.spec == spec) SubmitResult.DUPLICATE else SubmitResult.IN_FLIGHT
         }
 
         val token = nextToken++
         inFlight = InFlight(spec, token, clock.nowMillis())
+        cancellationRequested = false
         val accepted = port.dispatch(
             spec,
             object : GestureCallback {
@@ -64,17 +69,30 @@ class GestureCoordinator(
     }
 
     @Synchronized
-    private fun finish(token: Long) {
-        if (inFlight?.token == token) inFlight = null
+    fun recoverAfterHealthCheck(): Boolean {
+        if (!degraded || inFlight != null) return false
+
+        degraded = false
+        return true
     }
 
-    @Suppress("UNUSED_PARAMETER")
+    @Synchronized
+    private fun finish(token: Long) {
+        if (inFlight?.token != token) return
+
+        inFlight = null
+        cancellationRequested = false
+    }
+
     @Synchronized
     private fun cancel(token: Long, reason: CancelReason) {
         if (inFlight?.token != token) return
 
-        port.cancelActiveGesture()
-        finish(token)
+        if (reason == CancelReason.TIMEOUT) degraded = true
+        if (!cancellationRequested) {
+            cancellationRequested = true
+            port.cancelActiveGesture()
+        }
     }
 
     private data class InFlight(

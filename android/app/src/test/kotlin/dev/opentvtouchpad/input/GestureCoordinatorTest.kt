@@ -66,7 +66,7 @@ class GestureCoordinatorTest {
     }
 
     @Test
-    fun explicitCancellationReturnsToIdleWithoutStartingRejectedGesture() {
+    fun explicitCancellationWaitsForAndroidCallbackBeforeReturningToIdle() {
         val port = FakeGesturePort()
         val coordinator = coordinator(port)
         coordinator.submit(firstTap)
@@ -75,6 +75,10 @@ class GestureCoordinatorTest {
         coordinator.cancel(CancelReason.EXPLICIT)
 
         assertEquals(listOf(firstTap), port.dispatched)
+        assertEquals(SubmitResult.IN_FLIGHT, coordinator.submit(secondTap))
+
+        port.callbacks.single().onCancelled()
+
         assertEquals(SubmitResult.ACCEPTED, coordinator.submit(secondTap))
     }
 
@@ -92,11 +96,15 @@ class GestureCoordinatorTest {
 
         assertEquals(1, port.cancellationCount)
         assertEquals(SubmitResult.IN_FLIGHT, resultDuringCancellation)
+        assertEquals(SubmitResult.IN_FLIGHT, coordinator.submit(secondTap))
+
+        port.callbacks.single().onCancelled()
+
         assertEquals(SubmitResult.ACCEPTED, coordinator.submit(secondTap))
     }
 
     @Test
-    fun callbackTimeoutReturnsToIdleWithoutSleepOrAutomaticDispatch() {
+    fun callbackTimeoutBlocksSubmissionsUntilCallbackAndHealthRecovery() {
         val port = FakeGesturePort()
         val clock = FakeMonotonicClock()
         val coordinator = coordinator(port, clock)
@@ -108,6 +116,13 @@ class GestureCoordinatorTest {
         assertTrue(coordinator.checkTimeout())
 
         assertEquals(listOf(firstTap), port.dispatched)
+        assertEquals(SubmitResult.REJECTED, coordinator.submit(secondTap))
+        assertFalse(coordinator.recoverAfterHealthCheck())
+
+        port.callbacks.single().onCancelled()
+
+        assertEquals(SubmitResult.REJECTED, coordinator.submit(secondTap))
+        assertTrue(coordinator.recoverAfterHealthCheck())
         assertEquals(SubmitResult.ACCEPTED, coordinator.submit(secondTap))
     }
 
@@ -118,6 +133,7 @@ class GestureCoordinatorTest {
         coordinator.submit(firstTap)
         val staleCallback = port.callbacks.single()
         coordinator.cancel(CancelReason.EXPLICIT)
+        staleCallback.onCancelled()
         coordinator.submit(secondTap)
 
         staleCallback.onCompleted()
