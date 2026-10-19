@@ -26,7 +26,7 @@
 - **Display rotation or size changes:** cursor clamps to current real display bounds and never uses cached 1920x1080 values; covered by `CursorBoundsTest`.
 - **Accessibility disabled mid-drag:** active gesture state cancels and the overlay hides; covered by `GestureCoordinatorTest` and a device trial.
 - **Repeated D-pad activation:** button key-repeat cannot dispatch duplicate taps or concurrent gestures; covered by `GateViewModelTest`.
-- **Gesture callback never arrives:** timeout fails closed and requires an accessibility-service restart before another gesture; covered by `GestureCoordinatorTest`.
+- **Gesture callback never arrives:** after the declared gesture duration, the callback grace period expires, fails closed, and requires an accessibility-service restart before another gesture; covered by `GestureCoordinatorTest`.
 - **Partial prior report:** the report verifier rejects a PASS without every required observation, APK hash, and commit; covered by verifier fixtures.
 
 ---
@@ -147,7 +147,7 @@ Expected: FAIL with missing types.
 
 - [ ] **Step 3: Implement the minimal immutable geometry and single-flight coordinator**
 
-Use monotonic time for the timeout. Keep Android classes behind `GesturePort` so unit tests use a fake. Do not add product queues, acceleration, or protocol state.
+Use monotonic time for the timeout and begin the callback grace period after the declared gesture duration. Keep Android classes behind `GesturePort` so unit tests use a fake. Do not add product queues, acceleration, or protocol state.
 
 - [ ] **Step 4: Run focused tests**
 

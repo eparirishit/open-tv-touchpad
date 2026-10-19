@@ -62,7 +62,8 @@ class GestureCoordinator(
     @Synchronized
     fun checkTimeout(): Boolean {
         val current = inFlight ?: return false
-        if (clock.nowMillis() - current.startedAtMillis < callbackTimeoutMillis) return false
+        val callbackDeadlineMillis = current.spec.durationMillis + callbackTimeoutMillis
+        if (clock.nowMillis() - current.startedAtMillis < callbackDeadlineMillis) return false
 
         cancel(current.token, CancelReason.TIMEOUT)
         finish(current.token)

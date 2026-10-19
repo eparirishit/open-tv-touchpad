@@ -110,7 +110,7 @@ class GestureCoordinatorTest {
         val coordinator = coordinator(port, clock)
         coordinator.submit(firstTap)
 
-        clock.advanceBy(999)
+        clock.advanceBy(1_079)
         assertFalse(coordinator.checkTimeout())
         clock.advanceBy(1)
         assertTrue(coordinator.checkTimeout())
@@ -137,13 +137,30 @@ class GestureCoordinatorTest {
         coordinator.submit(firstTap)
         val timedOutCallback = port.callbacks.single()
 
-        clock.advanceBy(1_000)
+        clock.advanceBy(1_080)
         coordinator.checkTimeout()
 
         timedOutCallback.onCancelled()
 
         assertTrue(coordinator.requiresRestart())
         assertEquals(SubmitResult.REJECTED, coordinator.submit(secondTap))
+    }
+
+    @Test
+    fun callbackTimeoutStartsAfterGestureDuration() {
+        val longDrag = GestureSpec.Drag(
+            points = listOf(PointF(0f, 0f), PointF(100f, 100f)),
+            durationMillis = 1_500,
+        )
+        val port = FakeGesturePort()
+        val clock = FakeMonotonicClock()
+        val coordinator = coordinator(port, clock)
+        coordinator.submit(longDrag)
+
+        clock.advanceBy(2_499)
+        assertFalse(coordinator.checkTimeout())
+        clock.advanceBy(1)
+        assertTrue(coordinator.checkTimeout())
     }
 
     @Test
