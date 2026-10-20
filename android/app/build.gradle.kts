@@ -50,6 +50,14 @@ val verifyReleaseBuildConfiguration = tasks.register("verifyReleaseBuildConfigur
     }
 }
 
+tasks.register<Exec>("verifyReleaseGateIsolation") {
+    group = "verification"
+    description = "Verifies M0 gate code and resources are absent from the release APK."
+    dependsOn("assembleRelease")
+    workingDir(rootProject.projectDir)
+    commandLine("sh", "scripts/verify-release-gate-isolation.sh")
+}
+
 dependencies {
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.runner)
