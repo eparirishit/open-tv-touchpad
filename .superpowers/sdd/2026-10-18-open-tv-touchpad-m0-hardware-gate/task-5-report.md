@@ -16,6 +16,7 @@
 - Final-review compact-overlay commit: `9282e33` (`fix: keep target apps visible under controls`)
 - Final-review lifecycle commit: `23c46ee` (`fix: refresh gate on service lifecycle changes`)
 - Final-review lint cleanup commit: `c850d0f` (`fix: avoid compact overlay overdraw`)
+- Fix-round-4 connected-test commit: `143e898` (`test: close Task 5 connected coverage gaps`)
 - Requirements source: `.superpowers/sdd/2026-10-18-open-tv-touchpad-m0-hardware-gate/task-5-brief.md`
 
 ## Scope Implemented
@@ -401,9 +402,102 @@ BUILD SUCCESSFUL in 11s
 - `android/app/src/main/kotlin/dev/opentvtouchpad/setup/GateActivity.kt`
 - `android/app/src/main/res/layout/controller_overlay.xml`
 
+## Fix Round 4 Test-Only Coverage Closure
+
+Scoped review requested exactly two connected-test closures. Production code,
+resources, manifest, metadata, dependencies, and capability remained unchanged.
+
+### RED: Live Disconnected-to-Connected Activity Transition
+
+The prior lifecycle test used reflection to assign `connectedService` and invoke
+`GateActivity.render()`. It was replaced with a system-driven scenario that
+starts from a visible disconnected activity, enables the real accessibility
+service through secure settings while using
+`FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES`, waits for Android to call
+`TouchAccessibilityService.onServiceConnected()`, and therefore exercises the
+production `publishConnectedService(this)` notification path. The test verifies
+connected status, every normal action enabled, cancel disabled, and settings
+guidance disabled. It then stops the activity, disables the service, verifies
+the stopped UI ignored the disconnect notification, and verifies restart
+reconciles to disabled guidance.
+
+A temporary mutation removed only
+`TouchAccessibilityService.addConnectionListener(serviceConnectionListener)`
+from `GateActivity.onStart()`. The focused connected test bound the real service
+in under one second and then failed at `assertConnectedControls`, proving the
+activity remained disconnected without the production listener path. The line
+was restored before GREEN verification; no production mutation was committed.
+
+### RED: Real Inflated Overlay Occupancy
+
+`controllerUsesCompactEndAnchoredWindow` now measures and lays out the actual
+inflated controller root under `1920×1080` `AT_MOST` bounds. In addition to the
+existing `WRAP_CONTENT × WRAP_CONTENT` and `END | CENTER_VERTICAL` assertions,
+it requires occupied width below `960`, height below `810`, and occupied area
+below `691200` square pixels. The one-third-area cap leaves more than two thirds
+of the target visible while the independent action, focus-order, teardown, and
+focusable/non-touchable security tests remain intact.
+
+A temporary layout mutation changed only root padding from `8dp` to `400dp`,
+preserving the existing window parameters. The focused connected test failed at
+the new occupied-width assertion, proving an oversized root can no longer pass
+through `WRAP_CONTENT` alone. The padding was restored before GREEN
+verification; no resource mutation was committed.
+
+### Focused GREEN
+
+Both complete connected classes passed independently on the API 31 Android TV
+emulator:
+
+```text
+./gradlew :android:app:connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=dev.opentvtouchpad.setup.GateActivityDpadTest
+BUILD SUCCESSFUL in 10s
+4 tests, 0 failures, 0 errors, 0 skipped
+
+./gradlew :android:app:connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=dev.opentvtouchpad.accessibility.DpadControllerOverlayTest
+BUILD SUCCESSFUL in 4s
+5 tests, 0 failures, 0 errors, 0 skipped
+```
+
+### Complete GREEN
+
+The complete required matrix passed on commit `143e898` with Java 17, the
+documented Android SDK, workspace-local Gradle state, and
+`ANDROID_SERIAL=emulator-5554`:
+
+```text
+./gradlew :android:app:testDebugUnitTest :android:app:connectedDebugAndroidTest \
+  :android:app:lintDebug :android:app:assembleDebug
+BUILD SUCCESSFUL in 14s
+85 actionable tasks: 5 executed, 80 up-to-date
+```
+
+- JVM XML: 24 tests, 0 failures, 0 errors, 0 skipped.
+- Connected XML: 25 tests, 0 failures, 0 errors, 0 skipped.
+- Lint: 0 errors and 7 pre-existing baseline warnings.
+- Merged manifest: one exported Leanback launcher activity and one exported,
+  `BIND_ACCESSIBILITY_SERVICE`-protected accessibility service; no receivers,
+  providers, or requested permissions, including no `SYSTEM_ALERT_WINDOW`.
+- Accessibility metadata remains gesture-only with
+  `canPerformGestures=true`, `canRetrieveWindowContent=false`, and no key-filter
+  capability, foreground inspection, or package restriction.
+- Debug APK assembled at `android/app/build/outputs/apk/debug/app-debug.apk`.
+- Commit `143e898` changes only the two connected-test classes, and both the
+  commit-range and worktree `git diff --check` checks were clean.
+
+### Fix Round 4 Changed Files
+
+- `.superpowers/sdd/2026-10-18-open-tv-touchpad-m0-hardware-gate/task-5-report.md`
+- `.superpowers/sdd/2026-10-18-open-tv-touchpad-m0-hardware-gate/progress.md`
+- `android/app/src/androidTest/kotlin/dev/opentvtouchpad/accessibility/DpadControllerOverlayTest.kt`
+- `android/app/src/androidTest/kotlin/dev/opentvtouchpad/setup/GateActivityDpadTest.kt`
+
 ## Self-Review
 
-Review range: Task 4 base `e9d8723` through final-review lint cleanup `c850d0f`, including all connected callers and final-review tests.
+Review range: Task 4 base `e9d8723` through fix-round-4 connected-test commit
+`143e898`, including all connected callers and final-review tests.
 
 - Confirmed all `GestureCoordinator` callers remain source-compatible through the default outcome listener.
 - Confirmed stale callbacks still cannot finish successor gestures and timeout remains fail-closed.
@@ -416,6 +510,8 @@ Review range: Task 4 base `e9d8723` through final-review lint cleanup `c850d0f`,
 - Confirmed queued service delivery skips a listener removed after outcome capture, delivers exactly once to a still-attached peer, and retains the terminal outcome for refresh/re-attach.
 - Confirmed the compact controller leaves the target application visible while retaining every Task 5 action and deterministic D-pad traversal.
 - Confirmed service connection notifications are synchronous, membership-fenced, registered only while the launcher is started, and removed before view-model detachment.
+- Confirmed the live-connection regression uses Android's real accessibility-service bind and production publication path rather than reflective state assignment or manual rendering, restores secure settings in `finally`, and proves stopped-listener cleanup behavior.
+- Confirmed the compactness regression measures the real inflated overlay against fixed display bounds and fails for oversized content even when window parameters remain `WRAP_CONTENT`.
 - Confirmed the manifest and app dependency configuration have no diff.
 - Final verdict: ship Task 5 for emulator/local verification. No open Critical, Important, or Minor findings.
 
