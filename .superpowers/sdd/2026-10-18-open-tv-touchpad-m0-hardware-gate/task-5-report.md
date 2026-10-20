@@ -548,3 +548,30 @@ This is an author self-review because subagents were explicitly prohibited; it i
 - Physical D-pad feel, real accessibility gesture delivery, callback timing, and cancellation behavior still require the separately planned hardware validation; Task 6 was not implemented.
 - Lint retains 7 baseline warnings unrelated to this fix; there are 0 errors.
 - `.kotlin/` build scratch was removed before the implementation commit. `local.properties` remains ignored and uncommitted.
+
+## Coordinator Final Verification Note
+
+The final independent verification initially discovered both the configured API 31
+emulator and the connected XGIMI projector. Gradle therefore ran instrumentation
+on both devices. The emulator passed, while the projector reported two
+`GateActivityDpadTest` failures: firmware denied cross-application key injection
+to the instrumentation runner, and the automated service-connection assertion did
+not complete there. These are not Task 6 hardware-gate observations: no approved
+Netflix gesture checklist was executed, and no M0 PASS or FAIL is inferred from
+instrumentation behavior.
+
+After isolating the disposable emulator, Gradle's unified test platform retained
+a cleanup/serialization issue (`INSTRUMENTATION_FAILED` plus package-uninstall
+errors) even after resetting the AVD. Manual installation of the generated app
+and test APKs succeeded. Running the same committed instrumentation runner
+directly on the isolated emulator completed all 25 connected tests successfully:
+
+```text
+adb -s emulator-5554 shell am instrument -w \
+  dev.opentvtouchpad.test/androidx.test.runner.AndroidJUnitRunner
+OK (25 tests)
+```
+
+The remaining Gradle verification command then passed 24 JVM tests, lint with
+0 errors and 7 baseline warnings, and debug assembly. This records the test-runner
+environment issue without weakening the required Task 6 certified-device gate.
