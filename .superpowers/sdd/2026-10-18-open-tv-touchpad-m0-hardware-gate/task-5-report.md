@@ -17,6 +17,8 @@
 - Final-review lifecycle commit: `23c46ee` (`fix: refresh gate on service lifecycle changes`)
 - Final-review lint cleanup commit: `c850d0f` (`fix: avoid compact overlay overdraw`)
 - Fix-round-4 connected-test commit: `143e898` (`test: close Task 5 connected coverage gaps`)
+- Fix-round-5 release-isolation test commit: `0ce941a` (`test: verify release gate isolation`)
+- Fix-round-5 source-set implementation commit: `3b71806` (`fix: isolate M0 gate from release`)
 - Requirements source: `.superpowers/sdd/2026-10-18-open-tv-touchpad-m0-hardware-gate/task-5-brief.md`
 
 ## Scope Implemented
@@ -494,10 +496,137 @@ BUILD SUCCESSFUL in 14s
 - `android/app/src/androidTest/kotlin/dev/opentvtouchpad/accessibility/DpadControllerOverlayTest.kt`
 - `android/app/src/androidTest/kotlin/dev/opentvtouchpad/setup/GateActivityDpadTest.kt`
 
+## Fix Round 5 Release-Boundary Isolation
+
+Final Codex review found one actionable scope violation: the disposable M0
+launcher, D-pad controller overlay, gate adapter, layouts, strings, and manifest
+declaration lived in `src/main`, so the release variant packaged them. The fix
+keeps reusable gesture and accessibility runtime in main while moving every
+M0-only surface to the debug source set.
+
+### RED: Actual Release Artifact Leakage
+
+Commit `0ce941a` added `:android:app:verifyReleaseGateIsolation`. The task
+depends on `assembleRelease`, inspects the generated release merged manifest
+and APK manifest with `aapt2`, scans release DEX strings with `dexdump`, and
+scans the release resource table for the gate layouts and `gate_*` strings.
+It does not assert source paths.
+
+The unchanged production tree built the release APK and then failed exactly on
+the leaked launcher declaration:
+
+```text
+./gradlew :android:app:verifyReleaseGateIsolation
+> Task :android:app:assembleRelease
+Release gate isolation failed: GateActivity declaration found in
+android/app/build/intermediates/merged_manifest/release/processReleaseMainManifest/AndroidManifest.xml
+android:name="dev.opentvtouchpad.setup.GateActivity"
+BUILD FAILED in 8s
+```
+
+### Source-Set Boundary
+
+- Moved `GateActivity`, `GateViewModel`, `ServiceGateRuntime`,
+  `DpadControllerOverlay`, both gate layouts, all `gate_*` strings, and the
+  Leanback launcher declaration to `src/debug`.
+- Moved `GateViewModelTest` to `src/testDebug`; connected tests remain in the
+  debug-targeted `src/androidTest` source set.
+- Added a main `ServiceOverlay` lifecycle interface and variant-specific
+  `ServiceOverlayFactory` implementations. Debug composes the existing D-pad
+  overlay and runtime adapter; release returns a no-op overlay and references
+  no debug-only class or resource.
+- Kept cursor, gesture dispatch, cancellation, outcome listeners, bounds, and
+  accessibility-service lifecycle in main. The service exposes reusable
+  in-flight/outcome queries instead of returning a gate UI type.
+
+### Focused and Complete Debug GREEN
+
+All automated connected runs were pinned to the disposable emulator with
+`ANDROID_SERIAL=emulator-5554`; the connected XGIMI projector was not selected
+or modified. Gradle UTP completed normally, so no manual APK fallback was
+needed in this round.
+
+```text
+./gradlew :android:app:testDebugUnitTest --tests 'dev.opentvtouchpad.setup.*' \
+  :android:app:connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=dev.opentvtouchpad.setup.GateActivityDpadTest
+BUILD SUCCESSFUL in 13s
+```
+
+The focused result remained 8 setup JVM tests and 4 connected activity tests,
+all passing.
+
+```text
+./gradlew :android:app:testDebugUnitTest :android:app:connectedDebugAndroidTest \
+  :android:app:lintDebug :android:app:assembleDebug
+BUILD SUCCESSFUL in 13s
+85 actionable tasks: 3 executed, 82 up-to-date
+```
+
+- JVM XML: 24 tests, 0 failures, 0 errors, 0 skipped.
+- Connected XML: 25 tests, 0 failures, 0 errors, 0 skipped.
+- Lint: 0 errors and 6 baseline warnings.
+- Debug merged manifest still contains `GateActivity`, the Leanback launcher,
+  and the permission-protected accessibility service.
+- Debug APK still contains every gate class, layout, and `gate_*` string.
+
+### Release GREEN and Artifact Inspection
+
+```text
+./gradlew :android:app:assembleRelease :android:app:verifyReleaseGateIsolation
+Release gate isolation verified: no M0 gate manifest, classes, layouts, or strings
+BUILD SUCCESSFUL in 1s
+```
+
+- Release merged manifest and APK manifest contain no activity or Leanback
+  launcher and contain only the exported, `BIND_ACCESSIBILITY_SERVICE`-protected
+  accessibility service.
+- Release DEX contains none of `GateActivity`, `GateViewModel`,
+  `ServiceGateRuntime`, `DpadControllerOverlay`, or the other `Gate*` UI types.
+- Release resource table contains only `app_name`, the neutral accessibility
+  service description, cursor/banner/icon drawables, and accessibility metadata;
+  it contains no layout and no `gate_*` string.
+- Release accessibility metadata remains `canPerformGestures=true`,
+  `canRetrieveWindowContent=false`, with no key-filter flag, package allowlist,
+  overlay permission, or requested runtime permission.
+- `git diff --check` passed before both fix-round commits.
+
+### Preserved-History Ruling
+
+All prior Task 5 commits and review-fix commits remain unchanged. Fix round 5
+uses two additive conventional commits (`0ce941a`, `3b71806`); no commit was
+rebased, squashed, amended, reverted, dropped, pushed, or attached to a PR.
+The cost is that history still records the superseded main-source implementation,
+while the final tree and built release artifact enforce the required boundary.
+
+### Fix Round 5 Changed Files
+
+- `.superpowers/sdd/2026-10-18-open-tv-touchpad-m0-hardware-gate/task-5-report.md`
+- `.superpowers/sdd/2026-10-18-open-tv-touchpad-m0-hardware-gate/progress.md`
+- `scripts/verify-release-gate-isolation.sh`
+- `android/app/build.gradle.kts`
+- `android/app/src/debug/AndroidManifest.xml`
+- `android/app/src/debug/kotlin/dev/opentvtouchpad/accessibility/DpadControllerOverlay.kt`
+- `android/app/src/debug/kotlin/dev/opentvtouchpad/accessibility/ServiceOverlayFactory.kt`
+- `android/app/src/debug/kotlin/dev/opentvtouchpad/setup/GateActivity.kt`
+- `android/app/src/debug/kotlin/dev/opentvtouchpad/setup/GateViewModel.kt`
+- `android/app/src/debug/kotlin/dev/opentvtouchpad/setup/ServiceGateRuntime.kt`
+- `android/app/src/debug/res/layout/activity_gate.xml`
+- `android/app/src/debug/res/layout/controller_overlay.xml`
+- `android/app/src/debug/res/values/strings.xml`
+- `android/app/src/main/AndroidManifest.xml`
+- `android/app/src/main/kotlin/dev/opentvtouchpad/accessibility/ServiceOverlay.kt`
+- `android/app/src/main/kotlin/dev/opentvtouchpad/accessibility/TouchAccessibilityService.kt`
+- `android/app/src/main/res/values/strings.xml`
+- `android/app/src/release/kotlin/dev/opentvtouchpad/accessibility/ServiceOverlayFactory.kt`
+- `android/app/src/testDebug/kotlin/dev/opentvtouchpad/setup/GateViewModelTest.kt`
+- `android/app/src/androidTest/kotlin/dev/opentvtouchpad/accessibility/AndroidGesturePortTest.kt`
+
 ## Self-Review
 
 Review range: Task 4 base `e9d8723` through fix-round-4 connected-test commit
-`143e898`, including all connected callers and final-review tests.
+`143e898`, plus fix-round-5 commits `0ce941a` and `3b71806`, including all
+connected callers and final-review tests.
 
 - Confirmed all `GestureCoordinator` callers remain source-compatible through the default outcome listener.
 - Confirmed stale callbacks still cannot finish successor gestures and timeout remains fail-closed.
@@ -512,7 +641,9 @@ Review range: Task 4 base `e9d8723` through fix-round-4 connected-test commit
 - Confirmed service connection notifications are synchronous, membership-fenced, registered only while the launcher is started, and removed before view-model detachment.
 - Confirmed the live-connection regression uses Android's real accessibility-service bind and production publication path rather than reflective state assignment or manual rendering, restores secure settings in `finally`, and proves stopped-listener cleanup behavior.
 - Confirmed the compactness regression measures the real inflated overlay against fixed display bounds and fails for oversized content even when window parameters remain `WRAP_CONTENT`.
-- Confirmed the manifest and app dependency configuration have no diff.
+- Confirmed the debug manifest preserves the M0 launcher contract while the
+  release merged manifest and APK contain no gate activity, classes, layouts,
+  or strings.
 - Final verdict: ship Task 5 for emulator/local verification. No open Critical, Important, or Minor findings.
 
 Implementers did not spawn nested subagents; independent task and scoped re-reviews were coordinated separately.
@@ -546,7 +677,10 @@ Implementers did not spawn nested subagents; independent task and scoped re-revi
   the certified XGIMI accessibility shortcut keeps controller focus over
   Netflix; that remains a Task 6 hardware PASS/FAIL observation.
 - Physical D-pad feel, real accessibility gesture delivery, callback timing, and cancellation behavior still require the separately planned hardware validation; Task 6 was not implemented.
-- Lint retains 7 baseline warnings unrelated to this fix; there are 0 errors.
+- Lint retains 6 baseline warnings unrelated to this fix; there are 0 errors.
+- The current release artifact intentionally has no launcher activity because
+  the M0 launcher is disposable and the production setup UI is future gated
+  work; Task 6 still uses the debug APK.
 - `.kotlin/` build scratch was removed before the implementation commit. `local.properties` remains ignored and uncommitted.
 
 ## Coordinator Final Verification Note
