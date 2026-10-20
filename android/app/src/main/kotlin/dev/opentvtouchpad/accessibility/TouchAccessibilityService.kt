@@ -12,6 +12,7 @@ import android.view.accessibility.AccessibilityEvent
 import dev.opentvtouchpad.input.CancelReason
 import dev.opentvtouchpad.input.DisplayBounds
 import dev.opentvtouchpad.input.GestureCoordinator
+import dev.opentvtouchpad.input.GestureOutcome
 import dev.opentvtouchpad.input.GestureSpec
 import dev.opentvtouchpad.input.SubmitResult
 
@@ -23,6 +24,9 @@ class TouchAccessibilityService : AccessibilityService() {
     }
     private var gestureCoordinator: GestureCoordinator? = null
     private var cursorOverlay: CursorOverlay? = null
+    private var controllerOverlay: ServiceOverlay? = null
+    private val gestureOutcomeListeners = linkedSetOf<(GestureOutcome) -> Unit>()
+    private var latestGestureOutcome: GestureOutcome? = null
     private lateinit var windowManager: WindowManager
 
     override fun onServiceConnected() {
@@ -34,8 +38,14 @@ class TouchAccessibilityService : AccessibilityService() {
                 port = AndroidGesturePort(this, ::currentDisplayBounds),
                 clock = SystemClock::elapsedRealtime,
                 callbackTimeoutMillis = CALLBACK_TIMEOUT_MILLIS,
+                onFinished = ::publishGestureOutcome,
             )
-            connectedService = this
+            publishConnectedService(this)
+            controllerOverlay = ServiceOverlayFactory.create(
+                this,
+                windowManager,
+                serviceProvider = { this },
+            ).also(ServiceOverlay::show)
         }
     }
 
@@ -62,6 +72,7 @@ class TouchAccessibilityService : AccessibilityService() {
         val coordinator = gestureCoordinator ?: return@synchronized SubmitResult.REJECTED
         coordinator.submit(spec).also { result ->
             if (result == SubmitResult.ACCEPTED) {
+                latestGestureOutcome = null
                 mainHandler.removeCallbacks(timeoutCheck)
                 mainHandler.postDelayed(
                     timeoutCheck,
@@ -95,6 +106,41 @@ class TouchAccessibilityService : AccessibilityService() {
         }
     }
 
+    fun addGestureOutcomeListener(listener: (GestureOutcome) -> Unit) {
+        synchronized(runtimeLock) {
+            gestureOutcomeListeners += listener
+        }
+    }
+
+    fun removeGestureOutcomeListener(listener: (GestureOutcome) -> Unit) {
+        synchronized(runtimeLock) {
+            gestureOutcomeListeners -= listener
+        }
+    }
+
+    internal fun publishGestureOutcome(outcome: GestureOutcome) {
+        val listeners = synchronized(runtimeLock) {
+            latestGestureOutcome = outcome
+            gestureOutcomeListeners.toList()
+        }
+        mainHandler.post {
+            listeners.forEach { listener ->
+                val stillObserved = synchronized(runtimeLock) {
+                    listener in gestureOutcomeListeners
+                }
+                if (stillObserved) listener(outcome)
+            }
+        }
+    }
+
+    internal fun isGestureInFlight(): Boolean = synchronized(runtimeLock) {
+        gestureCoordinator?.isInFlight() == true
+    }
+
+    internal fun latestGestureOutcome(): GestureOutcome? = synchronized(runtimeLock) {
+        latestGestureOutcome
+    }
+
     fun currentBounds(): DisplayBounds = currentDisplayBounds()
 
     private fun shutdownRuntime(reason: CancelReason) {
@@ -103,9 +149,13 @@ class TouchAccessibilityService : AccessibilityService() {
             mainHandler.removeCallbacks(timeoutCheck)
             cursorOverlay?.hide()
             cursorOverlay?.remove()
+            controllerOverlay?.remove()
+            gestureOutcomeListeners.clear()
+            latestGestureOutcome = null
             gestureCoordinator = null
             cursorOverlay = null
-            if (connectedService === this) connectedService = null
+            controllerOverlay = null
+            if (connectedService === this) publishConnectedService(null)
         }
     }
 
@@ -127,9 +177,37 @@ class TouchAccessibilityService : AccessibilityService() {
     }
 
     companion object {
+        private val connectionLock = Any()
+        private val connectionListeners = linkedSetOf<() -> Unit>()
+
         @Volatile
         var connectedService: TouchAccessibilityService? = null
             private set
+
+        internal fun addConnectionListener(listener: () -> Unit) {
+            synchronized(connectionLock) {
+                connectionListeners += listener
+            }
+        }
+
+        internal fun removeConnectionListener(listener: () -> Unit) {
+            synchronized(connectionLock) {
+                connectionListeners -= listener
+            }
+        }
+
+        private fun publishConnectedService(service: TouchAccessibilityService?) {
+            val listeners = synchronized(connectionLock) {
+                connectedService = service
+                connectionListeners.toList()
+            }
+            listeners.forEach { listener ->
+                val stillObserved = synchronized(connectionLock) {
+                    listener in connectionListeners
+                }
+                if (stillObserved) listener()
+            }
+        }
 
         private const val CALLBACK_TIMEOUT_MILLIS = 2_000L
 

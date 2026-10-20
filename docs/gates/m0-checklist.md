@@ -5,6 +5,18 @@ may use ADB, but no gate gesture may be injected with ADB or an equivalent
 command. Success in another application or on another device does not satisfy
 M0.
 
+## Controller Setup
+
+- Open the Open TV Touchpad launcher activity and select **Open accessibility
+  settings and assign shortcut**.
+- Enable the gesture-only accessibility service and assign the system
+  accessibility shortcut. Do not use ADB, package commands, or an overlay-app
+  permission to activate control.
+- Launch Netflix. Confirm the service-owned D-pad controller keeps focus over
+  Netflix while touch gestures pass through to Netflix beneath it.
+- Use the system accessibility shortcut to disable the service after the run;
+  confirm the controller and cursor overlays are removed.
+
 ## Evidence Identity
 
 - Record the full 40-character Git commit used to build the APK.

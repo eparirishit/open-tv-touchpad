@@ -57,6 +57,14 @@ class AccessibilityManifestTest {
             installedService.capabilities and
                 AccessibilityServiceInfo.CAPABILITY_CAN_PERFORM_GESTURES != 0,
         )
+        assertFalse(
+            installedService.capabilities and
+                AccessibilityServiceInfo.CAPABILITY_CAN_REQUEST_FILTER_KEY_EVENTS != 0,
+        )
+        assertFalse(
+            installedService.flags and
+                AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS != 0,
+        )
     }
 
     @Test

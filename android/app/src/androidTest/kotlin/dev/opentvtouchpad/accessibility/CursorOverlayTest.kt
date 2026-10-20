@@ -84,6 +84,7 @@ internal data class CapturedLayoutParams(
     val flags: Int,
     val width: Int,
     val height: Int,
+    val gravity: Int,
     val x: Int,
     val y: Int,
 )
@@ -120,6 +121,7 @@ internal class RecordingWindowManager : InvocationHandler {
         flags = params.flags,
         width = params.width,
         height = params.height,
+        gravity = params.gravity,
         x = params.x,
         y = params.y,
     )

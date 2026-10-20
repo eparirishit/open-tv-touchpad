@@ -190,6 +190,38 @@ class GestureCoordinatorTest {
         assertEquals(SubmitResult.ACCEPTED, coordinator.submit(secondTap))
     }
 
+    @Test
+    fun reportsCallbackDurationAndCancellationReason() {
+        val outcomes = mutableListOf<GestureOutcome>()
+        val clock = FakeMonotonicClock()
+        val port = FakeGesturePort()
+        val coordinator = GestureCoordinator(
+            port = port,
+            clock = clock,
+            callbackTimeoutMillis = 1_000,
+            onFinished = outcomes::add,
+        )
+
+        coordinator.submit(firstTap)
+        clock.advanceBy(93)
+        port.callbacks.single().onCompleted()
+        coordinator.submit(secondTap)
+        coordinator.cancel(CancelReason.EXPLICIT)
+        clock.advanceBy(41)
+        port.callbacks.last().onCancelled()
+
+        assertEquals(
+            listOf(
+                GestureOutcome(callbackDurationMillis = 93, cancellationReason = null),
+                GestureOutcome(
+                    callbackDurationMillis = 41,
+                    cancellationReason = CancelReason.EXPLICIT,
+                ),
+            ),
+            outcomes,
+        )
+    }
+
     private fun coordinator(
         port: GesturePort,
         clock: MonotonicClock = FakeMonotonicClock(),
