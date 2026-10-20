@@ -6,6 +6,7 @@ import android.app.UiAutomation
 import android.content.ComponentName
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import android.provider.Settings
@@ -86,8 +87,14 @@ class GateActivityDpadTest {
         assertEquals(View.VISIBLE, settingsButton.visibility)
         assertTrue(settingsButton.isEnabled)
 
+        val primaryIntent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+        val handlerPackageName = activity.packageManager.resolveActivity(
+            primaryIntent,
+            PackageManager.MATCH_DEFAULT_ONLY,
+        )?.activityInfo?.packageName
+        val expectedAction = SettingsActionPolicy.actionFor(handlerPackageName)
         val monitor = instrumentation.addMonitor(
-            IntentFilter(Settings.ACTION_ACCESSIBILITY_SETTINGS),
+            IntentFilter(expectedAction),
             Instrumentation.ActivityResult(Activity.RESULT_OK, null),
             true,
         )
