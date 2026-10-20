@@ -7,8 +7,8 @@ not record a `PASS` decision unless every required observation is `PASS`.
 
 Gate: M0
 Decision: <PENDING-MANUAL-DECISION>
-Commit: 22c5587ca98c3c9805bda05401e19622b3f32ce8
-APK-SHA256: 7c1b966b8757760c036423168e8ac478345bd36a3a702767a22f3a7b4c99ec61
+Commit: 6223c19e4900c8086ba549e9fa326fd41d156c11
+APK-SHA256: f3cc262c74645800515da01d28e6e175833b29761188a88c5a4e15af8bd2535a
 Projector: XGIMI Horizon XK03H
 Android-TV: 11
 Firmware: RT.3.24.327 release-keys
@@ -21,5 +21,5 @@ Horizontal-Scroll: <PENDING-MANUAL-RESULT>
 Drag: <PENDING-MANUAL-RESULT>
 Cancel: <PENDING-ALL-THREE-CANCELLATION-RESULTS>
 Playback-1080p: <PENDING-MANUAL-RESULT>
-Investigation-Count: <PENDING-0-OR-1>
-Investigation-Details: <PENDING-NONE-OR-WHAT-FAILED-WHAT-CHANGED-AND-OBSERVED-RESULT>
+Investigation-Count: 1
+Investigation-Details: ACCESSIBILITY_SETTINGS resolved to com.google.android.tv.frameworkpackagestubs/.Stubs$SettingsStub and showed no compatible app; debug-gate navigation now falls back to general TV Settings with regression and release-isolation coverage; manual projector validation is pending

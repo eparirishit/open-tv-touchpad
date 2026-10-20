@@ -11,8 +11,8 @@ it is observed on the projector.
 
 | Field | Recorded value |
 | --- | --- |
-| Git commit | `22c5587ca98c3c9805bda05401e19622b3f32ce8` |
-| APK SHA-256 | `7c1b966b8757760c036423168e8ac478345bd36a3a702767a22f3a7b4c99ec61` |
+| Git commit | `6223c19e4900c8086ba549e9fa326fd41d156c11` |
+| APK SHA-256 | `f3cc262c74645800515da01d28e6e175833b29761188a88c5a4e15af8bd2535a` |
 | Projector | `XGIMI Horizon XK03H` |
 | Android TV | `11` |
 | Firmware | `RT.3.24.327 release-keys` |
@@ -29,9 +29,9 @@ remain `PENDING` until every manual check is finished.
 | Prerequisite | Status | Evidence or remaining action |
 | --- | --- | --- |
 | Clean unit, lint, and debug APK build | `COMPLETE` | Coordinator verified the clean unit-test, lint, and debug-build run passed. |
-| APK digest recorded before installation | `COMPLETE` | SHA-256 is `7c1b966b8757760c036423168e8ac478345bd36a3a702767a22f3a7b4c99ec61`. |
-| APK installed with `adb install -r` on XK03H | `COMPLETE` | Coordinator verified installation returned `Success`. |
-| No ADB gesture/input command used through installation and evidence preparation | `COMPLETE` | Coordinator verified no `adb shell input` or equivalent gesture/input command was used through installation and preparation. |
+| APK digest recorded before installation | `COMPLETE` | SHA-256 is `f3cc262c74645800515da01d28e6e175833b29761188a88c5a4e15af8bd2535a`. |
+| APK installed with `adb install -r` on XK03H | `PENDING` | Install the replacement APK; the earlier installed APK is superseded. |
+| No ADB gesture/input command used through installation and evidence preparation | `PENDING` | No gesture/input command was used during replacement evidence preparation; reconfirm through replacement installation. |
 | Accessibility service enabled and shortcut assigned | `PENDING` | Open the launcher with the projector remote, select **Open accessibility settings and assign shortcut**, then enable the gesture-only service and assign the system accessibility shortcut manually. |
 | Post-run no-ADB gesture/input attestation | `PENDING` | After every manual check, attest that no `adb shell input` or equivalent gesture/input injection was used during the hardware run. A recorded non-input process-stop command does not fail this attestation. |
 
@@ -111,10 +111,10 @@ complete every detail; the report details must summarize the same evidence.
 
 | Investigation field | Recorded value |
 | --- | --- |
-| Count (`0` or `1`) | `PENDING` |
-| What failed | `PENDING` |
-| What changed | `PENDING` |
-| Observed result | `PENDING` |
+| Count (`0` or `1`) | `1` |
+| What failed | `android.settings.ACCESSIBILITY_SETTINGS` resolved to `com.google.android.tv.frameworkpackagestubs/.Stubs$SettingsStub` and showed no compatible app. |
+| What changed | Debug-gate navigation now falls back to general TV Settings, with JVM regression and release-isolation coverage. |
+| Observed result | `PENDING` — install the replacement APK and manually test the settings button on the projector. |
 
 ## Decision and Stop Record
 
