@@ -2,8 +2,12 @@ package dev.opentvtouchpad.setup
 
 import android.app.Activity
 import android.app.Instrumentation
+import android.app.UiAutomation
+import android.content.ComponentName
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.ParcelFileDescriptor
+import android.os.SystemClock
 import android.provider.Settings
 import android.view.KeyEvent
 import android.view.View
@@ -25,6 +29,9 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class GateActivityDpadTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
+    private val uiAutomation by lazy {
+        instrumentation.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES)
+    }
     private lateinit var activity: Activity
 
     @Before
@@ -127,47 +134,87 @@ class GateActivityDpadTest {
     }
 
     @Test
-    fun visibleServiceLossRecoversGuidanceAndStoppedActivityIgnoresNotifications() {
-        val render = GateActivity::class.java.getDeclaredMethod("render", GateUiState::class.java)
-            .apply { isAccessible = true }
-        val connectedState = GateUiState(
-            connected = true,
-            bounds = DisplayBounds(width = 1920, height = 1080),
-            cursor = PointF(960f, 540f),
-            controlsEnabled = true,
-            settingsGuidanceVisible = false,
+    fun visibleActivityTracksLiveServiceConnectionAndStopsObservingAfterStop() {
+        val resolver = instrumentation.targetContext.contentResolver
+        val enabledServices = Settings.Secure.getString(
+            resolver,
+            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
         )
-        val firstService = TouchAccessibilityService()
-        setConnectedService(firstService)
-        instrumentation.runOnMainSync { render.invoke(activity, connectedState) }
+        val accessibilityEnabled = Settings.Secure.getInt(
+            resolver,
+            Settings.Secure.ACCESSIBILITY_ENABLED,
+            0,
+        )
 
-        instrumentation.runOnMainSync(firstService::onDestroy)
+        try {
+            setTouchServiceEnabled(false, enabledServices)
+            waitForServiceConnection(connected = false)
+            instrumentation.waitForIdleSync()
+            assertDisconnectedGuidance()
 
-        assertDisconnectedGuidance()
+            val connectionStartedAt = SystemClock.elapsedRealtime()
+            setTouchServiceEnabled(true, enabledServices)
+            waitForServiceConnection(connected = true)
+            instrumentation.waitForIdleSync()
 
-        val stoppedService = TouchAccessibilityService()
-        setConnectedService(stoppedService)
-        instrumentation.runOnMainSync {
-            render.invoke(activity, connectedState)
-            instrumentation.callActivityOnPause(activity)
-            instrumentation.callActivityOnStop(activity)
-            stoppedService.onDestroy()
+            assertTrue(
+                "Live service connection did not update the visible gate promptly",
+                SystemClock.elapsedRealtime() - connectionStartedAt < SERVICE_CONNECTION_TIMEOUT_MILLIS,
+            )
+            assertConnectedControls()
+
+            instrumentation.runOnMainSync {
+                instrumentation.callActivityOnPause(activity)
+                instrumentation.callActivityOnStop(activity)
+            }
+            setTouchServiceEnabled(false, enabledServices)
+            waitForServiceConnection(connected = false)
+            instrumentation.waitForIdleSync()
+
+            assertConnectedControls()
+
+            instrumentation.runOnMainSync {
+                instrumentation.callActivityOnRestart(activity)
+                instrumentation.callActivityOnStart(activity)
+                instrumentation.callActivityOnResume(activity)
+            }
+            instrumentation.waitForIdleSync()
+
+            assertDisconnectedGuidance()
+        } finally {
+            writeSecureSetting(
+                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
+                enabledServices,
+            )
+            writeSecureSetting(
+                Settings.Secure.ACCESSIBILITY_ENABLED,
+                accessibilityEnabled.toString(),
+            )
         }
+    }
 
+    private fun assertConnectedControls() {
         assertTrue(
             activity.findViewById<TextView>(requiredId("gate_status"))
                 .text.toString().contains("connected", ignoreCase = true),
         )
-        assertTrue(activity.findViewById<Button>(requiredId("show_cursor")).isEnabled)
-        assertTrue(!activity.findViewById<Button>(requiredId("accessibility_settings")).isEnabled)
-
-        instrumentation.runOnMainSync {
-            instrumentation.callActivityOnRestart(activity)
-            instrumentation.callActivityOnStart(activity)
-            instrumentation.callActivityOnResume(activity)
-        }
-
-        assertDisconnectedGuidance()
+        assertTrue(
+            listOf(
+                "show_cursor",
+                "move_up",
+                "move_down",
+                "move_left",
+                "move_right",
+                "tap",
+                "swipe_vertical",
+                "swipe_horizontal",
+                "drag_path",
+            ).all { activity.findViewById<Button>(requiredId(it)).isEnabled },
+        )
+        assertTrue(!activity.findViewById<Button>(requiredId("cancel")).isEnabled)
+        val settingsButton = activity.findViewById<Button>(requiredId("accessibility_settings"))
+        assertEquals(View.VISIBLE, settingsButton.visibility)
+        assertTrue(!settingsButton.isEnabled)
     }
 
     private fun assertDisconnectedGuidance() {
@@ -192,10 +239,45 @@ class GateActivityDpadTest {
         assertTrue(activity.findViewById<Button>(requiredId("accessibility_settings")).isEnabled)
     }
 
-    private fun setConnectedService(service: TouchAccessibilityService?) {
-        TouchAccessibilityService::class.java.getDeclaredField("connectedService").apply {
-            isAccessible = true
-            set(null, service)
+    private fun setTouchServiceEnabled(enabled: Boolean, baseline: String?) {
+        val component = ComponentName(
+            instrumentation.targetContext,
+            TouchAccessibilityService::class.java,
+        ).flattenToString()
+        val services = baseline.orEmpty().split(':').filter(String::isNotBlank).toMutableSet()
+        if (enabled) {
+            services += component
+        } else {
+            services -= component
+        }
+        writeSecureSetting(
+            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
+            services.takeIf { it.isNotEmpty() }?.joinToString(":"),
+        )
+        writeSecureSetting(
+            Settings.Secure.ACCESSIBILITY_ENABLED,
+            if (services.isEmpty()) "0" else "1",
+        )
+    }
+
+    private fun writeSecureSetting(name: String, value: String?) {
+        val operation = if (value == null) "delete" else "put"
+        val suffix = value?.let { " $it" }.orEmpty()
+        ParcelFileDescriptor.AutoCloseInputStream(
+            uiAutomation.executeShellCommand(
+                "settings $operation secure $name$suffix",
+            ),
+        ).use { it.readBytes() }
+    }
+
+    private fun waitForServiceConnection(connected: Boolean) {
+        val deadline = SystemClock.elapsedRealtime() + SERVICE_CONNECTION_TIMEOUT_MILLIS
+        while ((TouchAccessibilityService.connectedService != null) != connected) {
+            assertTrue(
+                "Timed out waiting for service connected=$connected",
+                SystemClock.elapsedRealtime() < deadline,
+            )
+            SystemClock.sleep(25)
         }
     }
 
@@ -203,5 +285,9 @@ class GateActivityDpadTest {
         val id = activity.resources.getIdentifier(name, "id", activity.packageName)
         assertNotEquals("Missing view id: $name", 0, id)
         return id
+    }
+
+    private companion object {
+        const val SERVICE_CONNECTION_TIMEOUT_MILLIS = 5_000L
     }
 }

@@ -51,13 +51,42 @@ class DpadControllerOverlayTest {
     fun controllerUsesCompactEndAnchoredWindow() {
         val windowManager = RecordingWindowManager()
         val overlay = newOverlay(windowManager, RecordingGateRuntime())
+        val displayBounds = DisplayBounds(width = 1920, height = 1080)
 
-        onMain { invoke(overlay, "show") }
+        onMain {
+            invoke(overlay, "show")
+            windowManager.view!!.measure(
+                View.MeasureSpec.makeMeasureSpec(displayBounds.width, View.MeasureSpec.AT_MOST),
+                View.MeasureSpec.makeMeasureSpec(displayBounds.height, View.MeasureSpec.AT_MOST),
+            )
+            windowManager.view!!.layout(
+                0,
+                0,
+                windowManager.view!!.measuredWidth,
+                windowManager.view!!.measuredHeight,
+            )
+        }
 
         val added = windowManager.added.single()
         assertEquals(WindowManager.LayoutParams.WRAP_CONTENT, added.width)
         assertEquals(WindowManager.LayoutParams.WRAP_CONTENT, added.height)
         assertEquals(Gravity.END or Gravity.CENTER_VERTICAL, added.gravity)
+        val occupiedWidth = windowManager.view!!.width
+        val occupiedHeight = windowManager.view!!.height
+        val occupiedArea = occupiedWidth.toLong() * occupiedHeight
+        val displayArea = displayBounds.width.toLong() * displayBounds.height
+        assertTrue(
+            "Overlay width $occupiedWidth must remain under half of ${displayBounds.width}",
+            occupiedWidth < displayBounds.width / 2,
+        )
+        assertTrue(
+            "Overlay height $occupiedHeight must remain under three quarters of ${displayBounds.height}",
+            occupiedHeight < displayBounds.height * 3 / 4,
+        )
+        assertTrue(
+            "Overlay area $occupiedArea must remain under one third of $displayArea",
+            occupiedArea < displayArea / 3,
+        )
 
         onMain { invoke(overlay, "remove") }
     }
