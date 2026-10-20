@@ -15,6 +15,7 @@ import dev.opentvtouchpad.input.GestureCoordinator
 import dev.opentvtouchpad.input.GestureOutcome
 import dev.opentvtouchpad.input.GestureSpec
 import dev.opentvtouchpad.input.SubmitResult
+import dev.opentvtouchpad.setup.ServiceGateRuntime
 
 class TouchAccessibilityService : AccessibilityService() {
     private val runtimeLock = Any()
@@ -24,6 +25,7 @@ class TouchAccessibilityService : AccessibilityService() {
     }
     private var gestureCoordinator: GestureCoordinator? = null
     private var cursorOverlay: CursorOverlay? = null
+    private var controllerOverlay: DpadControllerOverlay? = null
     private var gestureOutcomeListener: ((GestureOutcome) -> Unit)? = null
     private lateinit var windowManager: WindowManager
 
@@ -44,6 +46,11 @@ class TouchAccessibilityService : AccessibilityService() {
                 },
             )
             connectedService = this
+            controllerOverlay = DpadControllerOverlay(
+                this,
+                windowManager,
+                ServiceGateRuntime { this },
+            ).also(DpadControllerOverlay::show)
         }
     }
 
@@ -117,9 +124,11 @@ class TouchAccessibilityService : AccessibilityService() {
             mainHandler.removeCallbacks(timeoutCheck)
             cursorOverlay?.hide()
             cursorOverlay?.remove()
+            controllerOverlay?.remove()
             gestureOutcomeListener = null
             gestureCoordinator = null
             cursorOverlay = null
+            controllerOverlay = null
             if (connectedService === this) connectedService = null
         }
     }

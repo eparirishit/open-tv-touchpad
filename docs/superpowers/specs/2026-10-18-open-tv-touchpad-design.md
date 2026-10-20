@@ -93,7 +93,7 @@ The Android application contains these components:
 5. **Pairing Service** — Manages short-lived pairing codes, TV-side confirmation, rate limits, and pairing lock state.
 6. **Session Arbiter** — Authenticates WebSocket sessions, grants one active controller lease, renews and expires the lease, and requires TV confirmation for a live takeover.
 7. **Input Engine** — Validates message schemas, enforces ordering and rate limits, coalesces bounded relative movement, maintains cursor state, and drives the gesture state machine.
-8. **Accessibility Runtime** — Owns the cursor accessibility overlay and serializes calls to Android's accessibility gesture APIs.
+8. **Accessibility Runtime** — Owns the non-focusable cursor accessibility overlay, owns the M0-only focusable/non-touchable D-pad controller overlay, and serializes calls to Android's accessibility gesture APIs. The system accessibility shortcut and service lifecycle are the only global activation path for the M0 controller.
 
 The Gateway Service and Accessibility Runtime communicate through an in-process interface carrying validated domain commands and lifecycle events. Network payloads never reach Android accessibility APIs directly.
 
@@ -154,6 +154,7 @@ The client sends relative movement only. It cannot supply display coordinates, A
 - `canRetrieveWindowContent` is `false`.
 - It does not request screen-content, notification, usage-access, overlay-app, storage, microphone, contacts, or location permissions.
 - The user must enable it manually in Android accessibility settings. The application never uses ADB or `WRITE_SECURE_SETTINGS` to enable it.
+- The M0 gate assigns the system accessibility shortcut for global D-pad controller activation; disabling the service removes both accessibility overlays.
 - Setup and troubleshooting document the Android 13+ sideload flow: open App Info, choose **Allow restricted settings**, then return to Accessibility and enable the service. OEM wording and availability are verified in the compatibility matrix.
 
 ## 7. Security Model

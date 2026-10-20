@@ -134,15 +134,19 @@ class DpadControllerOverlayTest {
             "dev.opentvtouchpad.accessibility.DpadControllerOverlay",
         )
         val runtimeClass = Class.forName("dev.opentvtouchpad.setup.GateRuntime")
-        return overlayClass.getConstructor(
-            Context::class.java,
-            WindowManager::class.java,
-            runtimeClass,
-        ).newInstance(
-            instrumentation.targetContext,
-            windowManager.instance,
-            runtime.instance,
-        )
+        lateinit var overlay: Any
+        onMain {
+            overlay = overlayClass.getConstructor(
+                Context::class.java,
+                WindowManager::class.java,
+                runtimeClass,
+            ).newInstance(
+                instrumentation.targetContext,
+                windowManager.instance,
+                runtime.instance,
+            )
+        }
+        return overlay
     }
 
     private fun invoke(target: Any, methodName: String) {

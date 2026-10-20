@@ -10,11 +10,6 @@ import android.widget.Button
 import android.widget.TextView
 import dev.opentvtouchpad.R
 import dev.opentvtouchpad.accessibility.TouchAccessibilityService
-import dev.opentvtouchpad.input.DisplayBounds
-import dev.opentvtouchpad.input.GestureOutcome
-import dev.opentvtouchpad.input.GestureSpec
-import dev.opentvtouchpad.input.PointF
-import dev.opentvtouchpad.input.SubmitResult
 
 class GateActivity : Activity() {
     private lateinit var viewModel: GateViewModel
@@ -24,7 +19,9 @@ class GateActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_gate)
 
-        viewModel = GateViewModel(AccessibilityGateRuntime())
+        viewModel = GateViewModel(
+            ServiceGateRuntime { TouchAccessibilityService.connectedService },
+        )
         actionButtons = mapOf(
             GateAction.SHOW_CURSOR to findViewById(R.id.show_cursor),
             GateAction.MOVE_UP to findViewById(R.id.move_up),
@@ -105,44 +102,6 @@ class GateActivity : Activity() {
                 settingsButton.requestFocus()
             }
         }
-    }
-
-    private class AccessibilityGateRuntime : GateRuntime {
-        private var observedService: TouchAccessibilityService? = null
-
-        override val isConnected: Boolean
-            get() = TouchAccessibilityService.connectedService != null
-
-        override fun currentBounds(): DisplayBounds =
-            TouchAccessibilityService.connectedService?.currentBounds() ?: DisplayBounds(1, 1)
-
-        override fun showCursorAt(point: PointF) {
-            TouchAccessibilityService.connectedService
-                ?.showCursorAt(point.x.toInt(), point.y.toInt())
-        }
-
-        override fun moveCursorTo(point: PointF) {
-            TouchAccessibilityService.connectedService
-                ?.moveCursorTo(point.x.toInt(), point.y.toInt())
-        }
-
-        override fun submitGesture(spec: GestureSpec): SubmitResult =
-            TouchAccessibilityService.connectedService?.submitGesture(spec)
-                ?: SubmitResult.REJECTED
-
-        override fun cancelGesture() {
-            TouchAccessibilityService.connectedService?.cancelGesture()
-        }
-
-        override fun setGestureOutcomeListener(listener: ((GestureOutcome) -> Unit)?) {
-            val service = TouchAccessibilityService.connectedService
-            if (observedService !== service) {
-                observedService?.setGestureOutcomeListener(null)
-                observedService = service
-            }
-            service?.setGestureOutcomeListener(listener)
-        }
-
     }
 
     private companion object {
