@@ -515,7 +515,7 @@ Review range: Task 4 base `e9d8723` through fix-round-4 connected-test commit
 - Confirmed the manifest and app dependency configuration have no diff.
 - Final verdict: ship Task 5 for emulator/local verification. No open Critical, Important, or Minor findings.
 
-This is an author self-review because subagents were explicitly prohibited; it is weaker than an independent review.
+Implementers did not spawn nested subagents; independent task and scoped re-reviews were coordinated separately.
 
 ## Changed Files
 
