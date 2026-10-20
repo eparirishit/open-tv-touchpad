@@ -9,9 +9,11 @@ import android.os.Message
 import android.view.View
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import dev.opentvtouchpad.input.CancelReason
 import dev.opentvtouchpad.input.DisplayBounds
 import dev.opentvtouchpad.input.GestureCallback
 import dev.opentvtouchpad.input.GestureCoordinator
+import dev.opentvtouchpad.input.GestureOutcome
 import dev.opentvtouchpad.input.GesturePort
 import dev.opentvtouchpad.input.GestureSpec
 import dev.opentvtouchpad.input.PointF
@@ -271,6 +273,43 @@ class AndroidGesturePortTest {
         } finally {
             fixture.close()
         }
+    }
+
+    @Test
+    fun serviceSkipsDetachedListenerAndRetainsOutcomeForRefresh() {
+        val service = TouchAccessibilityService()
+        val handler = QueuedHandler(
+            (service.privateField("mainHandler") as Handler).looper,
+        )
+        service.setPrivateField("mainHandler", handler)
+        val detachedOutcomes = mutableListOf<GestureOutcome>()
+        val attachedOutcomes = mutableListOf<GestureOutcome>()
+        val replayListenerOutcomes = mutableListOf<GestureOutcome>()
+        val detachedListener: (GestureOutcome) -> Unit = { detachedOutcomes += it }
+        val attachedListener: (GestureOutcome) -> Unit = { attachedOutcomes += it }
+        val replayListener: (GestureOutcome) -> Unit = { replayListenerOutcomes += it }
+        val outcome = GestureOutcome(
+            callbackDurationMillis = 527,
+            cancellationReason = CancelReason.ANDROID,
+        )
+        service.addGestureOutcomeListener(detachedListener)
+        service.addGestureOutcomeListener(attachedListener)
+
+        service.publishGestureOutcome(outcome)
+        service.removeGestureOutcomeListener(detachedListener)
+        handler.runQueued()
+
+        assertTrue(detachedOutcomes.isEmpty())
+        assertEquals(listOf(outcome), attachedOutcomes)
+
+        service.removeGestureOutcomeListener(attachedListener)
+        service.addGestureOutcomeListener(replayListener)
+        val refreshedState = service.currentGestureState()
+
+        assertFalse(refreshedState.gestureInFlight)
+        assertEquals(outcome, refreshedState.latestOutcome)
+        assertTrue(detachedOutcomes.isEmpty())
+        assertTrue(replayListenerOutcomes.isEmpty())
     }
 
     private fun assertDragLifecycleTeardown(
@@ -555,6 +594,21 @@ class AndroidGesturePortTest {
                 if (!releasePost.await(5, TimeUnit.SECONDS)) return false
             }
             return super.sendMessageAtTime(message, uptimeMillis)
+        }
+    }
+
+    private class QueuedHandler(looper: android.os.Looper) : Handler(looper) {
+        private val queuedMessages = ArrayDeque<Message>()
+
+        override fun sendMessageAtTime(message: Message, uptimeMillis: Long): Boolean {
+            queuedMessages += message
+            return true
+        }
+
+        fun runQueued() {
+            while (queuedMessages.isNotEmpty()) {
+                checkNotNull(queuedMessages.removeFirst().callback).run()
+            }
         }
     }
 }

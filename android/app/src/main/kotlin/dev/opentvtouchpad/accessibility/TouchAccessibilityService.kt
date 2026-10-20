@@ -40,20 +40,7 @@ class TouchAccessibilityService : AccessibilityService() {
                 port = AndroidGesturePort(this, ::currentDisplayBounds),
                 clock = SystemClock::elapsedRealtime,
                 callbackTimeoutMillis = CALLBACK_TIMEOUT_MILLIS,
-                onFinished = { outcome ->
-                    val listeners = synchronized(runtimeLock) {
-                        latestGestureOutcome = outcome
-                        gestureOutcomeListeners.toList()
-                    }
-                    mainHandler.post {
-                        listeners.forEach { listener ->
-                            val stillObserved = synchronized(runtimeLock) {
-                                listener in gestureOutcomeListeners
-                            }
-                            if (stillObserved) listener(outcome)
-                        }
-                    }
-                },
+                onFinished = ::publishGestureOutcome,
             )
             connectedService = this
             controllerOverlay = DpadControllerOverlay(
@@ -130,6 +117,21 @@ class TouchAccessibilityService : AccessibilityService() {
     fun removeGestureOutcomeListener(listener: (GestureOutcome) -> Unit) {
         synchronized(runtimeLock) {
             gestureOutcomeListeners -= listener
+        }
+    }
+
+    internal fun publishGestureOutcome(outcome: GestureOutcome) {
+        val listeners = synchronized(runtimeLock) {
+            latestGestureOutcome = outcome
+            gestureOutcomeListeners.toList()
+        }
+        mainHandler.post {
+            listeners.forEach { listener ->
+                val stillObserved = synchronized(runtimeLock) {
+                    listener in gestureOutcomeListeners
+                }
+                if (stillObserved) listener(outcome)
+            }
         }
     }
 
