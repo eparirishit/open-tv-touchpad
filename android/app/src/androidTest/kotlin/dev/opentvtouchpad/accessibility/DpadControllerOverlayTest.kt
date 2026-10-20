@@ -13,6 +13,7 @@ import dev.opentvtouchpad.input.DisplayBounds
 import dev.opentvtouchpad.input.GestureSpec
 import dev.opentvtouchpad.input.PointF
 import dev.opentvtouchpad.input.SubmitResult
+import dev.opentvtouchpad.setup.GateRuntimeState
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy
@@ -197,8 +198,10 @@ private class RecordingGateRuntime : InvocationHandler {
                 Unit
             }
             "setGestureOutcomeListener" -> Unit
-            "gestureInFlight" -> false
-            "latestGestureOutcome" -> null
+            "currentGestureState" -> GateRuntimeState(
+                gestureInFlight = false,
+                latestOutcome = null,
+            )
             "toString" -> "RecordingGateRuntime"
             "hashCode" -> System.identityHashCode(this)
             "equals" -> proxy === arguments?.firstOrNull()

@@ -80,6 +80,9 @@ class GestureCoordinator(
     fun requiresRestart(): Boolean = restartRequired
 
     @Synchronized
+    fun isInFlight(): Boolean = inFlight != null
+
+    @Synchronized
     private fun finishCompleted(token: Long) {
         finish(token, cancellationReason = null)
     }

@@ -15,6 +15,7 @@ import dev.opentvtouchpad.input.GestureCoordinator
 import dev.opentvtouchpad.input.GestureOutcome
 import dev.opentvtouchpad.input.GestureSpec
 import dev.opentvtouchpad.input.SubmitResult
+import dev.opentvtouchpad.setup.GateRuntimeState
 import dev.opentvtouchpad.setup.ServiceGateRuntime
 
 class TouchAccessibilityService : AccessibilityService() {
@@ -26,7 +27,8 @@ class TouchAccessibilityService : AccessibilityService() {
     private var gestureCoordinator: GestureCoordinator? = null
     private var cursorOverlay: CursorOverlay? = null
     private var controllerOverlay: DpadControllerOverlay? = null
-    private var gestureOutcomeListener: ((GestureOutcome) -> Unit)? = null
+    private val gestureOutcomeListeners = linkedSetOf<(GestureOutcome) -> Unit>()
+    private var latestGestureOutcome: GestureOutcome? = null
     private lateinit var windowManager: WindowManager
 
     override fun onServiceConnected() {
@@ -39,9 +41,17 @@ class TouchAccessibilityService : AccessibilityService() {
                 clock = SystemClock::elapsedRealtime,
                 callbackTimeoutMillis = CALLBACK_TIMEOUT_MILLIS,
                 onFinished = { outcome ->
+                    val listeners = synchronized(runtimeLock) {
+                        latestGestureOutcome = outcome
+                        gestureOutcomeListeners.toList()
+                    }
                     mainHandler.post {
-                        val listener = synchronized(runtimeLock) { gestureOutcomeListener }
-                        listener?.invoke(outcome)
+                        listeners.forEach { listener ->
+                            val stillObserved = synchronized(runtimeLock) {
+                                listener in gestureOutcomeListeners
+                            }
+                            if (stillObserved) listener(outcome)
+                        }
                     }
                 },
             )
@@ -77,6 +87,7 @@ class TouchAccessibilityService : AccessibilityService() {
         val coordinator = gestureCoordinator ?: return@synchronized SubmitResult.REJECTED
         coordinator.submit(spec).also { result ->
             if (result == SubmitResult.ACCEPTED) {
+                latestGestureOutcome = null
                 mainHandler.removeCallbacks(timeoutCheck)
                 mainHandler.postDelayed(
                     timeoutCheck,
@@ -110,10 +121,23 @@ class TouchAccessibilityService : AccessibilityService() {
         }
     }
 
-    fun setGestureOutcomeListener(listener: ((GestureOutcome) -> Unit)?) {
+    fun addGestureOutcomeListener(listener: (GestureOutcome) -> Unit) {
         synchronized(runtimeLock) {
-            gestureOutcomeListener = listener
+            gestureOutcomeListeners += listener
         }
+    }
+
+    fun removeGestureOutcomeListener(listener: (GestureOutcome) -> Unit) {
+        synchronized(runtimeLock) {
+            gestureOutcomeListeners -= listener
+        }
+    }
+
+    internal fun currentGestureState(): GateRuntimeState = synchronized(runtimeLock) {
+        GateRuntimeState(
+            gestureInFlight = gestureCoordinator?.isInFlight() == true,
+            latestOutcome = latestGestureOutcome,
+        )
     }
 
     fun currentBounds(): DisplayBounds = currentDisplayBounds()
@@ -125,7 +149,8 @@ class TouchAccessibilityService : AccessibilityService() {
             cursorOverlay?.hide()
             cursorOverlay?.remove()
             controllerOverlay?.remove()
-            gestureOutcomeListener = null
+            gestureOutcomeListeners.clear()
+            latestGestureOutcome = null
             gestureCoordinator = null
             cursorOverlay = null
             controllerOverlay = null

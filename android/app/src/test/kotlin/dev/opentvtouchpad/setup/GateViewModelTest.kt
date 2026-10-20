@@ -98,6 +98,67 @@ class GateViewModelTest {
     }
 
     @Test
+    fun movementAndEveryGestureRefreshCurrentBoundsBeforeDerivingCoordinates() {
+        val fixture = Fixture()
+        fixture.viewModel.refresh()
+
+        fixture.bounds = DisplayBounds(width = 1280, height = 720)
+        fixture.perform(GateAction.MOVE_RIGHT)
+        assertEquals(DisplayBounds(1280, 720), fixture.viewModel.state.bounds)
+        assertEquals(PointF(996f, 540f), fixture.moved.single())
+
+        fixture.bounds = DisplayBounds(width = 800, height = 600)
+        fixture.perform(GateAction.TAP)
+        assertEquals(DisplayBounds(800, 600), fixture.viewModel.state.bounds)
+        assertEquals(
+            GestureSpec.Tap(PointF(799f, 540f), durationMillis = 80),
+            fixture.submitted.last(),
+        )
+        fixture.finish(callbackDurationMillis = 80)
+
+        fixture.bounds = DisplayBounds(width = 1000, height = 500)
+        fixture.perform(GateAction.SWIPE_VERTICAL)
+        assertEquals(DisplayBounds(1000, 500), fixture.viewModel.state.bounds)
+        assertEquals(
+            GestureSpec.Swipe(
+                start = PointF(500f, 325f),
+                end = PointF(500f, 175f),
+                durationMillis = 250,
+            ),
+            fixture.submitted.last(),
+        )
+        fixture.finish(callbackDurationMillis = 250)
+
+        fixture.bounds = DisplayBounds(width = 600, height = 1000)
+        fixture.perform(GateAction.SWIPE_HORIZONTAL)
+        assertEquals(DisplayBounds(600, 1000), fixture.viewModel.state.bounds)
+        assertEquals(
+            GestureSpec.Swipe(
+                start = PointF(390f, 500f),
+                end = PointF(210f, 500f),
+                durationMillis = 250,
+            ),
+            fixture.submitted.last(),
+        )
+        fixture.finish(callbackDurationMillis = 250)
+
+        fixture.bounds = DisplayBounds(width = 1200, height = 800)
+        fixture.perform(GateAction.DRAG_PATH)
+        assertEquals(DisplayBounds(1200, 800), fixture.viewModel.state.bounds)
+        assertEquals(
+            GestureSpec.Drag(
+                points = listOf(
+                    PointF(480f, 400f),
+                    PointF(600f, 400f),
+                    PointF(720f, 400f),
+                ),
+                durationMillis = 500,
+            ),
+            fixture.submitted.last(),
+        )
+    }
+
+    @Test
     fun acceptedGestureDisablesDispatchUntilCallbackPublishesOutcome() {
         val fixture = Fixture()
         fixture.viewModel.refresh()
@@ -154,7 +215,7 @@ class GateViewModelTest {
 
     private class Fixture(
         var connected: Boolean = true,
-        private val bounds: DisplayBounds = DisplayBounds(width = 1920, height = 1080),
+        var bounds: DisplayBounds = DisplayBounds(width = 1920, height = 1080),
         private val disconnectAfterFirstConnectionCheck: Boolean = false,
     ) : GateRuntime {
         val shown = mutableListOf<PointF>()
@@ -202,6 +263,11 @@ class GateViewModelTest {
             outcomeListener = listener
         }
 
+        override fun currentGestureState(): GateRuntimeState = GateRuntimeState(
+            gestureInFlight = authoritativeInFlight,
+            latestOutcome = latestOutcome,
+        )
+
         fun perform(action: GateAction, isRepeat: Boolean = false) {
             viewModel.perform(action, isRepeat)
         }
@@ -213,8 +279,5 @@ class GateViewModelTest {
             outcomeListener?.invoke(outcome)
         }
 
-        fun gestureInFlight(): Boolean = authoritativeInFlight
-
-        fun latestGestureOutcome(): GestureOutcome? = latestOutcome
     }
 }

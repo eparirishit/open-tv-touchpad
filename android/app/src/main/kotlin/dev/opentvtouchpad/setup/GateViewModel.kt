@@ -33,6 +33,11 @@ internal data class GateUiState(
     val settingsGuidanceVisible: Boolean = true,
 )
 
+internal data class GateRuntimeState(
+    val gestureInFlight: Boolean,
+    val latestOutcome: GestureOutcome?,
+)
+
 internal interface GateRuntime {
     val isConnected: Boolean
 
@@ -47,6 +52,8 @@ internal interface GateRuntime {
     fun cancelGesture()
 
     fun setGestureOutcomeListener(listener: ((GestureOutcome) -> Unit)?)
+
+    fun currentGestureState(): GateRuntimeState
 }
 
 internal class GateViewModel(
@@ -79,12 +86,16 @@ internal class GateViewModel(
             return
         }
         runtime.setGestureOutcomeListener(::onGestureFinished)
+        val gestureState = runtime.currentGestureState()
         update(
             state.copy(
                 connected = true,
                 bounds = bounds,
                 cursor = state.cursor?.let(bounds::clamp) ?: bounds.center(),
-                controlsEnabled = !state.gestureInFlight,
+                callbackDurationMillis = gestureState.latestOutcome?.callbackDurationMillis,
+                cancellationReason = gestureState.latestOutcome?.cancellationReason,
+                gestureInFlight = gestureState.gestureInFlight,
+                controlsEnabled = !gestureState.gestureInFlight,
                 settingsGuidanceVisible = false,
             ),
         )
@@ -111,11 +122,11 @@ internal class GateViewModel(
 
         when (action) {
             GateAction.SHOW_CURSOR -> runtime.showCursorAt(requireCursor())
-            GateAction.MOVE_UP -> moveCursor(deltaY = -movementStep())
-            GateAction.MOVE_DOWN -> moveCursor(deltaY = movementStep())
-            GateAction.MOVE_LEFT -> moveCursor(deltaX = -movementStep())
-            GateAction.MOVE_RIGHT -> moveCursor(deltaX = movementStep())
-            GateAction.TAP -> dispatch(GestureSpec.Tap(requireCursor(), TAP_DURATION_MILLIS))
+            GateAction.MOVE_UP -> moveCursor(deltaY = -1f)
+            GateAction.MOVE_DOWN -> moveCursor(deltaY = 1f)
+            GateAction.MOVE_LEFT -> moveCursor(deltaX = -1f)
+            GateAction.MOVE_RIGHT -> moveCursor(deltaX = 1f)
+            GateAction.TAP -> dispatch(tap())
             GateAction.SWIPE_VERTICAL -> dispatch(verticalSwipe())
             GateAction.SWIPE_HORIZONTAL -> dispatch(horizontalSwipe())
             GateAction.DRAG_PATH -> dispatch(dragPath())
@@ -124,9 +135,10 @@ internal class GateViewModel(
     }
 
     private fun moveCursor(deltaX: Float = 0f, deltaY: Float = 0f) {
-        val bounds = requireBounds()
+        val bounds = publishCurrentBounds()
         val cursor = requireCursor()
-        val next = bounds.clamp(PointF(cursor.x + deltaX, cursor.y + deltaY))
+        val step = movementStep(bounds)
+        val next = bounds.clamp(PointF(cursor.x + deltaX * step, cursor.y + deltaY * step))
         runtime.moveCursorTo(next)
         update(state.copy(cursor = next))
     }
@@ -156,8 +168,13 @@ internal class GateViewModel(
         )
     }
 
+    private fun tap(): GestureSpec.Tap {
+        publishCurrentBounds()
+        return GestureSpec.Tap(requireCursor(), TAP_DURATION_MILLIS)
+    }
+
     private fun verticalSwipe(): GestureSpec.Swipe {
-        val bounds = requireBounds()
+        val bounds = publishCurrentBounds()
         return GestureSpec.Swipe(
             start = bounds.point(xPercent = 50, yPercent = 65),
             end = bounds.point(xPercent = 50, yPercent = 35),
@@ -166,7 +183,7 @@ internal class GateViewModel(
     }
 
     private fun horizontalSwipe(): GestureSpec.Swipe {
-        val bounds = requireBounds()
+        val bounds = publishCurrentBounds()
         return GestureSpec.Swipe(
             start = bounds.point(xPercent = 65, yPercent = 50),
             end = bounds.point(xPercent = 35, yPercent = 50),
@@ -175,7 +192,7 @@ internal class GateViewModel(
     }
 
     private fun dragPath(): GestureSpec.Drag {
-        val bounds = requireBounds()
+        val bounds = publishCurrentBounds()
         return GestureSpec.Drag(
             points = listOf(
                 bounds.point(xPercent = 40, yPercent = 50),
@@ -186,14 +203,22 @@ internal class GateViewModel(
         )
     }
 
-    private fun movementStep(): Float {
-        val bounds = requireBounds()
+    private fun movementStep(bounds: DisplayBounds): Float {
         return (min(bounds.width, bounds.height) * MOVE_PERCENT / 100)
             .coerceAtLeast(1)
             .toFloat()
     }
 
-    private fun requireBounds(): DisplayBounds = checkNotNull(state.bounds)
+    private fun publishCurrentBounds(): DisplayBounds {
+        val bounds = runtime.currentBounds()
+        update(
+            state.copy(
+                bounds = bounds,
+                cursor = state.cursor?.let(bounds::clamp) ?: bounds.center(),
+            ),
+        )
+        return bounds
+    }
 
     private fun requireCursor(): PointF = checkNotNull(state.cursor)
 

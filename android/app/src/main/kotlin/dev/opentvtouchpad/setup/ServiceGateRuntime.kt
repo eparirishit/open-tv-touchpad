@@ -11,6 +11,7 @@ internal class ServiceGateRuntime(
     private val serviceProvider: () -> TouchAccessibilityService?,
 ) : GateRuntime {
     private var observedService: TouchAccessibilityService? = null
+    private var observedListener: ((GestureOutcome) -> Unit)? = null
 
     override val isConnected: Boolean
         get() = serviceProvider() != null
@@ -36,9 +37,20 @@ internal class ServiceGateRuntime(
     override fun setGestureOutcomeListener(listener: ((GestureOutcome) -> Unit)?) {
         val service = serviceProvider()
         if (observedService !== service) {
-            observedService?.setGestureOutcomeListener(null)
+            observedListener?.let { observedService?.removeGestureOutcomeListener(it) }
             observedService = service
+            observedListener = null
         }
-        service?.setGestureOutcomeListener(listener)
+        if (observedListener !== listener) {
+            observedListener?.let { service?.removeGestureOutcomeListener(it) }
+            observedListener = listener
+            listener?.let { service?.addGestureOutcomeListener(it) }
+        }
     }
+
+    override fun currentGestureState(): GateRuntimeState =
+        serviceProvider()?.currentGestureState() ?: GateRuntimeState(
+            gestureInFlight = false,
+            latestOutcome = null,
+        )
 }
