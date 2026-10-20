@@ -20,7 +20,7 @@ internal class DpadControllerOverlay(
     context: Context,
     private val windowManager: WindowManager,
     runtime: GateRuntime,
-) {
+) : ServiceOverlay {
     private val controllerView = ControllerView(context, GateViewModel(runtime))
     private val layoutParams = WindowManager.LayoutParams(
         WindowManager.LayoutParams.WRAP_CONTENT,
@@ -33,14 +33,14 @@ internal class DpadControllerOverlay(
     }
     private var attached = false
 
-    fun show() {
+    override fun show() {
         if (attached) return
         windowManager.addView(controllerView, layoutParams)
         attached = true
         controllerView.start()
     }
 
-    fun remove() {
+    override fun remove() {
         if (!attached) return
         controllerView.stop()
         windowManager.removeViewImmediate(controllerView)

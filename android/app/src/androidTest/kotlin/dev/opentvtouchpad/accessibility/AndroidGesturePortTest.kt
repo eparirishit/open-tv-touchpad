@@ -304,10 +304,8 @@ class AndroidGesturePortTest {
 
         service.removeGestureOutcomeListener(attachedListener)
         service.addGestureOutcomeListener(replayListener)
-        val refreshedState = service.currentGestureState()
-
-        assertFalse(refreshedState.gestureInFlight)
-        assertEquals(outcome, refreshedState.latestOutcome)
+        assertFalse(service.isGestureInFlight())
+        assertEquals(outcome, service.latestGestureOutcome())
         assertTrue(detachedOutcomes.isEmpty())
         assertTrue(replayListenerOutcomes.isEmpty())
     }

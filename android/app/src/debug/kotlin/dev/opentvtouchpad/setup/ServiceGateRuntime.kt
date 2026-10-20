@@ -49,7 +49,12 @@ internal class ServiceGateRuntime(
     }
 
     override fun currentGestureState(): GateRuntimeState =
-        serviceProvider()?.currentGestureState() ?: GateRuntimeState(
+        serviceProvider()?.let { service ->
+            GateRuntimeState(
+                gestureInFlight = service.isGestureInFlight(),
+                latestOutcome = service.latestGestureOutcome(),
+            )
+        } ?: GateRuntimeState(
             gestureInFlight = false,
             latestOutcome = null,
         )

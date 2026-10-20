@@ -15,8 +15,6 @@ import dev.opentvtouchpad.input.GestureCoordinator
 import dev.opentvtouchpad.input.GestureOutcome
 import dev.opentvtouchpad.input.GestureSpec
 import dev.opentvtouchpad.input.SubmitResult
-import dev.opentvtouchpad.setup.GateRuntimeState
-import dev.opentvtouchpad.setup.ServiceGateRuntime
 
 class TouchAccessibilityService : AccessibilityService() {
     private val runtimeLock = Any()
@@ -26,7 +24,7 @@ class TouchAccessibilityService : AccessibilityService() {
     }
     private var gestureCoordinator: GestureCoordinator? = null
     private var cursorOverlay: CursorOverlay? = null
-    private var controllerOverlay: DpadControllerOverlay? = null
+    private var controllerOverlay: ServiceOverlay? = null
     private val gestureOutcomeListeners = linkedSetOf<(GestureOutcome) -> Unit>()
     private var latestGestureOutcome: GestureOutcome? = null
     private lateinit var windowManager: WindowManager
@@ -43,11 +41,11 @@ class TouchAccessibilityService : AccessibilityService() {
                 onFinished = ::publishGestureOutcome,
             )
             publishConnectedService(this)
-            controllerOverlay = DpadControllerOverlay(
+            controllerOverlay = ServiceOverlayFactory.create(
                 this,
                 windowManager,
-                ServiceGateRuntime { this },
-            ).also(DpadControllerOverlay::show)
+                serviceProvider = { this },
+            ).also(ServiceOverlay::show)
         }
     }
 
@@ -135,11 +133,12 @@ class TouchAccessibilityService : AccessibilityService() {
         }
     }
 
-    internal fun currentGestureState(): GateRuntimeState = synchronized(runtimeLock) {
-        GateRuntimeState(
-            gestureInFlight = gestureCoordinator?.isInFlight() == true,
-            latestOutcome = latestGestureOutcome,
-        )
+    internal fun isGestureInFlight(): Boolean = synchronized(runtimeLock) {
+        gestureCoordinator?.isInFlight() == true
+    }
+
+    internal fun latestGestureOutcome(): GestureOutcome? = synchronized(runtimeLock) {
+        latestGestureOutcome
     }
 
     fun currentBounds(): DisplayBounds = currentDisplayBounds()

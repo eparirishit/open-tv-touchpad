@@ -1,25 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Open TV Touchpad</string>
-    <string name="accessibility_service_description">Shows the Open TV Touchpad cursor and performs approved test gestures.</string>
-    <string name="gate_title">M0 D-pad hardware gate</string>
-    <string name="gate_status_connected">Accessibility service connected. Use the system accessibility shortcut to show or hide the global D-pad controller.</string>
-    <string name="gate_status_disabled">Accessibility service disabled. Open settings, enable the gesture-only service, and assign the system accessibility shortcut.</string>
-    <string name="gate_bounds_value">Display bounds: %1$d × %2$d</string>
-    <string name="gate_bounds_unavailable">Display bounds: unavailable</string>
-    <string name="gate_dispatch_value">Last dispatch: %1$s</string>
-    <string name="gate_callback_value">Callback duration: %1$s ms</string>
-    <string name="gate_cancellation_value">Cancellation reason: %1$s</string>
-    <string name="gate_none">none</string>
-    <string name="gate_show_cursor">Show cursor</string>
-    <string name="gate_move_up">Move up</string>
-    <string name="gate_move_down">Move down</string>
-    <string name="gate_move_left">Move left</string>
-    <string name="gate_move_right">Move right</string>
-    <string name="gate_tap">Tap</string>
-    <string name="gate_swipe_vertical">Swipe vertical</string>
-    <string name="gate_swipe_horizontal">Swipe horizontal</string>
-    <string name="gate_drag_path">Drag path</string>
-    <string name="gate_cancel">Cancel active gesture</string>
-    <string name="gate_accessibility_settings">Open accessibility settings and assign shortcut</string>
+    <string name="accessibility_service_description">Shows the Open TV Touchpad cursor and performs approved gestures.</string>
 </resources>
