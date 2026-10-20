@@ -53,11 +53,13 @@ class GateActivity : Activity() {
         )?.activityInfo?.packageName
         val action = SettingsActionPolicy.actionFor(handlerPackageName)
 
-        try {
-            startActivity(Intent(action))
-        } catch (_: ActivityNotFoundException) {
-            startActivity(Intent(Settings.ACTION_SETTINGS))
-        }
+        SettingsNavigator { launchAction ->
+            try {
+                startActivity(Intent(launchAction))
+            } catch (error: ActivityNotFoundException) {
+                throw SettingsNavigator.ActivityUnavailableException(error)
+            }
+        }.open(action)
     }
 
     override fun onStart() {
