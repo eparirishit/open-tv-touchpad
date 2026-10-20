@@ -208,6 +208,7 @@ This is an author self-review because subagents were explicitly prohibited; it i
 ## Changed Files
 
 - `.superpowers/sdd/2026-10-18-open-tv-touchpad-m0-hardware-gate/task-5-report.md`
+- `.superpowers/sdd/2026-10-18-open-tv-touchpad-m0-hardware-gate/progress.md`
 - `README.md`
 - `android/app/src/androidTest/kotlin/dev/opentvtouchpad/accessibility/AccessibilityManifestTest.kt`
 - `android/app/src/androidTest/kotlin/dev/opentvtouchpad/accessibility/DpadControllerOverlayTest.kt`
