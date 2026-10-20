@@ -102,6 +102,13 @@ class GateViewModelTest {
         val fixture = Fixture()
         fixture.viewModel.refresh()
 
+        val showFixture = Fixture()
+        showFixture.viewModel.refresh()
+        showFixture.bounds = DisplayBounds(width = 800, height = 600)
+        showFixture.perform(GateAction.SHOW_CURSOR)
+        assertEquals(DisplayBounds(800, 600), showFixture.viewModel.state.bounds)
+        assertEquals(PointF(799f, 540f), showFixture.shown.single())
+
         fixture.bounds = DisplayBounds(width = 1280, height = 720)
         fixture.perform(GateAction.MOVE_RIGHT)
         assertEquals(DisplayBounds(1280, 720), fixture.viewModel.state.bounds)

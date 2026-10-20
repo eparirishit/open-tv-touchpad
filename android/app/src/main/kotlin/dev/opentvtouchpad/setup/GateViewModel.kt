@@ -121,7 +121,10 @@ internal class GateViewModel(
         if (state.gestureInFlight && action != GateAction.CANCEL) return
 
         when (action) {
-            GateAction.SHOW_CURSOR -> runtime.showCursorAt(requireCursor())
+            GateAction.SHOW_CURSOR -> {
+                publishCurrentBounds()
+                runtime.showCursorAt(requireCursor())
+            }
             GateAction.MOVE_UP -> moveCursor(deltaY = -1f)
             GateAction.MOVE_DOWN -> moveCursor(deltaY = 1f)
             GateAction.MOVE_LEFT -> moveCursor(deltaX = -1f)
