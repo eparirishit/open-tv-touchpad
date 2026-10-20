@@ -2,6 +2,7 @@ package dev.opentvtouchpad.accessibility
 
 import android.app.Activity
 import android.content.Context
+import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
@@ -42,6 +43,21 @@ class DpadControllerOverlayTest {
         assertFalse(added.flags and WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE != 0)
         assertTrue(added.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE != 0)
         assertFalse(windowManager.view!!.context is Activity)
+
+        onMain { invoke(overlay, "remove") }
+    }
+
+    @Test
+    fun controllerUsesCompactEndAnchoredWindow() {
+        val windowManager = RecordingWindowManager()
+        val overlay = newOverlay(windowManager, RecordingGateRuntime())
+
+        onMain { invoke(overlay, "show") }
+
+        val added = windowManager.added.single()
+        assertEquals(WindowManager.LayoutParams.WRAP_CONTENT, added.width)
+        assertEquals(WindowManager.LayoutParams.WRAP_CONTENT, added.height)
+        assertEquals(Gravity.END or Gravity.CENTER_VERTICAL, added.gravity)
 
         onMain { invoke(overlay, "remove") }
     }

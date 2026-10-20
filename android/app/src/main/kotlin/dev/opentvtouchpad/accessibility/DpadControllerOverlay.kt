@@ -23,13 +23,13 @@ internal class DpadControllerOverlay(
 ) {
     private val controllerView = ControllerView(context, GateViewModel(runtime))
     private val layoutParams = WindowManager.LayoutParams(
-        WindowManager.LayoutParams.MATCH_PARENT,
-        WindowManager.LayoutParams.MATCH_PARENT,
+        WindowManager.LayoutParams.WRAP_CONTENT,
+        WindowManager.LayoutParams.WRAP_CONTENT,
         WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
         WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
         PixelFormat.TRANSLUCENT,
     ).apply {
-        gravity = Gravity.TOP or Gravity.START
+        gravity = Gravity.END or Gravity.CENTER_VERTICAL
     }
     private var attached = false
 
@@ -57,7 +57,7 @@ internal class DpadControllerOverlay(
         init {
             isFocusable = true
             isFocusableInTouchMode = true
-            LayoutInflater.from(context).inflate(R.layout.activity_gate, this, true)
+            LayoutInflater.from(context).inflate(R.layout.controller_overlay, this, true)
             actionButtons = mapOf(
                 GateAction.SHOW_CURSOR to findViewById(R.id.show_cursor),
                 GateAction.MOVE_UP to findViewById(R.id.move_up),
@@ -117,22 +117,6 @@ internal class DpadControllerOverlay(
                     R.string.gate_status_disabled
                 },
             )
-            findViewById<TextView>(R.id.display_bounds).text = state.bounds?.let {
-                context.getString(R.string.gate_bounds_value, it.width, it.height)
-            } ?: context.getString(R.string.gate_bounds_unavailable)
-            findViewById<TextView>(R.id.last_dispatch_result).text = context.getString(
-                R.string.gate_dispatch_value,
-                state.lastDispatchResult?.name ?: context.getString(R.string.gate_none),
-            )
-            findViewById<TextView>(R.id.callback_duration).text = context.getString(
-                R.string.gate_callback_value,
-                state.callbackDurationMillis?.toString() ?: context.getString(R.string.gate_none),
-            )
-            findViewById<TextView>(R.id.cancellation_reason).text = context.getString(
-                R.string.gate_cancellation_value,
-                state.cancellationReason?.name ?: context.getString(R.string.gate_none),
-            )
-
             actionButtons.forEach { (action, button) ->
                 button.isEnabled = if (action == GateAction.CANCEL) {
                     state.connected && state.gestureInFlight
