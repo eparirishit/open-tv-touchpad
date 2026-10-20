@@ -3,6 +3,7 @@ package dev.opentvtouchpad.setup
 import android.app.Activity
 import android.app.Instrumentation
 import android.content.Intent
+import android.content.IntentFilter
 import android.provider.Settings
 import android.view.KeyEvent
 import android.view.View
@@ -10,6 +11,8 @@ import android.widget.Button
 import android.widget.TextView
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import dev.opentvtouchpad.input.DisplayBounds
+import dev.opentvtouchpad.input.PointF
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -76,7 +79,7 @@ class GateActivityDpadTest {
         assertTrue(settingsButton.isEnabled)
 
         val monitor = instrumentation.addMonitor(
-            Settings.ACTION_ACCESSIBILITY_SETTINGS,
+            IntentFilter(Settings.ACTION_ACCESSIBILITY_SETTINGS),
             Instrumentation.ActivityResult(Activity.RESULT_OK, null),
             true,
         )
@@ -87,6 +90,39 @@ class GateActivityDpadTest {
         } finally {
             instrumentation.removeMonitor(monitor)
         }
+    }
+
+    @Test
+    fun inFlightGestureDisablesDispatchActionsAndFocusesCancel() {
+        val render = GateActivity::class.java.getDeclaredMethod("render", GateUiState::class.java)
+            .apply { isAccessible = true }
+        val state = GateUiState(
+            connected = true,
+            bounds = DisplayBounds(width = 1920, height = 1080),
+            cursor = PointF(960f, 540f),
+            gestureInFlight = true,
+            controlsEnabled = false,
+            settingsGuidanceVisible = false,
+        )
+
+        instrumentation.runOnMainSync { render.invoke(activity, state) }
+
+        assertTrue(
+            listOf(
+                "show_cursor",
+                "move_up",
+                "move_down",
+                "move_left",
+                "move_right",
+                "tap",
+                "swipe_vertical",
+                "swipe_horizontal",
+                "drag_path",
+            ).all { !activity.findViewById<Button>(requiredId(it)).isEnabled },
+        )
+        val cancel = activity.findViewById<Button>(requiredId("cancel"))
+        assertTrue(cancel.isEnabled)
+        assertEquals(cancel.id, activity.currentFocus?.id)
     }
 
     private fun requiredId(name: String): Int {

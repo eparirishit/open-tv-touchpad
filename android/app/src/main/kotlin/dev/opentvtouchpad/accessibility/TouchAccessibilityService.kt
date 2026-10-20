@@ -12,6 +12,7 @@ import android.view.accessibility.AccessibilityEvent
 import dev.opentvtouchpad.input.CancelReason
 import dev.opentvtouchpad.input.DisplayBounds
 import dev.opentvtouchpad.input.GestureCoordinator
+import dev.opentvtouchpad.input.GestureOutcome
 import dev.opentvtouchpad.input.GestureSpec
 import dev.opentvtouchpad.input.SubmitResult
 
@@ -23,6 +24,7 @@ class TouchAccessibilityService : AccessibilityService() {
     }
     private var gestureCoordinator: GestureCoordinator? = null
     private var cursorOverlay: CursorOverlay? = null
+    private var gestureOutcomeListener: ((GestureOutcome) -> Unit)? = null
     private lateinit var windowManager: WindowManager
 
     override fun onServiceConnected() {
@@ -34,6 +36,12 @@ class TouchAccessibilityService : AccessibilityService() {
                 port = AndroidGesturePort(this, ::currentDisplayBounds),
                 clock = SystemClock::elapsedRealtime,
                 callbackTimeoutMillis = CALLBACK_TIMEOUT_MILLIS,
+                onFinished = { outcome ->
+                    mainHandler.post {
+                        val listener = synchronized(runtimeLock) { gestureOutcomeListener }
+                        listener?.invoke(outcome)
+                    }
+                },
             )
             connectedService = this
         }
@@ -95,6 +103,12 @@ class TouchAccessibilityService : AccessibilityService() {
         }
     }
 
+    fun setGestureOutcomeListener(listener: ((GestureOutcome) -> Unit)?) {
+        synchronized(runtimeLock) {
+            gestureOutcomeListener = listener
+        }
+    }
+
     fun currentBounds(): DisplayBounds = currentDisplayBounds()
 
     private fun shutdownRuntime(reason: CancelReason) {
@@ -103,6 +117,7 @@ class TouchAccessibilityService : AccessibilityService() {
             mainHandler.removeCallbacks(timeoutCheck)
             cursorOverlay?.hide()
             cursorOverlay?.remove()
+            gestureOutcomeListener = null
             gestureCoordinator = null
             cursorOverlay = null
             if (connectedService === this) connectedService = null

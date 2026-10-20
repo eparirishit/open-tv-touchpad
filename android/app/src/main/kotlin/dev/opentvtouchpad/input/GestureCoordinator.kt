@@ -17,10 +17,16 @@ enum class CancelReason {
     TIMEOUT,
 }
 
+data class GestureOutcome(
+    val callbackDurationMillis: Long,
+    val cancellationReason: CancelReason?,
+)
+
 class GestureCoordinator(
     private val port: GesturePort,
     private val clock: MonotonicClock,
     private val callbackTimeoutMillis: Long,
+    private val onFinished: (GestureOutcome) -> Unit = {},
 ) {
     private var nextToken = 0L
     private var inFlight: InFlight? = null
@@ -41,14 +47,14 @@ class GestureCoordinator(
         val accepted = port.dispatch(
             spec,
             object : GestureCallback {
-                override fun onCompleted() = finish(token)
+                override fun onCompleted() = finishCompleted(token)
 
-                override fun onCancelled() = finish(token)
+                override fun onCancelled() = finishCancelled(token)
             },
         )
 
         if (!accepted) {
-            finish(token)
+            clear(token)
             return SubmitResult.REJECTED
         }
         return SubmitResult.ACCEPTED
@@ -66,7 +72,7 @@ class GestureCoordinator(
         if (clock.nowMillis() - current.startedAtMillis < callbackDeadlineMillis) return false
 
         cancel(current.token, CancelReason.TIMEOUT)
-        finish(current.token)
+        finishCancelled(current.token)
         return true
     }
 
@@ -74,7 +80,33 @@ class GestureCoordinator(
     fun requiresRestart(): Boolean = restartRequired
 
     @Synchronized
-    private fun finish(token: Long) {
+    private fun finishCompleted(token: Long) {
+        finish(token, cancellationReason = null)
+    }
+
+    @Synchronized
+    private fun finishCancelled(token: Long) {
+        val cancellationReason = inFlight
+            ?.takeIf { it.token == token }
+            ?.cancellationReason
+            ?: CancelReason.ANDROID
+        finish(token, cancellationReason)
+    }
+
+    private fun finish(token: Long, cancellationReason: CancelReason?) {
+        val completed = inFlight?.takeIf { it.token == token } ?: return
+
+        clear(token)
+        onFinished(
+            GestureOutcome(
+                callbackDurationMillis = (clock.nowMillis() - completed.startedAtMillis)
+                    .coerceAtLeast(0),
+                cancellationReason = cancellationReason,
+            ),
+        )
+    }
+
+    private fun clear(token: Long) {
         if (inFlight?.token != token) return
 
         inFlight = null
@@ -83,9 +115,10 @@ class GestureCoordinator(
 
     @Synchronized
     private fun cancel(token: Long, reason: CancelReason) {
-        if (inFlight?.token != token) return
+        val current = inFlight?.takeIf { it.token == token } ?: return
 
         if (reason == CancelReason.TIMEOUT) restartRequired = true
+        current.cancellationReason = reason
         if (!cancellationRequested) {
             cancellationRequested = true
             port.cancelActiveGesture()
@@ -96,5 +129,6 @@ class GestureCoordinator(
         val spec: GestureSpec,
         val token: Long,
         val startedAtMillis: Long,
+        var cancellationReason: CancelReason? = null,
     )
 }

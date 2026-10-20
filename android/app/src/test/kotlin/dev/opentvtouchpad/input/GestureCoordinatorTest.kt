@@ -192,17 +192,15 @@ class GestureCoordinatorTest {
 
     @Test
     fun reportsCallbackDurationAndCancellationReason() {
-        val outcomeClass = Class.forName("dev.opentvtouchpad.input.GestureOutcome")
-        val outcomes = mutableListOf<Any>()
+        val outcomes = mutableListOf<GestureOutcome>()
         val clock = FakeMonotonicClock()
         val port = FakeGesturePort()
-        val listener: (Any) -> Unit = { outcome -> outcomes += outcome }
-        val coordinator = GestureCoordinator::class.java.getConstructor(
-            GesturePort::class.java,
-            MonotonicClock::class.java,
-            Long::class.javaPrimitiveType,
-            kotlin.jvm.functions.Function1::class.java,
-        ).newInstance(port, clock, 1_000L, listener) as GestureCoordinator
+        val coordinator = GestureCoordinator(
+            port = port,
+            clock = clock,
+            callbackTimeoutMillis = 1_000,
+            onFinished = outcomes::add,
+        )
 
         coordinator.submit(firstTap)
         clock.advanceBy(93)
@@ -212,13 +210,15 @@ class GestureCoordinatorTest {
         clock.advanceBy(41)
         port.callbacks.last().onCancelled()
 
-        assertEquals(2, outcomes.size)
-        assertEquals(93L, outcomeClass.getMethod("getCallbackDurationMillis").invoke(outcomes[0]))
-        assertEquals(null, outcomeClass.getMethod("getCancellationReason").invoke(outcomes[0]))
-        assertEquals(41L, outcomeClass.getMethod("getCallbackDurationMillis").invoke(outcomes[1]))
         assertEquals(
-            CancelReason.EXPLICIT,
-            outcomeClass.getMethod("getCancellationReason").invoke(outcomes[1]),
+            listOf(
+                GestureOutcome(callbackDurationMillis = 93, cancellationReason = null),
+                GestureOutcome(
+                    callbackDurationMillis = 41,
+                    cancellationReason = CancelReason.EXPLICIT,
+                ),
+            ),
+            outcomes,
         )
     }
 

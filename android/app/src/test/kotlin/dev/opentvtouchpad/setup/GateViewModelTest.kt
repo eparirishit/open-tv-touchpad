@@ -2,11 +2,10 @@ package dev.opentvtouchpad.setup
 
 import dev.opentvtouchpad.input.CancelReason
 import dev.opentvtouchpad.input.DisplayBounds
+import dev.opentvtouchpad.input.GestureOutcome
 import dev.opentvtouchpad.input.GestureSpec
 import dev.opentvtouchpad.input.PointF
 import dev.opentvtouchpad.input.SubmitResult
-import java.lang.reflect.Proxy
-import kotlin.jvm.functions.Function1
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -18,27 +17,38 @@ class GateViewModelTest {
     fun disconnectedAccessibilityShowsSettingsGuidanceAndDisablesActions() {
         val fixture = Fixture(connected = false)
 
-        fixture.refresh()
+        fixture.viewModel.refresh()
 
-        assertFalse(fixture.booleanState("getControlsEnabled"))
-        assertTrue(fixture.booleanState("getSettingsGuidanceVisible"))
-        assertNull(fixture.stateValue("getBounds"))
+        assertFalse(fixture.viewModel.state.controlsEnabled)
+        assertTrue(fixture.viewModel.state.settingsGuidanceVisible)
+        assertNull(fixture.viewModel.state.bounds)
+    }
+
+    @Test
+    fun connectionLossWhileRefreshingShowsSettingsGuidance() {
+        val fixture = Fixture(disconnectAfterFirstConnectionCheck = true)
+
+        fixture.viewModel.refresh()
+
+        assertFalse(fixture.viewModel.state.connected)
+        assertFalse(fixture.viewModel.state.controlsEnabled)
+        assertTrue(fixture.viewModel.state.settingsGuidanceVisible)
     }
 
     @Test
     fun keyRepeatMovesCursorWithoutDuplicatingTapOrDrag() {
         val fixture = Fixture()
-        fixture.refresh()
+        fixture.viewModel.refresh()
 
-        fixture.perform("SHOW_CURSOR")
-        fixture.perform("MOVE_RIGHT")
-        fixture.perform("MOVE_RIGHT", isRepeat = true)
-        fixture.perform("TAP")
-        fixture.finish(callbackDurationMillis = 80, cancellationReason = null)
-        fixture.perform("TAP", isRepeat = true)
-        fixture.perform("DRAG_PATH")
-        fixture.finish(callbackDurationMillis = 500, cancellationReason = null)
-        fixture.perform("DRAG_PATH", isRepeat = true)
+        fixture.perform(GateAction.SHOW_CURSOR)
+        fixture.perform(GateAction.MOVE_RIGHT)
+        fixture.perform(GateAction.MOVE_RIGHT, isRepeat = true)
+        fixture.perform(GateAction.TAP)
+        fixture.finish(callbackDurationMillis = 80)
+        fixture.perform(GateAction.TAP, isRepeat = true)
+        fixture.perform(GateAction.DRAG_PATH)
+        fixture.finish(callbackDurationMillis = 500)
+        fixture.perform(GateAction.DRAG_PATH, isRepeat = true)
 
         assertEquals(PointF(960f, 540f), fixture.shown.single())
         assertEquals(listOf(PointF(1_014f, 540f), PointF(1_068f, 540f)), fixture.moved)
@@ -50,13 +60,13 @@ class GateViewModelTest {
     @Test
     fun gesturePathsUseFixedConservativeFractionsOfCurrentBounds() {
         val fixture = Fixture()
-        fixture.refresh()
+        fixture.viewModel.refresh()
 
-        fixture.perform("SWIPE_VERTICAL")
-        fixture.finish(callbackDurationMillis = 250, cancellationReason = null)
-        fixture.perform("SWIPE_HORIZONTAL")
-        fixture.finish(callbackDurationMillis = 250, cancellationReason = null)
-        fixture.perform("DRAG_PATH")
+        fixture.perform(GateAction.SWIPE_VERTICAL)
+        fixture.finish(callbackDurationMillis = 250)
+        fixture.perform(GateAction.SWIPE_HORIZONTAL)
+        fixture.finish(callbackDurationMillis = 250)
+        fixture.perform(GateAction.DRAG_PATH)
 
         assertEquals(
             GestureSpec.Swipe(
@@ -90,101 +100,89 @@ class GateViewModelTest {
     @Test
     fun acceptedGestureDisablesDispatchUntilCallbackPublishesOutcome() {
         val fixture = Fixture()
-        fixture.refresh()
+        fixture.viewModel.refresh()
 
-        fixture.perform("TAP")
+        fixture.perform(GateAction.TAP)
 
-        assertFalse(fixture.booleanState("getControlsEnabled"))
-        assertTrue(fixture.booleanState("getGestureInFlight"))
-        assertEquals(SubmitResult.ACCEPTED, fixture.stateValue("getLastDispatchResult"))
+        assertFalse(fixture.viewModel.state.controlsEnabled)
+        assertTrue(fixture.viewModel.state.gestureInFlight)
+        assertEquals(SubmitResult.ACCEPTED, fixture.viewModel.state.lastDispatchResult)
 
-        fixture.perform("SWIPE_VERTICAL")
+        fixture.perform(GateAction.SWIPE_VERTICAL)
         assertEquals(1, fixture.submitted.size)
 
         fixture.finish(callbackDurationMillis = 93, cancellationReason = CancelReason.ANDROID)
 
-        assertTrue(fixture.booleanState("getControlsEnabled"))
-        assertFalse(fixture.booleanState("getGestureInFlight"))
-        assertEquals(93L, fixture.stateValue("getCallbackDurationMillis"))
-        assertEquals(CancelReason.ANDROID, fixture.stateValue("getCancellationReason"))
+        assertTrue(fixture.viewModel.state.controlsEnabled)
+        assertFalse(fixture.viewModel.state.gestureInFlight)
+        assertEquals(93L, fixture.viewModel.state.callbackDurationMillis)
+        assertEquals(CancelReason.ANDROID, fixture.viewModel.state.cancellationReason)
     }
 
     @Test
     fun cancelStaysAvailableForAnInFlightGesture() {
         val fixture = Fixture()
-        fixture.refresh()
-        fixture.perform("DRAG_PATH")
+        fixture.viewModel.refresh()
+        fixture.perform(GateAction.DRAG_PATH)
 
-        fixture.perform("CANCEL")
+        fixture.perform(GateAction.CANCEL)
 
         assertEquals(1, fixture.cancellationCount)
-        assertTrue(fixture.booleanState("getGestureInFlight"))
+        assertTrue(fixture.viewModel.state.gestureInFlight)
     }
 
     private class Fixture(
         var connected: Boolean = true,
         private val bounds: DisplayBounds = DisplayBounds(width = 1920, height = 1080),
-    ) {
+        private val disconnectAfterFirstConnectionCheck: Boolean = false,
+    ) : GateRuntime {
         val shown = mutableListOf<PointF>()
         val moved = mutableListOf<PointF>()
         val submitted = mutableListOf<GestureSpec>()
         var cancellationCount = 0
-        private var outcomeListener: Function1<Any, Unit>? = null
-        private val runtimeClass = Class.forName("dev.opentvtouchpad.setup.GateRuntime")
-        private val actionClass = Class.forName("dev.opentvtouchpad.setup.GateAction")
-        private val outcomeClass = Class.forName("dev.opentvtouchpad.input.GestureOutcome")
-        private val viewModelClass = Class.forName("dev.opentvtouchpad.setup.GateViewModel")
-        private val runtime = Proxy.newProxyInstance(
-            runtimeClass.classLoader,
-            arrayOf(runtimeClass),
-        ) { _, method, arguments ->
-            when (method.name) {
-                "isConnected" -> connected
-                "currentBounds" -> bounds
-                "showCursorAt" -> shown += arguments!![0] as PointF
-                "moveCursorTo" -> moved += arguments!![0] as PointF
-                "submitGesture" -> {
-                    submitted += arguments!![0] as GestureSpec
-                    SubmitResult.ACCEPTED
+        val viewModel = GateViewModel(this)
+        private var outcomeListener: ((GestureOutcome) -> Unit)? = null
+        private var connectionChecks = 0
+
+        override val isConnected: Boolean
+            get() {
+                connectionChecks += 1
+                return connected.also {
+                    if (disconnectAfterFirstConnectionCheck && connectionChecks == 1) {
+                        connected = false
+                    }
                 }
-                "cancelGesture" -> cancellationCount += 1
-                "setGestureOutcomeListener" -> {
-                    @Suppress("UNCHECKED_CAST")
-                    outcomeListener = arguments?.get(0) as Function1<Any, Unit>?
-                }
-                "toString" -> "FakeGateRuntime"
-                else -> error("Unexpected GateRuntime method: ${method.name}")
             }
-        }
-        private val viewModel = viewModelClass.getConstructor(runtimeClass).newInstance(runtime)
 
-        fun refresh() {
-            viewModelClass.getMethod("refresh").invoke(viewModel)
-        }
+        override fun currentBounds(): DisplayBounds = bounds
 
-        fun perform(actionName: String, isRepeat: Boolean = false) {
-            @Suppress("UNCHECKED_CAST")
-            val action = java.lang.Enum.valueOf(actionClass as Class<out Enum<*>>, actionName)
-            viewModelClass.getMethod(
-                "perform",
-                actionClass,
-                Boolean::class.javaPrimitiveType,
-            ).invoke(viewModel, action, isRepeat)
+        override fun showCursorAt(point: PointF) {
+            shown += point
         }
 
-        fun finish(callbackDurationMillis: Long, cancellationReason: CancelReason?) {
-            val outcome = outcomeClass.getConstructor(
-                Long::class.javaPrimitiveType,
-                CancelReason::class.java,
-            ).newInstance(callbackDurationMillis, cancellationReason)
-            outcomeListener!!.invoke(outcome)
+        override fun moveCursorTo(point: PointF) {
+            moved += point
         }
 
-        fun booleanState(getterName: String): Boolean = stateValue(getterName) as Boolean
+        override fun submitGesture(spec: GestureSpec): SubmitResult {
+            submitted += spec
+            return SubmitResult.ACCEPTED
+        }
 
-        fun stateValue(getterName: String): Any? {
-            val state = viewModelClass.getMethod("getState").invoke(viewModel)
-            return state.javaClass.getMethod(getterName).invoke(state)
+        override fun cancelGesture() {
+            cancellationCount += 1
+        }
+
+        override fun setGestureOutcomeListener(listener: ((GestureOutcome) -> Unit)?) {
+            outcomeListener = listener
+        }
+
+        fun perform(action: GateAction, isRepeat: Boolean = false) {
+            viewModel.perform(action, isRepeat)
+        }
+
+        fun finish(callbackDurationMillis: Long, cancellationReason: CancelReason? = null) {
+            outcomeListener!!.invoke(GestureOutcome(callbackDurationMillis, cancellationReason))
         }
     }
 }
