@@ -7,6 +7,10 @@
 - Test commit: `b6925c8` (`test: define D-pad gate behavior`)
 - Gesture-outcome test commit: `46c9fdd` (`test: define gesture outcome reporting`)
 - Implementation commit: `e5d4e0b` (`feat: add D-pad hardware gate controls`)
+- Controller-overlay test commit: `9cdf3f5` (`test: cover service D-pad overlay`)
+- Controller-overlay implementation commit: `79ba7c6` (`fix: add service-owned D-pad overlay`)
+- Detached-outcome test commit: `76dfab7` (`test: cover detached gesture outcome replay`)
+- Fix-round implementation commit: `b3189e6` (`fix: keep D-pad controls live over target apps`)
 - Requirements source: `.superpowers/sdd/2026-10-18-open-tv-touchpad-m0-hardware-gate/task-5-brief.md`
 
 ## Scope Implemented
@@ -79,6 +83,103 @@ BUILD SUCCESSFUL in 15s
 
 Result files contained 22 JVM test cases and 18 connected test cases, all passing. Lint and debug assembly also passed.
 
+## Fix Round 1 Evidence
+
+Independent review identified three blocking defects: the activity controller
+could not remain active over Netflix, a terminal gesture outcome could be lost
+while an activity listener was detached, and action coordinates could be
+derived from stale display bounds. The approved fix retained the activity as
+setup guidance while moving global gate control to a separate service-owned,
+focusable, non-touchable accessibility overlay.
+
+### RED: Service-Owned Controller
+
+The test-only commit `9cdf3f5` was exported to a temporary source directory and
+the focused connected class was run on the API 31 Android TV emulator before
+the implementation commit:
+
+```text
+./gradlew :android:app:connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=dev.opentvtouchpad.accessibility.DpadControllerOverlayTest
+```
+
+Result: `BUILD FAILED`; 4 tests ran and all 4 failed with
+`ClassNotFoundException: dev.opentvtouchpad.accessibility.DpadControllerOverlay`.
+This was the expected missing-controller failure. The same class on the final
+code reported `BUILD SUCCESSFUL`; 4/4 tests passed.
+
+### RED: Detached Terminal Outcome
+
+The test-only commit `76dfab7` was exported to a temporary source directory and
+the detached-outcome regression was run before the production changes:
+
+```text
+./gradlew :android:app:testDebugUnitTest \
+  --tests 'dev.opentvtouchpad.setup.GateViewModelTest.refreshRecoversTerminalOutcomeDeliveredWhileListenerWasDetached'
+```
+
+Result: `BUILD FAILED`; 1 test ran with exactly 1 failure at the assertion that
+the stale in-flight state must clear after refresh. On the final code, the
+focused setup suite passed 8/8, including this regression. The accessibility
+service now retains the latest terminal outcome, supports the activity and
+overlay as independent listeners, and publishes authoritative coordinator
+in-flight state during refresh.
+
+### RED: Current Bounds Per Action
+
+The bounds regression was added to the preserved six-file worktree before its
+production fix and run against that state:
+
+```text
+./gradlew :android:app:testDebugUnitTest \
+  --tests 'dev.opentvtouchpad.setup.GateViewModelTest'
+```
+
+Result: `BUILD FAILED`; 8 tests ran with exactly 1 failure. The new test
+expected published bounds `1280×720` but observed stale `1920×1080` bounds.
+After the minimal shared bounds-refresh implementation, the same suite passed
+8/8. The regression checks movement, tap, vertical swipe, horizontal swipe,
+and drag against independently changed bounds and verifies that each new bound
+is published before coordinate derivation.
+
+### Focused GREEN
+
+The exact Task 5 focused command passed on the final code:
+
+```text
+./gradlew :android:app:testDebugUnitTest --tests 'dev.opentvtouchpad.setup.*' \
+  :android:app:connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=dev.opentvtouchpad.setup.GateActivityDpadTest
+BUILD SUCCESSFUL in 12s
+76 actionable tasks: 3 executed, 73 up-to-date
+```
+
+Result XML contained 8 setup JVM tests and 3 connected activity tests, with 0
+failures, 0 errors, and 0 skipped tests.
+
+### Complete GREEN
+
+The complete required matrix passed with the documented Java 17, Android SDK,
+and workspace-local Gradle user home:
+
+```text
+./gradlew :android:app:testDebugUnitTest :android:app:connectedDebugAndroidTest \
+  :android:app:lintDebug :android:app:assembleDebug
+BUILD SUCCESSFUL in 19s
+85 actionable tasks: 19 executed, 66 up-to-date
+```
+
+- JVM XML: 24 tests, 0 failures, 0 errors, 0 skipped.
+- Connected XML: 22 tests, 0 failures, 0 errors, 0 skipped.
+- Lint: 0 errors and 7 pre-existing baseline warnings.
+- Merged manifest: one exported Leanback launcher activity and one exported
+  accessibility service protected by `BIND_ACCESSIBILITY_SERVICE`; no
+  receivers, providers, or requested permissions, including no
+  `SYSTEM_ALERT_WINDOW`.
+- Accessibility metadata: `canPerformGestures=true`,
+  `canRetrieveWindowContent=false`, with no key-filter capability or flag.
+- `git diff --check`: clean before the behavior commit.
+
 ## Security Review
 
 - No foreground-application inspection or identification was added.
@@ -90,13 +191,15 @@ Result files contained 22 JVM test cases and 18 connected test cases, all passin
 
 ## Self-Review
 
-Review range: Task 4 base `e9d8723` through implementation `e5d4e0b`, including untracked files before commit and all connected callers.
+Review range: Task 4 base `e9d8723` through fix-round implementation `b3189e6`, including preserved uncommitted files before commit and all connected callers.
 
 - Confirmed all `GestureCoordinator` callers remain source-compatible through the default outcome listener.
 - Confirmed stale callbacks still cannot finish successor gestures and timeout remains fail-closed.
 - Found and fixed one actionable race: accessibility service loss between connection and bounds checks could retain stale state or crash service calls. Added a focused RED-to-GREEN regression test and null-safe service adapter calls.
 - Investigated a possible in-flight focus loss. A connected regression test showed Android moves focus to the enabled cancel action; no production workaround was needed.
 - Confirmed deterministic action focus order, in-flight disabling, cancel availability, settings guidance, and key-repeat behavior through focused tests.
+- Confirmed the service-owned controller remains focusable/non-touchable while the cursor remains non-focusable/non-touchable, and that no key filtering, foreground inspection, overlay permission, or exported component was added.
+- Confirmed detached terminal outcomes and authoritative in-flight state reconcile on refresh, and all coordinate actions publish fresh bounds before derivation.
 - Confirmed the manifest and app dependency configuration have no diff.
 - Final verdict: ship Task 5 for emulator/local verification. No open Critical, Important, or Minor findings.
 
@@ -104,18 +207,30 @@ This is an author self-review because subagents were explicitly prohibited; it i
 
 ## Changed Files
 
+- `.superpowers/sdd/2026-10-18-open-tv-touchpad-m0-hardware-gate/task-5-report.md`
+- `README.md`
+- `android/app/src/androidTest/kotlin/dev/opentvtouchpad/accessibility/AccessibilityManifestTest.kt`
+- `android/app/src/androidTest/kotlin/dev/opentvtouchpad/accessibility/DpadControllerOverlayTest.kt`
+- `android/app/src/androidTest/kotlin/dev/opentvtouchpad/setup/GateActivityDpadTest.kt`
+- `android/app/src/main/kotlin/dev/opentvtouchpad/accessibility/DpadControllerOverlay.kt`
 - `android/app/src/main/kotlin/dev/opentvtouchpad/setup/GateActivity.kt`
 - `android/app/src/main/kotlin/dev/opentvtouchpad/setup/GateViewModel.kt`
 - `android/app/src/main/kotlin/dev/opentvtouchpad/accessibility/TouchAccessibilityService.kt`
 - `android/app/src/main/kotlin/dev/opentvtouchpad/input/GestureCoordinator.kt`
+- `android/app/src/main/kotlin/dev/opentvtouchpad/setup/ServiceGateRuntime.kt`
 - `android/app/src/main/res/layout/activity_gate.xml`
 - `android/app/src/main/res/values/strings.xml`
 - `android/app/src/test/kotlin/dev/opentvtouchpad/setup/GateViewModelTest.kt`
 - `android/app/src/test/kotlin/dev/opentvtouchpad/input/GestureCoordinatorTest.kt`
-- `android/app/src/androidTest/kotlin/dev/opentvtouchpad/setup/GateActivityDpadTest.kt`
+- `docs/gates/m0-checklist.md`
+- `docs/superpowers/specs/2026-10-18-open-tv-touchpad-design.md`
 
 ## Concerns and Limits
 
 - Verification used the configured API 31 Android TV emulator. No certified projector claim is made.
-- Physical D-pad feel, real accessibility gesture delivery, callback timing, and cancellation behavior still require the separately planned hardware validation; that later task was not read or implemented.
+- The emulator verifies window flags and D-pad behavior but cannot prove that
+  the certified XGIMI accessibility shortcut keeps controller focus over
+  Netflix; that remains a Task 6 hardware PASS/FAIL observation.
+- Physical D-pad feel, real accessibility gesture delivery, callback timing, and cancellation behavior still require the separately planned hardware validation; Task 6 was not implemented.
+- Lint retains 7 baseline warnings unrelated to this fix; there are 0 errors.
 - `.kotlin/` build scratch was removed before the implementation commit. `local.properties` remains ignored and uncommitted.
