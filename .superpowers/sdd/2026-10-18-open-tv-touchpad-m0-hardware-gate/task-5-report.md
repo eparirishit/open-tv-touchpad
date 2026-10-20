@@ -13,6 +13,9 @@
 - Fix-round implementation commit: `b3189e6` (`fix: keep D-pad controls live over target apps`)
 - Fix-round-2 bounds commit: `9636a2e` (`fix: refresh bounds before showing cursor`)
 - Fix-round-2 service replay test commit: `23c108a` (`test: cover service outcome listener replay`)
+- Final-review compact-overlay commit: `9282e33` (`fix: keep target apps visible under controls`)
+- Final-review lifecycle commit: `23c46ee` (`fix: refresh gate on service lifecycle changes`)
+- Final-review lint cleanup commit: `c850d0f` (`fix: avoid compact overlay overdraw`)
 - Requirements source: `.superpowers/sdd/2026-10-18-open-tv-touchpad-m0-hardware-gate/task-5-brief.md`
 
 ## Scope Implemented
@@ -302,9 +305,105 @@ BUILD SUCCESSFUL in 15s
 - `android/app/src/main/kotlin/dev/opentvtouchpad/setup/GateViewModel.kt`
 - `android/app/src/test/kotlin/dev/opentvtouchpad/setup/GateViewModelTest.kt`
 
+## Final Complete-Review Fix Evidence
+
+The final complete review identified two actionable findings: the
+service-owned controller reused the full-screen launcher layout and obscured
+the target application, and a visible launcher activity did not observe
+accessibility-service disconnection.
+
+### RED: Compact Service Controller
+
+A connected regression was added before production changes:
+
+```text
+./gradlew :android:app:connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class='dev.opentvtouchpad.accessibility.DpadControllerOverlayTest#controllerUsesCompactEndAnchoredWindow'
+```
+
+Result XML: 1 test, 1 failure, 0 errors, 0 skipped. The test expected
+`WRAP_CONTENT` (`-2`) but observed the existing `MATCH_PARENT` (`-1`) window.
+The service overlay now inflates a dedicated two-column compact controller,
+uses `WRAP_CONTENT × WRAP_CONTENT`, and is anchored at
+`END | CENTER_VERTICAL`. The launcher continues to use the separate full
+diagnostic layout. The complete controller class passed 5/5, including every
+Task 5 action, deterministic focus order, focusable/non-touchable flags, and
+service teardown.
+
+### RED: Visible Activity Service Loss
+
+A connected lifecycle regression was added before the observer path:
+
+```text
+./gradlew :android:app:connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class='dev.opentvtouchpad.setup.GateActivityDpadTest#visibleServiceLossRecoversGuidanceAndStoppedActivityIgnoresNotifications'
+```
+
+Result XML: 1 test, 1 failure, 0 errors, 0 skipped. After service destruction,
+the visible activity still displayed the connected state instead of enabling
+settings guidance and disabling actions. The service now publishes connection
+and disconnection synchronously through a membership-fenced listener set.
+`GateActivity` registers while started, unregisters before detaching while
+stopped, refreshes immediately on transitions, ignores notifications while
+stopped, and reconciles current state when restarted. The complete activity
+class passed 4/4, and the affected service class passed 12/12.
+
+### Focused GREEN
+
+The exact Task 5 focused command passed:
+
+```text
+./gradlew :android:app:testDebugUnitTest --tests 'dev.opentvtouchpad.setup.*' \
+  :android:app:connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=dev.opentvtouchpad.setup.GateActivityDpadTest
+BUILD SUCCESSFUL in 9s
+```
+
+Result XML contained 8 setup JVM tests and 4 connected activity tests, with 0
+failures, 0 errors, and 0 skipped tests. Additional focused connected runs
+passed the compact controller class 5/5 and accessibility service class 12/12.
+
+### Complete GREEN
+
+The complete required matrix passed on the final committed source with the
+documented Java 17, Android SDK, and workspace-local Gradle user home:
+
+```text
+./gradlew :android:app:testDebugUnitTest :android:app:connectedDebugAndroidTest \
+  :android:app:lintDebug :android:app:assembleDebug
+BUILD SUCCESSFUL in 11s
+85 actionable tasks: 3 executed, 82 up-to-date
+```
+
+- JVM XML: 24 tests, 0 failures, 0 errors, 0 skipped.
+- Connected XML: 25 tests, 0 failures, 0 errors, 0 skipped.
+- Lint: 0 errors and 7 pre-existing baseline warnings. An initially introduced
+  compact-layout overdraw warning was removed before final verification.
+- Merged manifest: only the exported Leanback launcher activity and exported,
+  `BIND_ACCESSIBILITY_SERVICE`-protected accessibility service; no requested
+  permissions, including no `SYSTEM_ALERT_WINDOW`.
+- Accessibility metadata remains gesture-only with
+  `canPerformGestures=true`, `canRetrieveWindowContent=false`, and no key-filter
+  capability, foreground inspection, or package restriction.
+- Cursor overlay remains non-focusable/non-touchable; controller overlay
+  remains focusable/non-touchable.
+- Debug APK assembled successfully; `git diff --check` was clean.
+
+### Final Review Changed Files
+
+- `.superpowers/sdd/2026-10-18-open-tv-touchpad-m0-hardware-gate/task-5-report.md`
+- `.superpowers/sdd/2026-10-18-open-tv-touchpad-m0-hardware-gate/progress.md`
+- `android/app/src/androidTest/kotlin/dev/opentvtouchpad/accessibility/CursorOverlayTest.kt`
+- `android/app/src/androidTest/kotlin/dev/opentvtouchpad/accessibility/DpadControllerOverlayTest.kt`
+- `android/app/src/androidTest/kotlin/dev/opentvtouchpad/setup/GateActivityDpadTest.kt`
+- `android/app/src/main/kotlin/dev/opentvtouchpad/accessibility/DpadControllerOverlay.kt`
+- `android/app/src/main/kotlin/dev/opentvtouchpad/accessibility/TouchAccessibilityService.kt`
+- `android/app/src/main/kotlin/dev/opentvtouchpad/setup/GateActivity.kt`
+- `android/app/src/main/res/layout/controller_overlay.xml`
+
 ## Self-Review
 
-Review range: Task 4 base `e9d8723` through fix-round-2 service test `23c108a`, including preserved uncommitted files before commit and all connected callers.
+Review range: Task 4 base `e9d8723` through final-review lint cleanup `c850d0f`, including all connected callers and final-review tests.
 
 - Confirmed all `GestureCoordinator` callers remain source-compatible through the default outcome listener.
 - Confirmed stale callbacks still cannot finish successor gestures and timeout remains fail-closed.
@@ -315,6 +414,8 @@ Review range: Task 4 base `e9d8723` through fix-round-2 service test `23c108a`, 
 - Confirmed detached terminal outcomes and authoritative in-flight state reconcile on refresh, and all coordinate actions publish fresh bounds before derivation.
 - Confirmed `SHOW_CURSOR` now publishes and clamps against current bounds before display.
 - Confirmed queued service delivery skips a listener removed after outcome capture, delivers exactly once to a still-attached peer, and retains the terminal outcome for refresh/re-attach.
+- Confirmed the compact controller leaves the target application visible while retaining every Task 5 action and deterministic D-pad traversal.
+- Confirmed service connection notifications are synchronous, membership-fenced, registered only while the launcher is started, and removed before view-model detachment.
 - Confirmed the manifest and app dependency configuration have no diff.
 - Final verdict: ship Task 5 for emulator/local verification. No open Critical, Important, or Minor findings.
 
