@@ -11,6 +11,8 @@
 - Controller-overlay implementation commit: `79ba7c6` (`fix: add service-owned D-pad overlay`)
 - Detached-outcome test commit: `76dfab7` (`test: cover detached gesture outcome replay`)
 - Fix-round implementation commit: `b3189e6` (`fix: keep D-pad controls live over target apps`)
+- Fix-round-2 bounds commit: `9636a2e` (`fix: refresh bounds before showing cursor`)
+- Fix-round-2 service replay test commit: `23c108a` (`test: cover service outcome listener replay`)
 - Requirements source: `.superpowers/sdd/2026-10-18-open-tv-touchpad-m0-hardware-gate/task-5-brief.md`
 
 ## Scope Implemented
@@ -189,9 +191,120 @@ BUILD SUCCESSFUL in 19s
 - Gesture paths remain fixed, conservative, and derived only from current display bounds.
 - No runtime gesture coordinates, device identifiers, or sensitive diagnostics were added to logs or reports.
 
+## Fix Round 2 Evidence
+
+Scoped re-review found that `SHOW_CURSOR` still used cached bounds and requested
+one deterministic production-service regression for multi-listener terminal
+delivery and replay.
+
+### RED: Show Cursor Current Bounds
+
+`SHOW_CURSOR` was added to the existing current-bounds regression before the
+production change, then run alone:
+
+```text
+./gradlew :android:app:testDebugUnitTest \
+  --tests 'dev.opentvtouchpad.setup.GateViewModelTest.movementAndEveryGestureRefreshCurrentBoundsBeforeDerivingCoordinates'
+```
+
+Result: `BUILD FAILED`; 1 test ran with exactly 1 failure. After bounds changed
+from `1920×1080` to `800×600`, the test expected the new bounds to be published
+and the cursor clamped to `(799, 540)`, but `SHOW_CURSOR` retained the cached
+bounds. The same focused test passed after routing `SHOW_CURSOR` through the
+shared `publishCurrentBounds()` path before showing the cursor.
+
+### RED: Service Multi-Listener Replay
+
+The connected regression was first added against the production service API.
+Before the existing outcome callback body was extracted into
+`publishGestureOutcome`, the smallest compile command failed as expected:
+
+```text
+./gradlew :android:app:compileDebugAndroidTestKotlin
+```
+
+Result: `BUILD FAILED` with the single relevant compiler error
+`Unresolved reference 'publishGestureOutcome'`. After extraction, an initial
+connected run exposed a test-fixture equality issue: bound `MutableList::add`
+references collapsed in the service's linked set while both lists were empty.
+The test was corrected to use identity-distinct lambdas.
+
+A minimal mutation then removed the production membership re-check before
+queued delivery. The focused connected test provided behavioral RED evidence:
+
+```text
+./gradlew :android:app:connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class='dev.opentvtouchpad.accessibility.AndroidGesturePortTest#serviceSkipsDetachedListenerAndRetainsOutcomeForRefresh'
+```
+
+Result XML: 1 test, 1 failure, 0 errors, 0 skipped; failure occurred at the
+assertion that the listener removed before queued delivery must receive no
+outcome. The mutation was restored, and the same test passed 1/1. The final
+test registers two listeners in the real `TouchAccessibilityService` set,
+removes one before deterministic queued delivery, verifies exactly one outcome
+for the surviving listener, then replaces that listener and verifies the
+terminal outcome remains authoritative through `currentGestureState()` without
+an unsolicited replay to either detached or newly attached listeners.
+
+### Focused GREEN
+
+The setup and accessibility-focused suites passed:
+
+```text
+./gradlew :android:app:testDebugUnitTest --tests 'dev.opentvtouchpad.setup.*' \
+  :android:app:connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=dev.opentvtouchpad.accessibility.AndroidGesturePortTest
+BUILD SUCCESSFUL in 6s
+```
+
+Result XML contained 8 setup JVM tests and 12 accessibility connected tests,
+with 0 failures, 0 errors, and 0 skipped tests.
+
+The exact Task 5 focused command then passed:
+
+```text
+./gradlew :android:app:testDebugUnitTest --tests 'dev.opentvtouchpad.setup.*' \
+  :android:app:connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=dev.opentvtouchpad.setup.GateActivityDpadTest
+BUILD SUCCESSFUL in 9s
+```
+
+Result XML contained 8 setup JVM tests and 3 connected activity tests, with 0
+failures, 0 errors, and 0 skipped tests.
+
+### Complete GREEN
+
+The complete required matrix passed with the documented Java 17, Android SDK,
+and workspace-local Gradle user home:
+
+```text
+./gradlew :android:app:testDebugUnitTest :android:app:connectedDebugAndroidTest \
+  :android:app:lintDebug :android:app:assembleDebug
+BUILD SUCCESSFUL in 15s
+85 actionable tasks: 11 executed, 74 up-to-date
+```
+
+- JVM XML: 24 tests, 0 failures, 0 errors, 0 skipped.
+- Connected XML: 23 tests, 0 failures, 0 errors, 0 skipped.
+- Lint: 0 errors and 7 pre-existing baseline warnings.
+- Merged manifest: only the exported Leanback launcher activity and exported,
+  `BIND_ACCESSIBILITY_SERVICE`-protected accessibility service; no requested
+  permissions, including no `SYSTEM_ALERT_WINDOW`.
+- Debug APK assembled successfully.
+- `git diff --check`: clean after restoring the RED mutation.
+
+### Fix Round 2 Changed Files
+
+- `.superpowers/sdd/2026-10-18-open-tv-touchpad-m0-hardware-gate/task-5-report.md`
+- `.superpowers/sdd/2026-10-18-open-tv-touchpad-m0-hardware-gate/progress.md`
+- `android/app/src/androidTest/kotlin/dev/opentvtouchpad/accessibility/AndroidGesturePortTest.kt`
+- `android/app/src/main/kotlin/dev/opentvtouchpad/accessibility/TouchAccessibilityService.kt`
+- `android/app/src/main/kotlin/dev/opentvtouchpad/setup/GateViewModel.kt`
+- `android/app/src/test/kotlin/dev/opentvtouchpad/setup/GateViewModelTest.kt`
+
 ## Self-Review
 
-Review range: Task 4 base `e9d8723` through fix-round implementation `b3189e6`, including preserved uncommitted files before commit and all connected callers.
+Review range: Task 4 base `e9d8723` through fix-round-2 service test `23c108a`, including preserved uncommitted files before commit and all connected callers.
 
 - Confirmed all `GestureCoordinator` callers remain source-compatible through the default outcome listener.
 - Confirmed stale callbacks still cannot finish successor gestures and timeout remains fail-closed.
@@ -200,6 +313,8 @@ Review range: Task 4 base `e9d8723` through fix-round implementation `b3189e6`, 
 - Confirmed deterministic action focus order, in-flight disabling, cancel availability, settings guidance, and key-repeat behavior through focused tests.
 - Confirmed the service-owned controller remains focusable/non-touchable while the cursor remains non-focusable/non-touchable, and that no key filtering, foreground inspection, overlay permission, or exported component was added.
 - Confirmed detached terminal outcomes and authoritative in-flight state reconcile on refresh, and all coordinate actions publish fresh bounds before derivation.
+- Confirmed `SHOW_CURSOR` now publishes and clamps against current bounds before display.
+- Confirmed queued service delivery skips a listener removed after outcome capture, delivers exactly once to a still-attached peer, and retains the terminal outcome for refresh/re-attach.
 - Confirmed the manifest and app dependency configuration have no diff.
 - Final verdict: ship Task 5 for emulator/local verification. No open Critical, Important, or Minor findings.
 
@@ -211,6 +326,7 @@ This is an author self-review because subagents were explicitly prohibited; it i
 - `.superpowers/sdd/2026-10-18-open-tv-touchpad-m0-hardware-gate/progress.md`
 - `README.md`
 - `android/app/src/androidTest/kotlin/dev/opentvtouchpad/accessibility/AccessibilityManifestTest.kt`
+- `android/app/src/androidTest/kotlin/dev/opentvtouchpad/accessibility/AndroidGesturePortTest.kt`
 - `android/app/src/androidTest/kotlin/dev/opentvtouchpad/accessibility/DpadControllerOverlayTest.kt`
 - `android/app/src/androidTest/kotlin/dev/opentvtouchpad/setup/GateActivityDpadTest.kt`
 - `android/app/src/main/kotlin/dev/opentvtouchpad/accessibility/DpadControllerOverlay.kt`
