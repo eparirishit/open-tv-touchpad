@@ -131,6 +131,27 @@ class GateViewModelTest {
         assertTrue(fixture.viewModel.state.gestureInFlight)
     }
 
+    @Test
+    fun refreshRecoversTerminalOutcomeDeliveredWhileListenerWasDetached() {
+        val fixture = Fixture()
+        fixture.viewModel.observe {}
+        fixture.viewModel.refresh()
+        fixture.perform(GateAction.DRAG_PATH)
+
+        fixture.viewModel.detach()
+        fixture.finish(
+            callbackDurationMillis = 527,
+            cancellationReason = CancelReason.ANDROID,
+        )
+        fixture.viewModel.observe {}
+        fixture.viewModel.refresh()
+
+        assertFalse(fixture.viewModel.state.gestureInFlight)
+        assertTrue(fixture.viewModel.state.controlsEnabled)
+        assertEquals(527L, fixture.viewModel.state.callbackDurationMillis)
+        assertEquals(CancelReason.ANDROID, fixture.viewModel.state.cancellationReason)
+    }
+
     private class Fixture(
         var connected: Boolean = true,
         private val bounds: DisplayBounds = DisplayBounds(width = 1920, height = 1080),
@@ -142,6 +163,8 @@ class GateViewModelTest {
         var cancellationCount = 0
         val viewModel = GateViewModel(this)
         private var outcomeListener: ((GestureOutcome) -> Unit)? = null
+        private var authoritativeInFlight = false
+        private var latestOutcome: GestureOutcome? = null
         private var connectionChecks = 0
 
         override val isConnected: Boolean
@@ -166,6 +189,8 @@ class GateViewModelTest {
 
         override fun submitGesture(spec: GestureSpec): SubmitResult {
             submitted += spec
+            authoritativeInFlight = true
+            latestOutcome = null
             return SubmitResult.ACCEPTED
         }
 
@@ -182,7 +207,14 @@ class GateViewModelTest {
         }
 
         fun finish(callbackDurationMillis: Long, cancellationReason: CancelReason? = null) {
-            outcomeListener!!.invoke(GestureOutcome(callbackDurationMillis, cancellationReason))
+            val outcome = GestureOutcome(callbackDurationMillis, cancellationReason)
+            authoritativeInFlight = false
+            latestOutcome = outcome
+            outcomeListener?.invoke(outcome)
         }
+
+        fun gestureInFlight(): Boolean = authoritativeInFlight
+
+        fun latestGestureOutcome(): GestureOutcome? = latestOutcome
     }
 }
