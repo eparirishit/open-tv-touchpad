@@ -16,29 +16,36 @@ import dev.opentvtouchpad.input.GestureSpec
 import dev.opentvtouchpad.input.SubmitResult
 
 class TouchAccessibilityService : AccessibilityService() {
+    private val runtimeLock = Any()
     private val mainHandler = Handler(Looper.getMainLooper())
-    private val timeoutCheck = Runnable { gestureCoordinator?.checkTimeout() }
+    private val timeoutCheck = Runnable {
+        synchronized(runtimeLock) { gestureCoordinator?.checkTimeout() }
+    }
     private var gestureCoordinator: GestureCoordinator? = null
     private var cursorOverlay: CursorOverlay? = null
     private lateinit var windowManager: WindowManager
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        windowManager = getSystemService(WindowManager::class.java)
-        cursorOverlay = CursorOverlay(this, windowManager, ::currentDisplayBounds)
-        gestureCoordinator = GestureCoordinator(
-            port = AndroidGesturePort(this, ::currentDisplayBounds),
-            clock = SystemClock::elapsedRealtime,
-            callbackTimeoutMillis = CALLBACK_TIMEOUT_MILLIS,
-        )
-        connectedService = this
+        synchronized(runtimeLock) {
+            windowManager = getSystemService(WindowManager::class.java)
+            cursorOverlay = CursorOverlay(this, windowManager, ::currentDisplayBounds)
+            gestureCoordinator = GestureCoordinator(
+                port = AndroidGesturePort(this, ::currentDisplayBounds),
+                clock = SystemClock::elapsedRealtime,
+                callbackTimeoutMillis = CALLBACK_TIMEOUT_MILLIS,
+            )
+            connectedService = this
+        }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit
 
     override fun onInterrupt() {
-        gestureCoordinator?.cancel(CancelReason.ANDROID)
-        cursorOverlay?.hide()
+        synchronized(runtimeLock) {
+            gestureCoordinator?.cancel(CancelReason.ANDROID)
+            cursorOverlay?.hide()
+        }
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
@@ -51,45 +58,55 @@ class TouchAccessibilityService : AccessibilityService() {
         super.onDestroy()
     }
 
-    fun submitGesture(spec: GestureSpec): SubmitResult {
-        val coordinator = gestureCoordinator ?: return SubmitResult.REJECTED
-        val result = coordinator.submit(spec)
-        if (result == SubmitResult.ACCEPTED) {
-            mainHandler.removeCallbacks(timeoutCheck)
-            mainHandler.postDelayed(
-                timeoutCheck,
-                timeoutCheckDelayMillis(spec, CALLBACK_TIMEOUT_MILLIS),
-            )
+    fun submitGesture(spec: GestureSpec): SubmitResult = synchronized(runtimeLock) {
+        val coordinator = gestureCoordinator ?: return@synchronized SubmitResult.REJECTED
+        coordinator.submit(spec).also { result ->
+            if (result == SubmitResult.ACCEPTED) {
+                mainHandler.removeCallbacks(timeoutCheck)
+                mainHandler.postDelayed(
+                    timeoutCheck,
+                    timeoutCheckDelayMillis(spec, CALLBACK_TIMEOUT_MILLIS),
+                )
+            }
         }
-        return result
     }
 
     fun cancelGesture() {
-        gestureCoordinator?.cancel(CancelReason.EXPLICIT)
+        synchronized(runtimeLock) {
+            gestureCoordinator?.cancel(CancelReason.EXPLICIT)
+        }
     }
 
     fun showCursorAt(x: Int, y: Int) {
-        cursorOverlay?.showAt(x, y)
+        synchronized(runtimeLock) {
+            cursorOverlay?.showAt(x, y)
+        }
     }
 
     fun moveCursorTo(x: Int, y: Int) {
-        cursorOverlay?.moveTo(x, y)
+        synchronized(runtimeLock) {
+            cursorOverlay?.moveTo(x, y)
+        }
     }
 
     fun hideCursor() {
-        cursorOverlay?.hide()
+        synchronized(runtimeLock) {
+            cursorOverlay?.hide()
+        }
     }
 
     fun currentBounds(): DisplayBounds = currentDisplayBounds()
 
     private fun shutdownRuntime(reason: CancelReason) {
-        gestureCoordinator?.cancel(reason)
-        mainHandler.removeCallbacks(timeoutCheck)
-        cursorOverlay?.hide()
-        cursorOverlay?.remove()
-        gestureCoordinator = null
-        cursorOverlay = null
-        if (connectedService === this) connectedService = null
+        synchronized(runtimeLock) {
+            gestureCoordinator?.cancel(reason)
+            mainHandler.removeCallbacks(timeoutCheck)
+            cursorOverlay?.hide()
+            cursorOverlay?.remove()
+            gestureCoordinator = null
+            cursorOverlay = null
+            if (connectedService === this) connectedService = null
+        }
     }
 
     @Suppress("DEPRECATION")

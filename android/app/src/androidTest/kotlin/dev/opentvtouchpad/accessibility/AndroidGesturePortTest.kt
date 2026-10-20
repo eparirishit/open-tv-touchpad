@@ -5,6 +5,7 @@ import android.accessibilityservice.GestureDescription
 import android.graphics.PathMeasure
 import android.graphics.RectF
 import android.os.Handler
+import android.os.Message
 import android.view.View
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -15,12 +16,18 @@ import dev.opentvtouchpad.input.GesturePort
 import dev.opentvtouchpad.input.GestureSpec
 import dev.opentvtouchpad.input.PointF
 import dev.opentvtouchpad.input.SubmitResult
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.jvm.functions.Function0
 import kotlin.jvm.functions.Function2
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -224,6 +231,48 @@ class AndroidGesturePortTest {
         assertDragLifecycleTeardown(TouchAccessibilityService::onDestroy)
     }
 
+    @Test
+    fun unbindSerializesBehindCapturedSubmissionAndCancelsAcceptedDrag() {
+        val fixture = LifecycleRaceFixture()
+
+        try {
+            fixture.runRace { service -> service.onUnbind(null) }
+
+            assertEquals(1, fixture.port.cancellationCount.get())
+            assertFalse(fixture.mainHandler.hasCallbacks(fixture.timeoutCheck))
+            assertEquals(View.GONE, fixture.windowManager.view!!.visibility)
+            assertEquals(1, fixture.windowManager.removeCount)
+            assertNull(fixture.service.privateField("gestureCoordinator"))
+            assertNull(fixture.service.privateField("cursorOverlay"))
+            assertNull(TouchAccessibilityService.connectedService)
+            assertEquals(SubmitResult.REJECTED, fixture.service.submitGesture(fixture.successor))
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun interruptSerializesBehindCapturedSubmissionAndCancelsAcceptedDrag() {
+        val fixture = LifecycleRaceFixture()
+
+        try {
+            fixture.runRace(TouchAccessibilityService::onInterrupt)
+
+            assertEquals(1, fixture.port.cancellationCount.get())
+            assertTrue(fixture.mainHandler.hasCallbacks(fixture.timeoutCheck))
+            assertEquals(View.GONE, fixture.windowManager.view!!.visibility)
+            assertEquals(0, fixture.windowManager.removeCount)
+            assertSame(fixture.coordinator, fixture.service.privateField("gestureCoordinator"))
+            assertSame(fixture.overlay, fixture.service.privateField("cursorOverlay"))
+            assertSame(fixture.service, TouchAccessibilityService.connectedService)
+            fixture.port.callbacks.single().onCancelled()
+            assertEquals(SubmitResult.ACCEPTED, fixture.service.submitGesture(fixture.successor))
+            fixture.port.callbacks.last().onCancelled()
+        } finally {
+            fixture.close()
+        }
+    }
+
     private fun assertDragLifecycleTeardown(
         lifecycleEvent: (TouchAccessibilityService) -> Unit,
     ) {
@@ -296,6 +345,92 @@ class AndroidGesturePortTest {
             isAccessible = true
             set(null, service)
         }
+    }
+
+    private inner class LifecycleRaceFixture {
+        val service = TouchAccessibilityService()
+        val port = BlockingGesturePort()
+        val coordinator = GestureCoordinator(
+            port = port,
+            clock = { 0L },
+            callbackTimeoutMillis = 2_000,
+        )
+        val windowManager = RecordingWindowManager()
+        val overlay = CursorOverlay(
+            InstrumentationRegistry.getInstrumentation().targetContext,
+            windowManager.instance,
+        ) { DisplayBounds(width = 1920, height = 1080) }
+        val timeoutCheck = service.privateField("timeoutCheck") as Runnable
+        val mainHandler = BlockingHandler(
+            (service.privateField("mainHandler") as Handler).looper,
+        )
+        val drag = GestureSpec.Drag(
+            points = listOf(PointF(10f, 10f), PointF(100f, 100f)),
+            durationMillis = 500,
+        )
+        val successor = GestureSpec.Tap(PointF(20f, 20f), durationMillis = 80)
+
+        init {
+            service.setPrivateField("gestureCoordinator", coordinator)
+            service.setPrivateField("cursorOverlay", overlay)
+            service.setPrivateField("mainHandler", mainHandler)
+            setConnectedService(service)
+            overlay.showAt(10, 10)
+        }
+
+        fun runRace(lifecycleEvent: (TouchAccessibilityService) -> Unit) {
+            val executor = Executors.newFixedThreadPool(2)
+            val lifecycleStarted = CountDownLatch(1)
+            val lifecycleCompleted = CountDownLatch(1)
+            lateinit var lifecycleThread: Thread
+
+            try {
+                val submission = executor.submit<SubmitResult> {
+                    service.submitGesture(drag)
+                }
+                assertTrue(port.dispatchEntered.await(5, TimeUnit.SECONDS))
+                val lifecycle = executor.submit {
+                    lifecycleThread = Thread.currentThread()
+                    lifecycleStarted.countDown()
+                    try {
+                        lifecycleEvent(service)
+                    } finally {
+                        lifecycleCompleted.countDown()
+                    }
+                }
+                assertTrue(lifecycleStarted.await(5, TimeUnit.SECONDS))
+                awaitThreadState(lifecycleThread, Thread.State.BLOCKED)
+
+                port.releaseDispatch.countDown()
+                assertTrue(mainHandler.postEntered.await(5, TimeUnit.SECONDS))
+                lifecycleCompleted.await(1, TimeUnit.SECONDS)
+                assertEquals(1L, lifecycleCompleted.count)
+
+                mainHandler.releasePost.countDown()
+                assertEquals(SubmitResult.ACCEPTED, submission.get(5, TimeUnit.SECONDS))
+                lifecycle.get(5, TimeUnit.SECONDS)
+            } finally {
+                port.releaseDispatch.countDown()
+                mainHandler.releasePost.countDown()
+                executor.shutdownNow()
+                executor.awaitTermination(5, TimeUnit.SECONDS)
+            }
+        }
+
+        fun close() {
+            mainHandler.removeCallbacks(timeoutCheck)
+            setConnectedService(null)
+            if (windowManager.removeCount == 0) overlay.remove()
+        }
+    }
+
+    private fun awaitThreadState(thread: Thread, expected: Thread.State) {
+        val deadlineNanos = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+        while (System.nanoTime() < deadlineNanos) {
+            if (thread.state == expected) return
+            Thread.yield()
+        }
+        fail("Thread ${thread.name} never reached $expected; was ${thread.state}")
     }
 
     private fun newPort(
@@ -386,6 +521,40 @@ class AndroidGesturePortTest {
 
         override fun cancelActiveGesture() {
             cancellationCount += 1
+        }
+    }
+
+    private class BlockingGesturePort : GesturePort {
+        val dispatchEntered = CountDownLatch(1)
+        val releaseDispatch = CountDownLatch(1)
+        val cancellationCount = AtomicInteger()
+        val callbacks = mutableListOf<GestureCallback>()
+
+        override fun dispatch(spec: GestureSpec, callback: GestureCallback): Boolean {
+            callbacks += callback
+            if (callbacks.size == 1) {
+                dispatchEntered.countDown()
+                return releaseDispatch.await(5, TimeUnit.SECONDS)
+            }
+            return true
+        }
+
+        override fun cancelActiveGesture() {
+            cancellationCount.incrementAndGet()
+        }
+    }
+
+    private class BlockingHandler(looper: android.os.Looper) : Handler(looper) {
+        val postEntered = CountDownLatch(1)
+        val releasePost = CountDownLatch(1)
+        private val postCount = AtomicInteger()
+
+        override fun sendMessageAtTime(message: Message, uptimeMillis: Long): Boolean {
+            if (postCount.getAndIncrement() == 0) {
+                postEntered.countDown()
+                if (!releasePost.await(5, TimeUnit.SECONDS)) return false
+            }
+            return super.sendMessageAtTime(message, uptimeMillis)
         }
     }
 }
