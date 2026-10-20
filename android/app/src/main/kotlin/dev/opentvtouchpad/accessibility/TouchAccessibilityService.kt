@@ -42,7 +42,7 @@ class TouchAccessibilityService : AccessibilityService() {
                 callbackTimeoutMillis = CALLBACK_TIMEOUT_MILLIS,
                 onFinished = ::publishGestureOutcome,
             )
-            connectedService = this
+            publishConnectedService(this)
             controllerOverlay = DpadControllerOverlay(
                 this,
                 windowManager,
@@ -156,7 +156,7 @@ class TouchAccessibilityService : AccessibilityService() {
             gestureCoordinator = null
             cursorOverlay = null
             controllerOverlay = null
-            if (connectedService === this) connectedService = null
+            if (connectedService === this) publishConnectedService(null)
         }
     }
 
@@ -178,9 +178,37 @@ class TouchAccessibilityService : AccessibilityService() {
     }
 
     companion object {
+        private val connectionLock = Any()
+        private val connectionListeners = linkedSetOf<() -> Unit>()
+
         @Volatile
         var connectedService: TouchAccessibilityService? = null
             private set
+
+        internal fun addConnectionListener(listener: () -> Unit) {
+            synchronized(connectionLock) {
+                connectionListeners += listener
+            }
+        }
+
+        internal fun removeConnectionListener(listener: () -> Unit) {
+            synchronized(connectionLock) {
+                connectionListeners -= listener
+            }
+        }
+
+        private fun publishConnectedService(service: TouchAccessibilityService?) {
+            val listeners = synchronized(connectionLock) {
+                connectedService = service
+                connectionListeners.toList()
+            }
+            listeners.forEach { listener ->
+                val stillObserved = synchronized(connectionLock) {
+                    listener in connectionListeners
+                }
+                if (stillObserved) listener()
+            }
+        }
 
         private const val CALLBACK_TIMEOUT_MILLIS = 2_000L
 

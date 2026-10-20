@@ -11,6 +11,7 @@ import android.widget.Button
 import android.widget.TextView
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import dev.opentvtouchpad.accessibility.TouchAccessibilityService
 import dev.opentvtouchpad.input.DisplayBounds
 import dev.opentvtouchpad.input.PointF
 import org.junit.After
@@ -123,6 +124,79 @@ class GateActivityDpadTest {
         val cancel = activity.findViewById<Button>(requiredId("cancel"))
         assertTrue(cancel.isEnabled)
         assertEquals(cancel.id, activity.currentFocus?.id)
+    }
+
+    @Test
+    fun visibleServiceLossRecoversGuidanceAndStoppedActivityIgnoresNotifications() {
+        val render = GateActivity::class.java.getDeclaredMethod("render", GateUiState::class.java)
+            .apply { isAccessible = true }
+        val connectedState = GateUiState(
+            connected = true,
+            bounds = DisplayBounds(width = 1920, height = 1080),
+            cursor = PointF(960f, 540f),
+            controlsEnabled = true,
+            settingsGuidanceVisible = false,
+        )
+        val firstService = TouchAccessibilityService()
+        setConnectedService(firstService)
+        instrumentation.runOnMainSync { render.invoke(activity, connectedState) }
+
+        instrumentation.runOnMainSync(firstService::onDestroy)
+
+        assertDisconnectedGuidance()
+
+        val stoppedService = TouchAccessibilityService()
+        setConnectedService(stoppedService)
+        instrumentation.runOnMainSync {
+            render.invoke(activity, connectedState)
+            instrumentation.callActivityOnPause(activity)
+            instrumentation.callActivityOnStop(activity)
+            stoppedService.onDestroy()
+        }
+
+        assertTrue(
+            activity.findViewById<TextView>(requiredId("gate_status"))
+                .text.toString().contains("connected", ignoreCase = true),
+        )
+        assertTrue(activity.findViewById<Button>(requiredId("show_cursor")).isEnabled)
+        assertTrue(!activity.findViewById<Button>(requiredId("accessibility_settings")).isEnabled)
+
+        instrumentation.runOnMainSync {
+            instrumentation.callActivityOnRestart(activity)
+            instrumentation.callActivityOnStart(activity)
+            instrumentation.callActivityOnResume(activity)
+        }
+
+        assertDisconnectedGuidance()
+    }
+
+    private fun assertDisconnectedGuidance() {
+        assertTrue(
+            activity.findViewById<TextView>(requiredId("gate_status"))
+                .text.toString().contains("disabled", ignoreCase = true),
+        )
+        assertTrue(
+            listOf(
+                "show_cursor",
+                "move_up",
+                "move_down",
+                "move_left",
+                "move_right",
+                "tap",
+                "swipe_vertical",
+                "swipe_horizontal",
+                "drag_path",
+                "cancel",
+            ).all { !activity.findViewById<Button>(requiredId(it)).isEnabled },
+        )
+        assertTrue(activity.findViewById<Button>(requiredId("accessibility_settings")).isEnabled)
+    }
+
+    private fun setConnectedService(service: TouchAccessibilityService?) {
+        TouchAccessibilityService::class.java.getDeclaredField("connectedService").apply {
+            isAccessible = true
+            set(null, service)
+        }
     }
 
     private fun requiredId(name: String): Int {

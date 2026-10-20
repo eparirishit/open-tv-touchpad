@@ -14,6 +14,7 @@ import dev.opentvtouchpad.accessibility.TouchAccessibilityService
 class GateActivity : Activity() {
     private lateinit var viewModel: GateViewModel
     private lateinit var actionButtons: Map<GateAction, Button>
+    private val serviceConnectionListener = { viewModel.refresh() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,10 +46,12 @@ class GateActivity : Activity() {
     override fun onStart() {
         super.onStart()
         viewModel.observe(::render)
+        TouchAccessibilityService.addConnectionListener(serviceConnectionListener)
         viewModel.refresh()
     }
 
     override fun onStop() {
+        TouchAccessibilityService.removeConnectionListener(serviceConnectionListener)
         viewModel.detach()
         super.onStop()
     }
