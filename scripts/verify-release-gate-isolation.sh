@@ -59,7 +59,7 @@ resources="$tmp_dir/resources.txt"
 "$aapt2" dump resources "$release_apk" >"$resources"
 
 manifest_pattern='dev\.opentvtouchpad\.setup\.GateActivity'
-class_pattern='Ldev/opentvtouchpad/setup/Gate|Ldev/opentvtouchpad/setup/ServiceGateRuntime;|Ldev/opentvtouchpad/accessibility/DpadControllerOverlay'
+class_pattern='Ldev/opentvtouchpad/setup/Gate|Ldev/opentvtouchpad/setup/ServiceGateRuntime;|Ldev/opentvtouchpad/setup/Settings(ActionPolicy|Navigator)|Ldev/opentvtouchpad/accessibility/DpadControllerOverlay'
 resource_pattern='layout/(activity_gate|controller_overlay)|string/gate_'
 
 assert_absent "GateActivity declaration" "$manifest_pattern" "$merged_manifest"

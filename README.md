@@ -4,6 +4,11 @@ Open TV Touchpad is an Android TV hardware-gate project. This repository is
 currently limited to the M0 gate baseline and does not contain networking,
 pairing, certificate, web, storage, analytics, or product input behavior.
 
+The certified XGIMI Horizon XK03H run recorded an M0 `FAIL`: cursor movement
+worked, but accessibility-dispatched taps did not activate a Netflix profile
+tile. The approved architecture therefore stops before M1. See
+`docs/progress.md` and `docs/gates/m0-report.md`.
+
 ## Build
 
 The reproducible baseline requires JDK 17 and Android SDK 36. With `JAVA_HOME`,
@@ -16,7 +21,9 @@ The reproducible baseline requires JDK 17 and Android SDK 36. With `JAVA_HOME`,
 The debug APK is written to
 `android/app/build/outputs/apk/debug/app-debug.apk`.
 
-Hardware and instrumentation verification are outside this baseline task.
+That build command does not perform hardware verification. The completed
+certified-device result is recorded in `docs/gates/m0-report.md` and
+`docs/gates/m0-checklist.md`.
 
 ## M0 Controller
 

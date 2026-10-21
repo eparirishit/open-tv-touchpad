@@ -1,7 +1,9 @@
 package dev.opentvtouchpad.setup
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.provider.Settings
 import android.view.KeyEvent
@@ -39,8 +41,25 @@ class GateActivity : Activity() {
             button.setOnClickListener { viewModel.perform(action, isRepeat = false) }
         }
         findViewById<Button>(R.id.accessibility_settings).setOnClickListener {
-            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            openAccessibilitySettings()
         }
+    }
+
+    private fun openAccessibilitySettings() {
+        val primaryIntent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+        val handlerPackageName = packageManager.resolveActivity(
+            primaryIntent,
+            PackageManager.MATCH_DEFAULT_ONLY,
+        )?.activityInfo?.packageName
+        val action = SettingsActionPolicy.actionFor(handlerPackageName)
+
+        SettingsNavigator { launchAction ->
+            try {
+                startActivity(Intent(launchAction))
+            } catch (error: ActivityNotFoundException) {
+                throw SettingsNavigator.ActivityUnavailableException(error)
+            }
+        }.open(action)
     }
 
     override fun onStart() {
