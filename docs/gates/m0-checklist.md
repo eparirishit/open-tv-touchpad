@@ -30,10 +30,11 @@ remain `PENDING` until every manual check is finished.
 | --- | --- | --- |
 | Clean unit, lint, and debug APK build | `COMPLETE` | Coordinator verified the clean unit-test, lint, and debug-build run passed. |
 | APK digest recorded before installation | `COMPLETE` | SHA-256 is `f3cc262c74645800515da01d28e6e175833b29761188a88c5a4e15af8bd2535a`. |
-| APK installed with `adb install -r` on XK03H | `PENDING` | Install the replacement APK; the earlier installed APK is superseded. |
-| No ADB gesture/input command used through installation and evidence preparation | `PENDING` | No gesture/input command was used during replacement evidence preparation; reconfirm through replacement installation. |
-| Accessibility service enabled and shortcut assigned | `PENDING` | Open the launcher with the projector remote, select **Open accessibility settings and assign shortcut**, then enable the gesture-only service and assign the system accessibility shortcut manually. |
-| Post-run no-ADB gesture/input attestation | `PENDING` | After every manual check, attest that no `adb shell input` or equivalent gesture/input injection was used during the hardware run. A recorded non-input process-stop command does not fail this attestation. |
+| APK installed with `adb install -r` on XK03H | `COMPLETE` | Coordinator verified replacement installation returned `Success`. |
+| No ADB gesture/input command used through installation and evidence preparation | `COMPLETE` | Coordinator verified no `adb shell input` or equivalent gesture/input command was used through replacement installation. |
+| Accessibility service enabled | `COMPLETE` | User enabled the service manually and confirmed the service-owned D-pad controller appeared over Netflix. |
+| Accessibility shortcut assigned | `NOT-COMPLETED` | Gate execution stopped at the required tap failure before cancellation checks. |
+| Post-run no-ADB gesture/input attestation | `COMPLETE` | Coordinator confirms no `adb shell input` or equivalent gesture/input injection was used. Through the M0 decision, ADB was limited to installation, read-only inspection, and non-input Netflix activity launch. After the recorded failure, a user-requested non-input `am force-stop dev.opentvtouchpad` and `pidof` check removed the blocking debug overlay; that cleanup is not cancellation-path gate evidence. |
 
 ## Controller Setup
 
@@ -64,30 +65,30 @@ what was exercised and what happened.
 
 | Check | Record | Value |
 | --- | --- | --- |
-| Controller D-pad focus with touch pass-through in Netflix | Result | `PENDING` |
-| Controller D-pad focus with touch pass-through in Netflix | Notes | `PENDING` — record D-pad focus behavior and whether touch gestures continued to reach Netflix beneath the controller. |
-| Overlay in Netflix browsing | Result | `PENDING` |
-| Overlay in Netflix browsing | Notes | `PENDING` — record where the cursor was visible and any obstruction or disappearance. |
-| Tap | Result | `PENDING` |
-| Tap | Notes | `PENDING` — record the intended target and the target actually activated. |
-| Vertical scroll | Result | `PENDING` |
-| Vertical scroll | Notes | `PENDING` — record the Netflix surface, direction, and observed movement. |
-| Horizontal scroll | Result | `PENDING` |
-| Horizontal scroll | Notes | `PENDING` — record the Netflix rail, direction, and observed movement. |
-| Drag | Result | `PENDING` |
-| Drag | Notes | `PENDING` — record the drag path, completion behavior, and whether any press remained stuck. |
-| Overlay over Netflix playback controls | Result | `PENDING` |
-| Overlay over Netflix playback controls | Notes | `PENDING` — record playback-control state and whether the cursor remained visible. |
-| 1080p playback usability | Result | `PENDING` |
-| 1080p playback usability | Notes | `PENDING` — record the 1080p title/state and whether playback and controls remained usable with the overlay active. |
-| Explicit cancel | Result | `PENDING` |
-| Explicit cancel | Notes | `PENDING` — with the projector remote, select **Drag path**, then immediately press/select **Cancel active gesture** while it is focused and enabled; record whether any press remained stuck. |
-| Accessibility service disable mid-drag | Result | `PENDING` |
-| Accessibility service disable mid-drag | Notes | `PENDING` — start a drag, disable the service with the system shortcut, and record whether the active press was released. |
-| Final overlay removal after disabling the service | Result | `PENDING` |
-| Final overlay removal after disabling the service | Notes | `PENDING` — record whether both controller and cursor overlays were removed, then record remote-only service re-enable and app/Netflix relaunch recovery. |
-| Forced process stop after drag start | Result | `PENDING` |
-| Forced process stop after drag start | Notes | `PENDING` — start a drag, force-stop the process, record the process-stop method and whether any press remained stuck; recover by remote-only relaunch/re-enable only if later evidence is needed. |
+| Controller D-pad focus with touch pass-through in Netflix | Result | `FAIL` |
+| Controller D-pad focus with touch pass-through in Netflix | Notes | D-pad focus and cursor movement worked, but the required accessibility tap did not pass through to the Netflix profile tile. The controller retained D-pad focus on the Android TV home screen, so the coordinator used non-input `adb shell am start` only to launch `com.netflix.mediaclient/.ui.launch.UIWebViewActivity`; no remote, tap, swipe, or gesture input was injected by ADB. |
+| Overlay in Netflix browsing | Result | `NOT-RUN` |
+| Overlay in Netflix browsing | Notes | Cursor visibility and movement were confirmed over Netflix `ProfileSelectionActivity`, but browsing UI was not reached because the required tap failed. |
+| Tap | Result | `FAIL` |
+| Tap | Notes | With Netflix `ProfileSelectionActivity` confirmed foreground and the bound service reporting gesture capability, the user centered the visible cursor over a profile tile and manually selected **Tap** twice. Neither attempt activated the tile. No ADB input was injected. |
+| Vertical scroll | Result | `NOT-RUN` |
+| Vertical scroll | Notes | Gate stopped after the required tap failed. |
+| Horizontal scroll | Result | `NOT-RUN` |
+| Horizontal scroll | Notes | Gate stopped after the required tap failed. |
+| Drag | Result | `NOT-RUN` |
+| Drag | Notes | Gate stopped after the required tap failed. |
+| Overlay over Netflix playback controls | Result | `NOT-RUN` |
+| Overlay over Netflix playback controls | Notes | Gate stopped before playback after the required tap failed. |
+| 1080p playback usability | Result | `NOT-RUN` |
+| 1080p playback usability | Notes | Gate stopped before playback after the required tap failed. |
+| Explicit cancel | Result | `NOT-RUN` |
+| Explicit cancel | Notes | Gate stopped after the required tap failed. |
+| Accessibility service disable mid-drag | Result | `NOT-RUN` |
+| Accessibility service disable mid-drag | Notes | Gate stopped after the required tap failed. |
+| Final overlay removal after disabling the service | Result | `NOT-RUN` |
+| Final overlay removal after disabling the service | Notes | Gate stopped after the required tap failed. |
+| Forced process stop after drag start | Result | `NOT-RUN` |
+| Forced process stop after drag start | Notes | Gate stopped after the required tap failed. |
 
 ## Aggregate Report Fields
 
@@ -114,14 +115,14 @@ complete every detail; the report details must summarize the same evidence.
 | Count (`0` or `1`) | `1` |
 | What failed | `android.settings.ACCESSIBILITY_SETTINGS` resolved to `com.google.android.tv.frameworkpackagestubs/.Stubs$SettingsStub` and showed no compatible app. |
 | What changed | Debug-gate navigation now falls back to general TV Settings, with JVM regression and release-isolation coverage. |
-| Observed result | `PENDING` — install the replacement APK and manually test the settings button on the projector. |
+| Observed result | `PASS` — replacement installation succeeded; the fallback opened a usable TV Settings path, and the user enabled the service and reached the controller over Netflix. |
 
 ## Decision and Stop Record
 
 | Field | Recorded value |
 | --- | --- |
-| Decision (`PASS` or `FAIL`) | `PENDING` |
-| Stop reason (`NONE` for complete PASS) | `PENDING` |
+| Decision (`PASS` or `FAIL`) | `FAIL` |
+| Stop reason (`NONE` for complete PASS) | Required accessibility-dispatched tap did not activate a centered Netflix profile tile after two manual attempts; the single allowed compatibility investigation had already been used for the XGIMI settings-intent stub. |
 
 - Verifier exit zero is reserved for a complete `PASS` report.
 - Set report `Decision` to `PASS` only when every manual execution result and
