@@ -1,5 +1,92 @@
 # Architecture Status
 
+## Approved H0 experiment (2026-10-24)
+
+The user approved a unified remote proposal with a local Mac/Windows hub:
+phone/laptop PWA → authenticated hub → Android TV Remote v2 (normal controls)
+and scrcpy input (pointer controls). This changes the proposed product ownership:
+input coordination and controller trust would live in the hub. It requires an
+awake host and separately verified projector transport security.
+
+The active implementation is only `experiments/hub_remote/`: a native local Mac
+window, a paired-certificate-bound Remote v2 adapter, and a version-pinned
+control-only scrcpy client. It has no HTTP/WSS listener. The Android app and
+its release boundary are unchanged. The user confirmed Remote v2 connection;
+direct SDK gestures activated a Netflix profile and scrolled the browsing page
+vertically, but the user reported no visible SDK cursor. The default is now
+UHID-only `HardwarePointer`: relative mouse reports, button presses/releases and
+vertical/horizontal wheels. Android owns the accelerated cursor position; the
+hub never derives SDK touch coordinates from it or mixes the two input modes.
+The SDK backend remains a separate diagnostic path. The user confirmed UHID cursor
+visibility, movement, a mouse click opening a Netflix title tile, and both vertical
+and horizontal wheel scrolling. H0 now passes as a scoped local Mac functional
+proof; hardware reliability limitations remain below. The app calls `pad.request_stop()` synchronously
+before scheduling cleanup. Further pointer input is fenced, with only cleanup
+release/destroy allowed; already in-flight sends cannot be retracted. Runtime
+idle channel loss checks run every 100 ms and stop both channels. Stop during old
+pointer replacement prevents a new temporary session. All listed lifecycle fixes
+passed regression tests and app/pointer re-review with no remaining actionable
+findings; main freshly reran 55 tests with ResourceWarning treated as errors.
+The recovery reviewer also found no actionable findings.
+The user confirmed ordinary touchpad Stop, physical-remote use after Stop, and
+touchpad reconnect. TV-channel Stop/reconnect subsequently passed by user report;
+active-drag interruption remains untested on hardware. The user also verified Remote v2 Home, D-pad/OK,
+Netflix launch, Back and volume alongside pointer selection in the same window;
+the Netflix launch claim is contradicted by the later specific failure below.
+Horizontal dragging and normal button release also passed by user observation
+in Netflix; this does not establish release during Stop or link loss.
+ADB recovery is confined to explicit Connect touchpad. If the configured
+transport is missing, the client makes at most one eight-second connect attempt
+to that exact private-IPv4:port or `.local`-hostname:port endpoint, then rechecks
+readiness and validates XK03H and the pinned server hash. It never discovers or
+substitutes a target, restarts the daemon automatically, or retries in the
+background. Setup failure stops both channels and gives sanitized address/ADB
+recovery advice without attributing the failure to TV pairing. A manual restart
+of an empty daemon recovered the observed routing failure; that is not runtime
+behavior. The no-click/no-key missing-transport recovery check passed. The user
+also confirmed Home and pointer both work after Pair TV then Connect touchpad in
+the reopened recovery snapshot. Full Stop/reconnect of both channels without
+pairing and playback/pause/resume subsequently passed by user report. UHID profile
+selection then passed explicitly: "Yes, it works". The Netflix shortcut subsequently
+dropped both channels; this failure is retained in the evidence. Six remote-service
+ActivityNotFoundException entries name the old `market://launch?id=com.netflix.mediaclient`
+link. The reviewed fix keeps the same pinned Remote v2 path and sends only the
+fixed `nflx://www.netflix.com/browse` URI; no arbitrary-link or ADB-launch fallback
+is introduced. DEFAULT resolution to NetflixComLaunchActivity and a fresh 55-test
+PASS verify resolution and local behavior. Separately, the reopened GUI's live
+retest on snapshot 6be01a1d… passed: "Netflix opens and both stay connected" after
+Home → Netflix, a 20-second wait and pointer movement. Stop-all behavior is preserved.
+All H0 functional checks now have evidence. Abrupt hardware link/power loss and
+active-drag interruption remain untested production reliability limitations,
+despite passing local STOP tests. H0 PASS authorizes the next hub trust/PWA design
+discussion and gate definition, not network implementation or PWA/Windows certification.
+
+The mouse descriptor is adapted from scrcpy v5.0.1
+`app/src/hid/hid_mouse.c`, with attribution in `pointer.py` and license in
+`experiments/hub_remote/scrcpy-LICENSE`.
+
+The H0 contract is `docs/superpowers/specs/2026-10-24-unified-remote-hub-proof.md`.
+Only that experiment supersedes the old prohibition on runtime ADB and normal
+remote commands. Historical M0 FAIL and M0.1 STOP remain unchanged. A product
+PWA must satisfy a new trust/browser gate before shipping. In particular, TLS
+to a hub does not protect a separate legacy plaintext ADB device link.
+
+## Proposed local-only PWA hub contract
+
+The owner selected per-device certificate trust without a VPN or account.
+[Design](superpowers/specs/2026-10-24-local-pwa-hub-design.md) and
+[implementation plan](superpowers/plans/2026-10-24-local-pwa-hub.md) propose a
+reserved-IP HTTPS origin, native Mac enrollment/revocation, opaque sessions,
+one socket-bound controller lease, and reuse of the tested adapters.
+A constrained intermediate supports same-address leaf renewal; actual phone
+trust/fingerprint ceremony and negative certificate tests are H1B requirements.
+The new contract is still proposed. D1 must resolve whether the projector link
+requires proven protection or an explicitly accepted legacy-ADB beta exception.
+Current ADB capability flags do not establish encryption or projector identity.
+No PWA control service is implemented and no old gate is superseded by this draft.
+
+## Historical projector-hosted architecture
+
 The approved architecture remains defined by
 `docs/superpowers/specs/2026-10-18-open-tv-touchpad-design.md`. This document
 records the architectural effect of the certified-device M0 result.

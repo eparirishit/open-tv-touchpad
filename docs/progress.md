@@ -2,6 +2,65 @@
 
 ## Current Status
 
+The user selected local-only phone/laptop access with per-device certificate trust,
+no account and no VPN. The [hub design](superpowers/specs/2026-10-24-local-pwa-hub-design.md)
+and [seven-stage plan](superpowers/plans/2026-10-24-local-pwa-hub.md) are drafted.
+Builder/security findings have explicit lifecycle and recovery rules. D1 remains
+an owner decision: require proven protected projector transport, or explicitly
+accept the existing unencrypted ADB hop for a trusted-LAN beta. Local HTTPS does
+not resolve that hop. No product listener, trust installation or product backend
+has been added. H1A/H1B/H2/H3 have not passed.
+
+On 2026-10-24 the user approved a separate unified-remote hub proof (H0).
+The isolated native Mac window has passed the scoped H0 functional proof.
+It combines Android TV Remote v2 buttons and a no-video scrcpy input channel.
+The user confirmed TV remote pairing/connection; diagnostic screenshots
+confirmed direct SDK profile activation and vertical Netflix swiping. The user
+reported NO visible cursor with the SDK pad. The default is now UHID-only
+`HardwarePointer`, with mouse buttons and wheel scrolling; it never combines
+accelerated cursor movement with SDK coordinates. The user confirmed "Pointer
+appears and moves" in the UHID-only window: visibility/movement PASS. The user also
+confirmed a UHID mouse click opens a Netflix title tile in the updated window.
+The user confirmed both vertical and horizontal wheel scrolling work in Netflix.
+The user also confirmed touchpad Stop, physical-remote use after Stop, and
+touchpad reconnect. Home, D-pad/OK, Netflix shortcut, Back and both volume buttons
+were initially reported working together; the shortcut claim is contradicted by
+the later specific failure below. The user confirmed
+horizontal dragging and normal release work in Netflix. The user subsequently
+confirmed the remaining reconnect check and playback/pause/resume work.
+All listed lifecycle findings are fixed, with no
+remaining actionable findings in the app and pointer re-reviews. Main independently
+freshly reran 55 tests with ResourceWarning treated as errors: PASS. Idle channel loss is
+checked every 100 ms; Stop fences further input but cannot retract in-flight sends.
+A later Connect touchpad failure was traced to a missing ADB transport, an
+unresolvable configured hostname and daemon routing failure despite direct TCP
+reachability. Main manually restarted an empty daemon (no devices or forwards)
+and verified XK03H. Explicit Connect now permits at most one eight-second connect
+to the exact configured private-IP/.local endpoint; no daemon restart or discovery
+is automated. Missing-transport recovery passed without clicks/keys. The recovery
+review found no actionable findings. In the reopened recovery snapshot the user
+confirmed "Both stay connected and work" after Pair TV then Connect touchpad,
+testing Home and pointer: original combined-connect regression PASS. Full
+Stop/reconnect of both channels without pairing and playback/pause/resume were
+subsequently confirmed by the user. UHID profile selection now also passed by
+user observation: "Yes, it works". A subsequent Netflix-button failure dropped
+both channels. Six remote-service ActivityNotFoundException entries name
+`market://launch?id=com.netflix.mediaclient`, contradicting the earlier shortcut PASS.
+The implemented/reviewed fix sends the fixed URI `nflx://www.netflix.com/browse`;
+DEFAULT resolution finds NetflixComLaunchActivity, and main's fresh 55-test run
+passed with ResourceWarning treated as errors. Neither resolver nor local TLS
+evidence alone establishes live launch. The corrected GUI's live retest now passed:
+"Netflix opens and both stay connected" after Home → Netflix, a 20-second wait
+and pointer movement on tv_remote.py snapshot 6be01a1d… (full hash in the report).
+All enumerated H0 functional checks have evidence: **H0 PASS, scoped local Mac proof**.
+Abrupt hardware link/power loss and active-drag interruption remain untested
+production reliability limitations; local STOP tests do not certify them.
+Next is new hub trust/PWA design and its acceptance gate, not network implementation.
+No PWA, Windows or universal robustness claim follows from this PASS.
+See `docs/gates/h0-report.md`. No PWA/LAN service has been implemented.
+
+The following status describes the original projector-hosted architecture:
+
 Open TV Touchpad is stopped at the M0 certified-hardware gate. M0 recorded a
 `FAIL` on 2026-10-20, so M1 and all product milestones remain blocked.
 
@@ -58,7 +117,7 @@ The detailed record is in `docs/gates/m0-report.md` and
 The approved design makes Android accessibility gesture dispatch the only V1
 input backend and Netflix success on this projector a hard gate. Continuing
 requires explicit approval of a revised product target, input backend, or gate
-contract. No such change is assumed by this repository.
+contract. The approved H0 proof is scoped separately and does not reopen these gates.
 
 The approved narrow investigation contract is in
 `docs/superpowers/specs/2026-10-20-open-tv-touchpad-m0-1-gesture-investigation-design.md`.

@@ -1,8 +1,27 @@
 # Open TV Touchpad
 
-Open TV Touchpad is an Android TV hardware-gate project. This repository is
-currently limited to the M0 gate baseline and does not contain networking,
-pairing, certificate, web, storage, analytics, or product input behavior.
+## Unified remote proof (H0)
+
+The user approved a separate local-hub experiment on 2026-10-24: one Mac
+window combines Android TV remote buttons with scrcpy UHID mouse input. **H0 PASS
+is scoped to the local Mac functional proof.** The user has confirmed
+visible pointer movement, UHID profile/title selection, both scroll axes, dragging,
+Stop/reconnect and playback/pause/resume. The earlier broad controls PASS is preserved,
+but its Netflix shortcut claim was contradicted by a later logged launch failure.
+The corrected shortcut now passed a separate live retest: Netflix opens and both
+channels stay connected. Next is new hub trust/PWA design and its acceptance gate,
+not network implementation. Abrupt link/power loss and active-drag interruption
+remain untested production reliability limitations; PWA and Windows are not certified.
+The earlier
+accessibility gates remain failed/stopped. This experiment is not the PWA or
+a released remote app. See [the proof runbook](experiments/hub_remote/README.md)
+and [its hardware evidence](docs/gates/h0-report.md).
+
+## Original Android gate
+
+Open TV Touchpad is an Android TV hardware-gate project. This repository
+contains the M0/M0.1 Android gate baseline and the isolated H0 Mac experiment.
+The Android release contains no product networking, web or input behavior.
 
 The certified XGIMI Horizon XK03H run recorded an M0 `FAIL`: cursor movement
 worked, but accessibility-dispatched taps did not activate a Netflix profile

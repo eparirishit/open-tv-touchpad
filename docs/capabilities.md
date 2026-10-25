@@ -2,6 +2,61 @@
 
 This file records observed behavior, not planned functionality.
 
+## Separate H0 local Mac proof
+
+- Local native window combines fixed TV buttons and a scrcpy touchpad.
+- Android TV Remote v2 pairing/verified connection: user confirmed connected.
+- Control-only scrcpy connection: observed on the XK03H, no video/audio stream.
+- Direct SDK proof-client tap: PASS, activated the Netflix profile tile (capture).
+- Direct SDK proof-client vertical swipe: PASS, moved Netflix browsing content (capture).
+- SDK cursor visibility: FAIL, user reported NO visible cursor in the SDK pad.
+- New default `HardwarePointer` sends UHID-only relative mouse movement, buttons
+  and wheel scrolling; it never mixes accelerated cursor movement with SDK coordinates.
+- UHID cursor visibility/movement: PASS by user observation, "Pointer appears and moves".
+- UHID Netflix title tile click: PASS by user observation, "Yes, the tile opens".
+- UHID vertical/horizontal wheel scrolling: PASS by user observation in Netflix.
+- Touchpad Stop, physical-remote use after Stop, and touchpad reconnect: PASS
+  by user observation, "All three pass".
+- Combined UI Home, D-pad/OK, Netflix shortcut, Back and volume: PASS by user
+  observation alongside pointer selection, "All listed controls work", historically.
+  The Netflix shortcut claim is contradicted by the later failure: button press
+  drops both channels, and six remote-service ActivityNotFoundException entries
+  name `market://launch?id=com.netflix.mediaclient`.
+- UHID horizontal drag and normal release: PASS by user observation in Netflix.
+- Playback/pause/resume and full Stop/reconnect without pairing: PASS by user
+  report, "works, and the play/pause also works", responding to those checks.
+- UHID profile selection: PASS by user observation, "Yes, it works", separately
+  from the earlier SDK test.
+- Netflix shortcut's prior failure is resolved by the implemented/reviewed fixed URI
+  `nflx://www.netflix.com/browse` resolves with DEFAULT to NetflixComLaunchActivity;
+  its local TLS payload test passes. The user confirmed "Netflix opens and both
+  stay connected" after Home → Netflix, a 20-second wait and pointer movement
+  on the corrected 6be01a1d… snapshot: live Remote v2 shortcut PASS.
+- Active-drag interruption and abrupt hardware link/power loss remain untested
+  production reliability limitations; local STOP tests do not establish those results.
+- Main freshly reran 55 local tests after the fixed-link change, with ResourceWarning treated as errors:
+  PASS. All listed lifecycle findings are fixed; app and pointer re-reviews found
+  no remaining actionable findings. Tests cover UHID framing, bounds, dispatcher
+  lifecycle, the STOP fence, certificate identity rejection and bounded exact-endpoint
+  ADB recovery. The recovery reviewer found no actionable findings.
+  A native-window render/Stop smoke passed; local tests do not establish hardware acceptance.
+- Idle channel loss is checked every 100 ms. Stop synchronously fences further
+  pointer input while allowing cleanup release/destroy; in-flight sends cannot be retracted.
+- Missing-ADB-transport recovery: PASS in main's no-click/no-key check after
+  disconnecting only the selected projector transport. Explicit Connect permits
+  at most one eight-second connect to the configured private-IP/.local endpoint;
+  it does not restart the daemon, discover devices or substitute another target.
+- Combined connection after recovery: PASS by user observation, "Both stay
+  connected and work" after Pair TV then Connect touchpad, testing Home and pointer
+  in the reopened recovery snapshot. The user subsequently confirmed full
+  Stop/reconnect and playback/pause/resume.
+- No browser endpoint, PWA, Windows package, or released input runtime exists.
+
+**H0 PASS: scoped local Mac functional proof.** Next is new hub trust/PWA design
+and an acceptance gate; no network implementation, PWA, Windows or universal
+robustness is certified. The sections below describe the earlier Android
+accessibility gate only.
+
 ## Available in the Debug Hardware-Gate APK
 
 - A TV-launcher setup screen navigable with a projector remote.

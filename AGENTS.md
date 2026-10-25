@@ -2,6 +2,16 @@
 
 These instructions apply to the entire repository.
 
+## Approved Hub Proof (2026-10-24)
+
+The user approved the unified remote proposal and its first local hardware proof.
+`docs/superpowers/specs/2026-10-24-unified-remote-hub-proof.md` governs the
+isolated `experiments/hub_remote/` spike and supersedes the projector-only,
+no-runtime-ADB, and no-Home/Back/app-launch restrictions ONLY for that spike.
+M0 FAIL and M0.1 STOP remain historical facts; this is a separate H0 gate, not
+an M0 workaround or permission to start M1/product delivery. No LAN/browser
+control endpoint is authorized by this proof. Preserve all other boundaries.
+
 ## Project Contract
 
 - Build the smallest complete implementation of the approved Open TV Touchpad V1 specification and plans.
