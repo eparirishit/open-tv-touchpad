@@ -4,7 +4,7 @@ import java.util.EnumSet;
 
 /** Main-thread process-wide ownership; a stopped owner keeps its slot until native cleanup. */
 final class NativeRunGate {
-    enum Resource { SERVICE, PROFILE, REGISTRATION }
+    enum Resource { SERVICE, PROFILE, REGISTRATION, TV }
     private Run current;
 
     boolean available() { return current == null; }

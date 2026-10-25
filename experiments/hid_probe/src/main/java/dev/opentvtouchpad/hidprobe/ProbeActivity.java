@@ -37,6 +37,8 @@ public final class ProbeActivity extends Activity {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private List<Button> inputs;
     private static EnrollmentStore enrollment;
+    private static TvEnrollment tvEnrollment;
+    private boolean pendingTvForget;
     private ProbeSession session;
     private BluetoothAdapter adapter;
     private Run run;
@@ -55,6 +57,14 @@ public final class ProbeActivity extends Activity {
         super.onCreate(state);
         // Keep a storage-failure latch across configuration recreation; the store holds no Context.
         if (enrollment == null) enrollment = new EnrollmentStore(new AtomicEnrollmentFile(getNoBackupFilesDir()));
+        if (tvEnrollment == null) tvEnrollment = new TvEnrollment(new TvEnrollmentFile(getNoBackupFilesDir()),
+            new TvEnrollment.Identity() {
+                public byte[] fingerprint(String alias) throws Exception {
+                    return java.security.MessageDigest.getInstance("SHA-256")
+                        .digest(TvIdentity.load(alias).getCertificate().getEncoded());
+                }
+                public void delete(String alias) throws Exception { TvIdentity.delete(alias); }
+            });
         session = new ProbeSession(enrollment);
         screen = new RemoteScreen(this, this::move, this::click);
         status = screen.status;
@@ -73,6 +83,19 @@ public final class ProbeActivity extends Activity {
         bind(visible, this::makeVisible);
         bind(confirm, this::confirmAndConnect);
         bind(screen.forget, this::forget);
+        if (tvEnrollment.record() != null) screen.tvAddress.setText(tvEnrollment.record().address());
+        bind(screen.tvSaveAddress, this::saveTvAddress);
+        bind(screen.tvPair, this::pairTv);
+        bind(screen.tvConfirm, this::confirmTvCode);
+        bind(screen.tvForget, this::forgetTv);
+        for (TvCommand command : TvCommand.values()) {
+            Button button = screen.tvButtons.get(command);
+            bind(button, () -> tvCommand(command));
+            button.setOnTouchListener((view, event) -> {
+                if (event.getActionMasked() == MotionEvent.ACTION_DOWN) touchpad.cancelGesture();
+                return false;
+            });
+        }
         bind(screen.moveLeft, () -> move(-16, 0));
         bind(screen.moveRight, () -> move(16, 0));
         bind(screen.moveUp, () -> move(0, -16));
@@ -125,7 +148,11 @@ public final class ProbeActivity extends Activity {
     }
 
     private void requestStart() {
-        if (!resumed || enrollment.failed()) return;
+        if (!resumed || enrollment.failed() || pendingTvForget) return;
+        if (tvEnrollment.state() == TvEnrollment.State.UNUSABLE) {
+            status.setText("TV enrollment is unusable. Forget TV controls successfully before another run.");
+            return;
+        }
         if (!NATIVE_RUNS.available()) {
             status.setText("Previous native teardown is pending. Tap Start again to recheck. "
                 + "If it remains blocked, force stop the probe in Android settings, then reopen.");
@@ -152,7 +179,7 @@ public final class ProbeActivity extends Activity {
         }
         NativeRunGate.Run ownership = NATIVE_RUNS.start();
         if (ownership == null) return;
-        run = new Run(ownership, session.start());
+        run = new Run(ownership, session.start(tvEnrollment.state()));
         session.foreground(run.generation, true);
         status.setText("Starting timed pairing service…");
         run.begin();
@@ -168,6 +195,8 @@ public final class ProbeActivity extends Activity {
     private final class Run {
         final NativeRunGate.Run ownership;
         final long generation;
+        final TvEnrollment.State tvMode = tvEnrollment.state();
+        TvRemoteClient tv;
         final ProbeTrace trace = new ProbeTrace(SystemClock.elapsedRealtime());
         BluetoothHidDevice hid;
         BluetoothDevice candidate;
@@ -383,7 +412,9 @@ public final class ProbeActivity extends Activity {
                             stop("Neutral report failed. No input enabled.");
                             return;
                         }
-                        status.setText("Mouse connected. Try one movement. Native acceptance does not prove delivery or encryption.");
+                        status.setText(tvMode == TvEnrollment.State.VALID
+                            ? "Mouse and TV connected. Both controls are ready."
+                            : "Mouse connected. TV controls are not paired.");
                     } else if (state == BluetoothProfile.STATE_DISCONNECTED) {
                         if (session.connected(generation, peer.getAddress(), false)) stop("Projector disconnected. No input enabled.");
                     }
@@ -417,6 +448,9 @@ public final class ProbeActivity extends Activity {
 
         boolean ready() {
             if (!active() || !resumed || hid == null || connected == null) return false;
+            if (tvMode == TvEnrollment.State.UNUSABLE
+                    || (tvMode == TvEnrollment.State.VALID && (tv == null || !tv.ready()))
+                    || (tvMode == TvEnrollment.State.ABSENT && tv != null)) return false;
             if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED
                     || !adapter.isEnabled()) { stop("Bluetooth permission or adapter lost."); return false; }
             if (connected.getBondState() != BluetoothDevice.BOND_BONDED) {
@@ -425,6 +459,58 @@ public final class ProbeActivity extends Activity {
                 return false;
             }
             return session.canSend(generation, connected.getAddress());
+        }
+
+        TvRemoteClient createTv() {
+            ownership.await(TV);
+            return new TvRemoteClient(SystemClock::elapsedRealtime, guard.deadlineMillis(), new TvRemoteClient.Listener() {
+                public void needCode() { handler.post(() -> {
+                    if (!active() || !resumed || stopping) return;
+                    status.setText("Enter the six-character code shown on the intended projector.");
+                    updateControls();
+                }); }
+                public void connected() { handler.post(() -> {
+                    if (!active() || !resumed || stopping || tv == null || !tv.ready()) return;
+                    if (!session.tvConnected(generation)) { stop("TV connection state changed. No input enabled."); return; }
+                    connect(target);
+                }); }
+                public void enrolled(TvEnrollment.Record record) { handler.post(() -> {
+                    // Main-thread finalization serializes Stop/Forget with durable trust publication.
+                    if (!active() || !resumed || stopping || tv == null || !tv.ready()) return;
+                    if (!tvEnrollment.save(record)) {
+                        stop("TV enrollment could not be saved. Forget TV controls before retrying.");
+                        return;
+                    }
+                    stop("TV controls paired. Start a new run, then Connect both channels.");
+                }); }
+                public void failed() { handler.post(() -> {
+                    if (ownership.owns() && !stopping)
+                        stop("TV connection or pairing failed. Both channels stopped; check the address or pair again.");
+                }); }
+                public void closed() { handler.post(() -> {
+                    if (!ownership.owns()) return;
+                    if (!stopping) stop("TV connection ended. Both channels stopped.");
+                    ownership.completed(TV);
+                    cleanupProgress();
+                }); }
+            });
+        }
+
+        void connectSelected(BluetoothDevice peer) {
+            if (tvMode == TvEnrollment.State.ABSENT) { connect(peer); return; }
+            if (tvMode != TvEnrollment.State.VALID || tvEnrollment.record() == null) {
+                stop("TV enrollment unavailable. Forget TV controls before retrying."); return;
+            }
+            target = peer;
+            try {
+                tv = createTv();
+                status.setText("Verifying TV connection before connecting the mouse…");
+                tv.connect(tvEnrollment.record());
+            } catch (RuntimeException failure) {
+                ownership.fail();
+                stop("TV connection setup failed. Native teardown unconfirmed.");
+            }
+            updateControls();
         }
 
         void connect(BluetoothDevice peer) {
@@ -453,6 +539,11 @@ public final class ProbeActivity extends Activity {
             if (!ownership.owns() || stopping) return;
             touchpad.cancelGesture();
             stopping = true;
+            clearTvCode();
+            if (tv != null) {
+                try { tv.stop(); }
+                catch (RuntimeException failure) { ownership.fail(); }
+            }
             trace(STOP);
             terminalReason = enrollment.failed() ? storageFailure() : message;
             session.stop();
@@ -470,12 +561,18 @@ public final class ProbeActivity extends Activity {
                 try {
                     if (target != null && hid.getConnectionState(target) != BluetoothProfile.STATE_DISCONNECTED
                             && !hid.disconnect(target)) ownership.fail();
-                    for (BluetoothDevice peer : hid.getConnectedDevices()) {
-                        if (!peer.equals(target) && !hid.disconnect(peer)) ownership.fail();
-                    }
-                    if (registrationRequested && !unregistered && !hid.unregisterApp()) ownership.fail();
-                    finishProfile();
                 } catch (SecurityException | IllegalStateException | IllegalArgumentException error) { ownership.fail(); }
+                try {
+                    for (BluetoothDevice peer : hid.getConnectedDevices()) {
+                        try {
+                            if (!peer.equals(target) && !hid.disconnect(peer)) ownership.fail();
+                        } catch (SecurityException | IllegalStateException | IllegalArgumentException error) { ownership.fail(); }
+                    }
+                } catch (SecurityException | IllegalStateException | IllegalArgumentException error) { ownership.fail(); }
+                try {
+                    if (registrationRequested && !unregistered && !hid.unregisterApp()) ownership.fail();
+                } catch (SecurityException | IllegalStateException | IllegalArgumentException error) { ownership.fail(); }
+                finishProfile();
             }
             finishGuard();
             cleanupProgress();
@@ -516,6 +613,7 @@ public final class ProbeActivity extends Activity {
                 handler.removeCallbacks(teardownDeadline);
                 status.setText(terminalReason + " Native teardown completed. Tap Start for a new run.");
             }
+            completePendingTvForget();
             updateControls();
         }
     }
@@ -589,7 +687,7 @@ public final class ProbeActivity extends Activity {
             stop(enrollment.failed() ? storageFailure() : "Comparison no longer eligible.");
             return;
         }
-        run.connect(run.candidate);
+        run.connectSelected(run.candidate);
     }
 
     private void connectSaved() {
@@ -602,15 +700,88 @@ public final class ProbeActivity extends Activity {
             stop(enrollment.failed() ? storageFailure() : "Saved bond missing. Fresh comparison required.");
             return;
         }
-        run.connect(selected);
+        run.connectSelected(selected);
     }
 
     private void forget() {
+        stop("Stopping to forget the Bluetooth projector.");
         boolean cleared = session.forget();
         stop(cleared ? "Projector forgotten. Remove its bond in OS settings before fresh comparison." : storageFailure());
         status.setText(cleared ? "App record cleared. Remove the old bond in OS settings before fresh comparison."
             : storageFailure());
         updateControls();
+    }
+
+    private void clearTvCode() { if (screen != null) screen.tvCode.getText().clear(); }
+
+    private void pairTv() {
+        if (!canAttempt() || !session.canPairTv(run.generation)) return;
+        String address = screen.tvAddress.getText().toString();
+        if (!TvEnrollment.validAddress(address)) {
+            status.setText("Enter a private Wi-Fi IPv4 address in Setup before pairing."); return;
+        }
+        if (!session.beginTvPair(run.generation)) return;
+        clearTvCode();
+        try {
+            run.tv = run.createTv();
+            status.setText("Starting TV pairing. No input is enabled during this run.");
+            run.tv.beginPair(address);
+        } catch (RuntimeException failure) {
+            run.ownership.fail();
+            stop("TV pairing setup failed. Native teardown unconfirmed.");
+        }
+        updateControls();
+    }
+
+    private void confirmTvCode() {
+        if (!canAttempt() || run.tv == null || !run.tv.needsCode()) return;
+        String code = screen.tvCode.getText().toString();
+        clearTvCode();
+        try { run.tv.finishPair(code); }
+        catch (RuntimeException failure) { stop("TV code submission failed. Start a new pairing run."); }
+        updateControls();
+    }
+
+    private void saveTvAddress() {
+        if (!resumed || !NATIVE_RUNS.available() || pendingTvForget) return;
+        String address = screen.tvAddress.getText().toString();
+        if (!TvEnrollment.validAddress(address)) {
+            status.setText("Use a private IPv4 address, with no spaces or port."); return;
+        }
+        if (tvEnrollment.state() == TvEnrollment.State.VALID) {
+            status.setText(tvEnrollment.changeLocator(address)
+                ? "TV address saved. Certificate identity is unchanged; Start then Connect."
+                : "TV address could not be saved. Forget TV controls successfully before retrying.");
+        } else if (tvEnrollment.state() == TvEnrollment.State.ABSENT) {
+            status.setText("Address ready. Start a new run, then Pair TV in Setup.");
+        }
+        updateControls();
+    }
+
+    private void forgetTv() {
+        if (!NATIVE_RUNS.available() && (run == null || !run.ownership.owns())) {
+            status.setText("Previous native teardown is pending. Retry Forget TV controls after it completes.");
+            return;
+        }
+        pendingTvForget = true;
+        clearTvCode();
+        stop("Stopping both channels before forgetting TV controls.");
+        completePendingTvForget();
+    }
+
+    private void completePendingTvForget() {
+        if (!pendingTvForget || !NATIVE_RUNS.available()) return;
+        pendingTvForget = false;
+        boolean cleared = tvEnrollment.forget();
+        status.setText(cleared ? "TV controls forgotten. Bluetooth enrollment is retained."
+            : "TV removal is unconfirmed. Input blocked; retry Forget TV controls successfully.");
+        updateControls();
+    }
+
+    private void tvCommand(TvCommand command) {
+        touchpad.cancelGesture();
+        if (!canAttempt() || !run.ready() || run.tv == null) return;
+        run.tv.submit(command);
     }
 
     private void move(int dx, int dy) {
@@ -642,7 +813,8 @@ public final class ProbeActivity extends Activity {
     private void updateControls() {
         migrationNotice.setVisibility(enrollment.requiresReenrollment() ? View.VISIBLE : View.GONE);
         // An idle/recreated screen can explicitly retry after another owner's teardown finishes.
-        start.setEnabled(resumed && !enrollment.failed() && (run == null || run.stopping));
+        start.setEnabled(resumed && !enrollment.failed() && !pendingTvForget
+            && tvEnrollment.state() != TvEnrollment.State.UNUSABLE && (run == null || run.stopping));
         boolean registered = run != null && run.ownership.active() && session.isRegistered(run.generation);
         visible.setEnabled(resumed && registered && session.savedPeer() == null && run.hid != null);
         confirm.setEnabled(registered && session.canConfirm(run.generation));
@@ -652,10 +824,25 @@ public final class ProbeActivity extends Activity {
         for (Button button : inputs) button.setEnabled(ready);
         touchpad.setEnabled(ready);
         screen.setConnected(ready);
+        boolean stopped = resumed && NATIVE_RUNS.available() && !pendingTvForget;
+        screen.tvAddress.setEnabled(stopped && tvEnrollment.state() != TvEnrollment.State.UNUSABLE);
+        screen.tvSaveAddress.setEnabled(screen.tvAddress.isEnabled());
+        screen.tvPair.setEnabled(registered && !pendingTvForget && session.canPairTv(run.generation));
+        boolean code = resumed && registered && run.tv != null && run.tv.needsCode();
+        screen.tvCode.setEnabled(code);
+        screen.tvConfirm.setEnabled(code);
+        screen.tvForget.setEnabled(resumed && !pendingTvForget);
+        boolean tvReady = ready && run.tvMode == TvEnrollment.State.VALID && run.tv != null;
+        for (Button button : screen.tvButtons.values()) button.setEnabled(tvReady);
+        screen.tvStatus.setText(tvEnrollment.state() == TvEnrollment.State.UNUSABLE ? "TV: enrollment unusable"
+            : run != null && run.ownership.active() && run.tv != null
+                ? run.tv.ready() ? "TV: connected" : code ? "TV: code required" : "TV: connecting"
+                : tvEnrollment.state() == TvEnrollment.State.VALID ? "TV: paired, disconnected" : "TV: not paired");
     }
 
     private void stop(String message) {
         if (touchpad != null) touchpad.cancelGesture();
+        clearTvCode();
         if (run != null && !run.stopping && run.ownership.owns()) run.stop(message);
         else {
             session.stop();
@@ -678,6 +865,7 @@ public final class ProbeActivity extends Activity {
     }
 
     @Override protected void onPause() {
+        clearTvCode();
         if (touchpad != null) touchpad.cancelGesture();
         resumed = false;
         if (run != null) {

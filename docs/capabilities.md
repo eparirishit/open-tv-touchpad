@@ -1,5 +1,16 @@
 # Capabilities
 
+## Nord unified remote0.9 — installed, hardware checks pending
+
+The app now includes D-pad/OK, Home/Back, volume, play/pause and Netflix alongside
+the existing touchpad and scroll controls. TV controls require separate in-app
+code pairing and exact-pinned TLS over local Wi-Fi; the mouse still uses Bluetooth.
+Combined Connect verifies TV first and enables input only when both are ready.
+Any active-channel failure stops both. No Mac, router reservation or CA setup.
+Automated checks and review pass; owner pairing and combined projector behavior
+remain unverified. The five-minute foreground-only diagnostic limit remains.
+See [N3 evidence](gates/n3-report.md).
+
 ## Nord UI refresh — owner smoke passed (2026-10-25)
 
 Version0.7 is installed with saved enrollment preserved. Owner confirmed layout

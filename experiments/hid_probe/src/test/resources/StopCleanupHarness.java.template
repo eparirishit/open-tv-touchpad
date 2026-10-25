@@ -8,7 +8,7 @@ public class StopCleanupHarness {
         int reports, disconnected, unregistered;
         boolean firstSucceeds;
         boolean rejectFirst;
-        boolean permissionRevoked;
+        boolean permissionRevoked, disconnectFails, enumerationFails, stateFails;
         boolean sendReport(BluetoothDevice peer, int id, byte[] data) {
             check(id == 1 && data.length == 5);
             if (reports >= 1) check(java.util.Arrays.equals(data, new byte[5]));
@@ -17,11 +17,18 @@ public class StopCleanupHarness {
             if (++reports == 1 && firstSucceeds) return true;
             throw new IllegalArgumentException("injected native failure");
         }
-        int getConnectionState(BluetoothDevice peer) { return 2; }
-        boolean disconnect(BluetoothDevice peer) { disconnected++; return true; }
-        List<BluetoothDevice> getConnectedDevices() { return List.of(); }
+        int getConnectionState(BluetoothDevice peer) { if (stateFails) throw new SecurityException("state permission lost"); return 2; }
+        boolean disconnect(BluetoothDevice peer) { disconnected++; if (disconnectFails) throw new IllegalStateException("disconnect failed"); return true; }
+        List<BluetoothDevice> getConnectedDevices() { if (enumerationFails) throw new SecurityException("enumeration permission lost"); return List.of(); }
         boolean unregisterApp() { unregistered++; return true; }
     }
+    static class Tv {
+        boolean stopped, throwsOnStop;
+        void stop() { stopped = true; if (throwsOnStop) throw new IllegalStateException("injected TV close failure"); }
+    }
+    final Tv tv = new Tv();
+    boolean codeCleared;
+    void clearTvCode() { codeCleared = true; }
     static class Enrollment { boolean failed() { return false; } }
     static class Session { boolean stopped; void stop() { stopped = true; } }
     static class Handler { void removeCallbacks(Runnable r) {} void postDelayed(Runnable r, long delay) {} }
@@ -64,11 +71,15 @@ __STOP_METHOD__
     }
     static void check(boolean condition) { if (!condition) throw new AssertionError(); }
     public static void main(String[] args) {
-        for (int mode = 0; mode < 5; mode++) {
+        for (int mode = 0; mode < 9; mode++) {
             boolean tap = mode == 1;
             StopCleanupHarness p = new StopCleanupHarness(tap);
             p.hid.rejectFirst = mode == 3;
             p.hid.permissionRevoked = mode == 4;
+            p.tv.throwsOnStop = mode == 5;
+            p.hid.disconnectFails = mode == 6;
+            p.hid.enumerationFails = mode == 7;
+            p.hid.stateFails = mode == 8;
             p.gesture.down(7, 0, 0, 0);
             boolean escaped = false;
             try {
@@ -78,7 +89,8 @@ __STOP_METHOD__
                 else { p.gesture.move(7, 6, 0); p.gesture.frame(p.gesture.generation(), 0); }
             } catch (IllegalArgumentException expected) { escaped = true; }
             check(!escaped && p.stopping && p.session.stopped && !p.gesture.hasPendingMotion());
-            check(p.guardFinished && p.cleaned && p.hid.disconnected == 1 && p.hid.unregistered == 1);
+            check(p.tv.stopped && p.codeCleared);
+            check(p.guardFinished && p.cleaned && p.hid.disconnected == (mode == 8 ? 0 : 1) && p.hid.unregistered == 1);
             check(!p.ownership.active() && !p.gates.available());
             System.out.println((tap ? "tap release" : "scheduled movement") +
                 ": native failure contained; input fenced; remaining cleanup attempted");

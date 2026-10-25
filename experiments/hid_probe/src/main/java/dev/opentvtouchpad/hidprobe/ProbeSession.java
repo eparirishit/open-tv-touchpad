@@ -18,6 +18,8 @@ public final class ProbeSession {
     private boolean connected;
     private boolean neutral;
     private String rejectedPeer;
+    private TvEnrollment.State tvEnrollment = TvEnrollment.State.ABSENT;
+    private boolean tvOperation, tvPairing, tvReady;
 
     ProbeSession(EnrollmentStore enrollment) { this.enrollment = enrollment; }
 
@@ -36,7 +38,8 @@ public final class ProbeSession {
     }
 
     public boolean canConnect(long generation) {
-        return isRegistered(generation) && foreground && savedPeer() != null && !confirmed && rejectedPeer == null;
+        return isRegistered(generation) && foreground && savedPeer() != null && !confirmed && rejectedPeer == null
+            && !tvOperation && tvEnrollment != TvEnrollment.State.UNUSABLE;
     }
 
     public boolean connectSaved(long generation, boolean currentlyBonded) {
@@ -45,6 +48,24 @@ public final class ProbeSession {
         candidate = savedPeer();
         bonded = true;
         confirmed = true;
+        tvOperation = tvEnrollment == TvEnrollment.State.VALID;
+        return true;
+    }
+
+    boolean canPairTv(long generation) {
+        return canConnect(generation) && tvEnrollment == TvEnrollment.State.ABSENT;
+    }
+
+    boolean beginTvPair(long generation) {
+        if (!canPairTv(generation)) return false;
+        tvOperation = tvPairing = true;
+        return true;
+    }
+
+    boolean tvConnected(long generation) {
+        if (!isRegistered(generation) || !foreground || !confirmed || !tvOperation || tvPairing
+                || tvEnrollment != TvEnrollment.State.VALID || tvReady) return false;
+        tvReady = true;
         return true;
     }
 
@@ -57,10 +78,15 @@ public final class ProbeSession {
     }
 
     public long start() {
+        return start(TvEnrollment.State.ABSENT);
+    }
+
+    long start(TvEnrollment.State tvEnrollment) {
         stop();
         // Fail closed on exhaustion instead of ever reusing a generation.
         generation = Math.incrementExact(generation);
         running = true;
+        this.tvEnrollment = java.util.Objects.requireNonNull(tvEnrollment);
         return generation;
     }
 
@@ -74,6 +100,7 @@ public final class ProbeSession {
         connected = false;
         neutral = false;
         rejectedPeer = null;
+        tvOperation = tvPairing = tvReady = false;
     }
 
     public boolean active(long generation) {
@@ -87,7 +114,7 @@ public final class ProbeSession {
     /** Setup evidence survives covering the UI; a confirmed session does not. */
     public void foreground(long generation, boolean foreground) {
         if (!active(generation)) return;
-        if (!foreground && confirmed) {
+        if (!foreground && (confirmed || tvOperation)) {
             stop();
             return;
         }
@@ -97,7 +124,8 @@ public final class ProbeSession {
     /** Whether a first explicit comparison can be accepted in the visible UI. */
     public boolean canConfirm(long generation) {
         return isRegistered(generation) && foreground && bonded && candidate != null && !confirmed
-            && savedPeer() == null && !enrollment.failed() && rejectedPeer == null;
+            && savedPeer() == null && !enrollment.failed() && rejectedPeer == null
+            && !tvOperation && tvEnrollment != TvEnrollment.State.UNUSABLE;
     }
 
     public void registered(long generation, boolean registered) {
@@ -132,6 +160,7 @@ public final class ProbeSession {
         if (!canConfirm(generation)) return false;
         if (!enrollment.save(candidate)) { stop(); return false; }
         confirmed = true;
+        tvOperation = tvEnrollment == TvEnrollment.State.VALID;
         return true;
     }
 
@@ -155,7 +184,8 @@ public final class ProbeSession {
             rejectedPeer = null;
             return false;
         }
-        boolean accepted = peer != null && peer.equals(eligiblePeer());
+        boolean accepted = peer != null && peer.equals(eligiblePeer())
+            && (tvEnrollment == TvEnrollment.State.ABSENT || tvReady);
         if (connected && !accepted && EnrollmentStore.validPeer(peer)) {
             if (rejectedPeer != null && !rejectedPeer.equals(peer)) stop();
             else rejectedPeer = peer;
@@ -170,6 +200,8 @@ public final class ProbeSession {
     }
 
     public boolean canSend(long generation, String peer) {
-        return active(generation) && foreground && connected && neutral && peer != null && peer.equals(eligiblePeer());
+        return active(generation) && foreground && connected && neutral && peer != null && peer.equals(eligiblePeer())
+            && !tvPairing && tvEnrollment != TvEnrollment.State.UNUSABLE
+            && (tvEnrollment == TvEnrollment.State.ABSENT || tvReady);
     }
 }

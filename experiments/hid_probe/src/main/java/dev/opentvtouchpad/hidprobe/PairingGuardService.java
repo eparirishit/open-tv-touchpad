@@ -43,7 +43,7 @@ public final class PairingGuardService extends Service {
         Notification notification = new Notification.Builder(this, "hid-probe")
             .setSmallIcon(android.R.drawable.ic_menu_compass)
             .setContentTitle("Open TV HID diagnostic")
-            .setContentText("Five-minute test. Mouse input requires the open probe screen.")
+            .setContentText("Five-minute test. TV and mouse controls require the open probe screen.")
             .setContentIntent(PendingIntent.getActivity(this, 2, open,
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT))
             .addAction(new Notification.Action.Builder(null, "Stop test", stopIntent).build())
@@ -76,6 +76,8 @@ public final class PairingGuardService extends Service {
             finish("Five-minute diagnostic window expired. Start a new run after teardown.");
         return alive;
     }
+
+    long deadlineMillis() { return deadline; }
 
     void onDestroyed(Runnable callback) { destroyed = callback; }
 

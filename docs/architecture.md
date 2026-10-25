@@ -10,7 +10,9 @@ Stop. A separate fail-closed TV enrollment store and non-exportable AndroidKeySt
 identity preserve the Bluetooth record. Initial TV-code pairing is a separate
 no-input run; combined Connect enables input only after both channels are ready.
 No router reservation, Mac bridge or CA installation is needed for this direction.
-N3a platform validation is in progress; no real-TV integration or N3 PASS yet.
+Native platform validation passes on the Nord; reviewed version0.9 integrates
+the two channels and is installed. Owner-observed combined TV behavior is pending;
+no N3 acceptance PASS yet. See [N3 evidence](gates/n3-report.md).
 The older hub/projector architectures and gate evidence below remain historical
 or deferred, and do not authorize an insecure runtime fallback.
 

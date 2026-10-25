@@ -1,10 +1,24 @@
 # Project Progress
 
-## N3 TV-controls implementation (2026-10-25)
+## N3 combined remote installed (2026-10-25)
+
+Reviewed implementation `8763f5a` adds TV controls to the existing Nord Bluetooth
+remote. Version0.9 is installed in place on the stopped authorized Nord; signing
+identity and both enrollment stores are preserved, foreground confirmed, no run
+started automatically. All164 unit tests and17 emulator native tests pass; lint
+has0 errors/37 warnings. Independent review and focused re-reviews close the
+handshake-write race, deferred-Forget recovery and cleanup-order findings.
+The owner has been asked to enter the projector locator and TV code in-app for
+first pairing. **N3 owner acceptance remains pending**; no live TV control by0.9
+has been observed. See [N3 report](gates/n3-report.md) for artifact identity,
+review disposition, remaining compatibility limits and hardware checklist.
+
+## N3 native foundation history (2026-10-25)
 
 Owner approved the [unified N3 design](superpowers/specs/2026-10-25-nord-tv-controls-design.md)
 and [implementation plan](superpowers/plans/2026-10-25-nord-tv-controls.md).
-The active branch is `nord-tv-controls`. The installed0.7 remains unchanged.
+Work started on `nord-tv-controls` with0.7 preserved; the foundation proof and
+combined update below subsequently installed0.8 and0.9.
 N3 adds Bluetooth mouse plus pinned Remote v2 TLS, native Keystore credentials,
 a stopped-only editable private-IP locator, and one shared foreground run/Stop.
 
@@ -31,7 +45,7 @@ The apparent missing-device result was a sandbox access failure; permitted
 inspection found the existing authorized connection. No new address was needed.
 No TV connection, pairing or input was used in this fixture. Source foundations:
 `691f5f2` (wire), `9aec0b2` (TLS), `81a1ebe` (storage). Bounded transport and combined
-UI/lifecycle implementation are now in progress. N3 overall is not accepted until
+UI/lifecycle implementation are complete in the installed0.9 snapshot above. N3 overall is not accepted until
 integration review and owner hardware checks pass. See [platform evidence](gates/n3-platform-report.md).
 
 ## Nord UI refresh (2026-10-25)

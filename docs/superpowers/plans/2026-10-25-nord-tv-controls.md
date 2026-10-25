@@ -90,7 +90,7 @@ Key presence/fingerprint validation supplied by native identity adapter; no HID 
   records, failed read/write/readback, explicit empty tombstone and process failure latch.
 - [x] Implement one fixed app-owned alias and separate noBackup record. Forget
   tombstones/readbacks before key deletion, unknown states cannot become ABSENT.
-- [ ] Test locator changes preserve peer pin; no candidate adoption or silent key
+- [x] Test locator changes preserve peer pin; no candidate adoption or silent key
   replacement; test delayed commit cannot follow revoked enrollment in integration.
 - [x] Review before task4 uses storage; no credentials in tests/logs/artifacts.
 
@@ -101,14 +101,14 @@ Consumes identity/enrollment/wire. Interface: per-run beginPair(locator), finish
 connect(record), submit(Command), stop(); callbacks carry immutable owner and attempt.
 Expose separate pairing/ready/closed/error status, never raw exceptions or peer data.
 
-- [ ] Test cancellation before/after socket creation, keygen, handshake and commit;
+- [x] Test cancellation before/after socket creation, keygen, handshake and commit;
   retained exact pin, pairing/control cert mismatch, deadlines and no send before ready.
-- [ ] Implement one socket, bounded reader/writer/watchdog, one pending user command,
+- [x] Implement one socket, bounded reader/writer/watchdog, one pending user command,
  250ms age/10Hz, bounded protocol replies8, frame admission100/s burst200; platform
   handshake12s/exchange10s/code120s/write2s/idle30s within existing run deadline.
-- [ ] Test blocked write independent close, stale timeout, Stop clears queue, new
+- [x] Test blocked write independent close, stale timeout, Stop clears queue, new
   owner cannot start until worker termination, no post-Stop trust resurrection.
-- [ ] Review transport and credential mutation paths together; no real TV operations yet.
+- [x] Review transport and credential mutation paths together; no real TV operations yet.
 
 ## Task 5: Unified native screen and lifecycle
 
@@ -116,22 +116,22 @@ Files: ProbeActivity, NativeRunGate, RemoteScreen, PairingGuardService wording/d
 access only; NativeRunGateTest, NativeStopTest plus StopCleanupHarness.java.template,
 RemoteScreenTest and appropriate new combined-state tests.
 
-- [ ] Test combined gating at actual submit boundaries, TV-active pause and existing
+- [x] Test combined gating at actual submit boundaries, TV-active pause and existing
   initial-Bluetooth-pair exception, service expiry before delayed timer, lost either
   channel stops both, Stop cleanup attempts every resource despite exceptions.
-- [ ] Wire separate TV enrollment/pairing run; then TLS-first/HID-second Connect.
+- [x] Wire separate TV enrollment/pairing run; then TLS-first/HID-second Connect.
   Keep HID-only only for ABSENT TV enrollment. Add TV native inputs and masked inline
   code field; state-saving/autofill off; clear on every terminal event.
-- [ ] Add real D-pad/OK/Home/Back/volume/play-pause/Netflix controls, split channel
+- [x] Add real D-pad/OK/Home/Back/volume/play-pause/Netflix controls, split channel
   status and accessible labels. DOWN/click cancels pad. Keep fixed Stop/Close.
-- [ ] Validate portrait/landscape/enlarged text/IME footer and no false enabled controls.
+- [x] Validate portrait/landscape/enlarged text/IME footer and no false enabled controls.
   Run full unit/lint/native suites, inspect packaged permissions/backup/export/release
   exclusion; whole-change independent security review and scoped re-review of fixes.
 
 ## Task 6: Install and owner hardware acceptance
 
 Files: probe README, progress/capabilities/BACKLOG, N3 report, approved architecture.
-- [ ] Commit reviewed implementation; preserve0.7 APK and record source/hash. Verify
+- [x] Commit reviewed implementation; preserve0.7 APK and record source/hash. Verify
   unique authorized stopped Nord; same-signature update preserves both stores/bond.
 - [ ] Owner TV-code pairing in app (never chat), saved reconnect/process restart,
   TV buttons/Netflix20s coexistence, pointer/tap/scroll and profile selection.

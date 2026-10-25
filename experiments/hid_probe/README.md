@@ -1,4 +1,4 @@
-# Disposable Nord HID probe — N3 platform foundation
+# Disposable Nord remote — N3 diagnostic
 
 The owner accepted remembering the verified projector for this isolated diagnostic
 on 2026-10-24, including the OS-bond continuity limitation. This is not a product
@@ -30,8 +30,42 @@ Uses native `BluetoothHidDevice` on API31+, the existing Gradle/JUnit toolchain,
 and pinned protobuf Java lite for N3 wire messages; no custom crypto. Separate
 application ID; opt-in Gradle module; debug-only variant. No scan, location,
 accessibility or storage permission. Nothing starts the app in response to a
-Bluetooth broadcast. Version0.7 remains the preserved owner-tested behavior baseline;0.8 is installed
-for the platform proof and has no live TV-controls caller yet.
+Bluetooth broadcast. Version0.7 remains the preserved owner-tested behavior baseline.
+Version0.8 was installed for the platform proof with no live TV-controls caller;
+it is superseded by the installed0.9 integration described below.
+
+
+## Installed0.9 unified controls setup
+
+Version0.9 combines the existing Bluetooth mouse with TV buttons over pinned TLS.
+Automated checks and independent review pass; it is installed on the Nord. [N3 evidence](../../docs/gates/n3-report.md)
+separates automated checks from owner acceptance. Keep the existing Bluetooth
+bond and saved enrollment; this update requires no Bluetooth re-pairing.
+
+To perform the pending owner acceptance checks:
+
+1. Keep the Nord and projector reachable on the same local Wi-Fi, with Bluetooth on.
+   Find the projector's Wi-Fi IPv4 address in its network settings.
+2. While stopped, open Setup, enter that private IPv4 address without a port, and
+   tap Save TV address. This address locates the TV; its certificate authenticates it.
+3. With Bluetooth already enrolled, tap Start, then Pair TV in Setup. Do not tap
+   Connect during this first TV-pairing run. Enter the six hexadecimal characters
+   shown on the intended projector into the masked field and tap Confirm TV code.
+   Keep the code out of chat/logs. Leaving the app stops the attempt.
+4. Successful pairing saves the separate TV identity and ends the run. Tap Start,
+   wait for HID registration, then Connect. TV TLS verifies first; mouse and TV
+   controls enable only after both channels are ready.
+5. Keep the app open. Stop/Close, expiry, foreground loss or either connection
+   failure stops both. Recovery is explicit Start/Connect after native teardown.
+
+If DHCP changes the address, Stop, edit it in Setup and save. This preserves the
+certificate identity. A wrong/expired/changed certificate fails closed; do not
+expect editing the address to replace trust. Explicit Forget TV controls removes
+only this app's TV record/key, then permits a new intended-TV pairing. A failed
+Forget remains blocked until a successful retry. Forget Bluetooth is separate.
+Apartment Wi-Fi client isolation can block TV keys even when Bluetooth works;
+there is no insecure transport fallback. The diagnostic remains foreground-only
+and limited to five minutes, including the pairing time.
 
 `ProbeActivity` owns public Bluetooth calls and the manual UI. Its `singleInstance`
 launch mode prevents multiple screens from holding conflicting enrollment views,

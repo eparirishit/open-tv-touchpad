@@ -34,11 +34,12 @@ design must be approved before an item moves into an active milestone.
 - [x] Version0.7 owner smoke: saved connect, movement/tap/scroll, page switching
   without stray input, Stop and portrait/landscape. [UI report](docs/gates/nord-ui-report.md).
 - [x] N3: approve the [concrete TV-controls design](docs/superpowers/specs/2026-10-25-nord-tv-controls-design.md).
-- [ ] N3a: native TLS/Keystore, wire/pairing and enrollment foundation.
-  Emulator14, Nord12 native tests and126 unit tests pass; foundation reviewed.
-  Bounded transport/cancellation acceptance remains with the next implementation slice.
-- [ ] N3b: bounded transport, combined lifecycle/admission and TV controls UI.
-- [ ] N3c: reviewed installation and combined owner hardware acceptance.
+- [x] N3a: reviewed native TLS/Keystore, wire/pairing, enrollment and bounded
+  transport foundation. Nord12 native TLS checks pass; final combined suite164unit/17emulator passes.
+- [x] N3b: bounded transport, combined lifecycle/admission and TV controls UI;
+  reviewed version0.9 installed with enrollment preserved.
+- [ ] N3c: combined owner hardware acceptance. First TV pairing requested;
+  [all hardware checks remain pending](docs/gates/n3-report.md).
   Existing Mac Python implementation is reference, not Android runtime code.
 - [ ] N4: review daily-use lifecycle and packaging after combined functionality.
 - [ ] Before broader distribution, verify screen-reader/font-scale/layout behavior;
