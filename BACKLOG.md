@@ -33,8 +33,10 @@ design must be approved before an item moves into an active milestone.
   Stop/Close, existing controls; unit/native tests and independent review pass.
 - [x] Version0.7 owner smoke: saved connect, movement/tap/scroll, page switching
   without stray input, Stop and portrait/landscape. [UI report](docs/gates/nord-ui-report.md).
-- [ ] N3: design and verify Android TV Remote v2 pairing/identity and fixed TV
-  controls in the same interface. Existing Mac Python implementation is reference.
+- [ ] N3: approve the [concrete TV-controls design](docs/superpowers/specs/2026-10-25-nord-tv-controls-design.md).
+  Source/lifecycle assessment complete; native TLS/Keystore platform proof,
+  integration and combined hardware acceptance remain pending. Existing Mac
+  Python implementation is reference, not Android runtime code.
 - [ ] N4: review daily-use lifecycle and packaging after combined functionality.
 - [ ] Before broader distribution, verify screen-reader/font-scale/layout behavior;
   current native alternative controls have not received a complete device audit.

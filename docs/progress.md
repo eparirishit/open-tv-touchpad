@@ -1,5 +1,18 @@
 # Project Progress
 
+## N3 TV-controls design (2026-10-25)
+
+Owner requested proceeding to N3 after0.7 smoke passed. Source tracing and current
+platform/protocol research produced the [concrete N3 design](superpowers/specs/2026-10-25-nord-tv-controls-design.md):
+Bluetooth mouse plus pinned Remote v2 TLS, native Keystore credentials, manual
+editable private-IP locator, one shared foreground run and Stop. N3 security/platform
+contract approval remains pending; no network permission, dependency or runtime
+code has been added and the installed0.7 remains unchanged. Independent lifecycle
+assessment identified pause/worker-teardown and queued-input admission requirements,
+now included in the design. Three further concrete draft ambiguities were fixed
+and independently re-reviewed with no remaining actionable findings. The design
+is ready for owner approval; this is not implementation or platform acceptance.
+
 ## Nord UI refresh (2026-10-25)
 
 Version0.7 implements the requested Google TV-inspired native presentation.

@@ -2,6 +2,17 @@
 
 These instructions apply to the entire repository.
 
+## Approved N3 Nord TV controls (2026-10-25)
+
+The owner approved the earlier unified N3 plan after considering a separate
+Google TV companion. Follow `docs/superpowers/specs/2026-10-25-nord-tv-controls-design.md`
+and its implementation plan. This supersedes the no-network/no-TV-key boundary
+only in the opt-in debug Nord diagnostic: reviewed TLS/Keystore fixture gate,
+then code-bound Remote v2 pairing and exact pinned control, with existing HID.
+N3a permits the specified test-only loopback fixture before N3b. Preserve the
+five-minute run, combined Stop, existing HID enrollment and all other gates.
+No plaintext runtime ADB, unpinned runtime TLS, background control or product release.
+
 ## Requested Nord remote presentation (2026-10-25)
 
 The owner requested a minimal Google TV-inspired UI and supplied the connected
