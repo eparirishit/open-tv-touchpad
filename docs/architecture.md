@@ -18,9 +18,11 @@ Installed0.10 retains this flow and adds only a closed failure-stage enum captur
 atomically with the first terminal failure, then shown by the existing guarded
 UI callback. Later cleanup cannot replace that stage or expose exception data.
 Native and independent Mac evidence now identify the explicit peer self-signature
-check as the TLS blocker. The [proposed leaf trust-anchor decision](superpowers/specs/2026-10-25-tv-trust-anchor-compatibility.md)
-awaits owner approval; neither certificate policy nor pairing authentication has
-been changed. TLS-only diagnostic instrumentation is explicit opt-in, sends no
+check as the TLS blocker. The [approved leaf trust-anchor decision](superpowers/specs/2026-10-25-tv-trust-anchor-compatibility.md)
+removes only explicit peer self-signature verification in installed0.11 after
+regression proof on emulator and Nord. Real projector pairing TLS now completes;
+owner code enrollment remains pending.
+Pairing authentication and native validation are preserved. TLS-only diagnostic instrumentation is explicit opt-in, sends no
 pairing/control frames and does not mutate runtime identity or enrollment.
 The older hub/projector architectures and gate evidence below remain historical
 or deferred, and do not authorize an insecure runtime fallback.

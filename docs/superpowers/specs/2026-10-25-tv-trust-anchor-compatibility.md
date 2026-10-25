@@ -1,7 +1,7 @@
 # TV certificate trust-anchor compatibility
 
-Status: independently reviewed proposal, awaiting owner decision. No runtime
-policy change applied. Review found no additional impersonation counterexample
+Status: independently reviewed and owner-approved on2026-10-25. The owner chose
+"Approve the narrow exception and test it (recommended)." Review found no additional impersonation counterexample
 within the accepted threat model if the retained checks pass, but this explicitly
 relaxes certificate self-consistency validation and requires the proofs below.
 
@@ -24,7 +24,7 @@ server, establish why its certificate is malformed, or prove later pairing and
 control compatibility. No certificate bytes, addresses or exception text are
 included in this record.
 
-## Proposed decision
+## Approved decision
 
 Treat the peer certificate as an explicitly enrolled leaf trust anchor. Remove
 only the additional requirement that a certificate whose issuer and subject

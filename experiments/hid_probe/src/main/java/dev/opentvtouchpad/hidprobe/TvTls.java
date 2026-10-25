@@ -108,10 +108,7 @@ final class TvTls {
                 && !"1.2.840.113549.1.1.12".equals(algorithm)
                 && !"1.2.840.113549.1.1.13".equals(algorithm))
             throw new CertificateException("Unsupported peer signature");
-        if (leaf.getSubjectX500Principal().equals(leaf.getIssuerX500Principal())) {
-            try { leaf.verify(leaf.getPublicKey()); }
-            catch (GeneralSecurityException e) { throw new CertificateException("Invalid peer signature", e); }
-        }
+        // The peer is authenticated by code-bound TLS then exact pin, not an anchor self-signature.
     }
 
     static void checkPssParameters(byte[] encoded) throws CertificateException {

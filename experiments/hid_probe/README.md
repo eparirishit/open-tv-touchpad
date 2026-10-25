@@ -205,6 +205,15 @@ Successful installation or unit tests do not establish actual-device acceptance.
 
 ## Diagnosing TV pairing
 
+Version0.11 applies the owner-approved leaf trust-anchor exception: an invalid
+peer self-signature alone does not block the otherwise checked candidate/pin.
+Code-bound authentication, native TLS/private-key proof, exact DER pinning,
+validity/algorithm policy and native control validation remain required. Native
+client self-signature checks are unchanged. Public test-key/certificate assets
+live only in androidTest and never ship in the app APK. See the
+[approved decision](../../docs/superpowers/specs/2026-10-25-tv-trust-anchor-compatibility.md)
+and [hardware evidence](../../docs/gates/n3-report.md).
+
 Use the projector's own Wi-Fi IPv4 address, not the phone's debugging endpoint
 or the network gateway. Save TV address validates the entry; it does not test
 connectivity. Pair TV is a separate no-input run. Keep its six-character code

@@ -3,6 +3,7 @@ package dev.opentvtouchpad.hidprobe;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.platform.app.InstrumentationRegistry;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -151,6 +152,88 @@ public class TvTlsTest {
 
     @Test public void tls12AuthenticatesActualKeystoreClientAndExchangesData() throws Exception {
         exchange(TvTls.clientSocket(client, cert(server)));
+    }
+
+    @Test public void invalidSelfSignatureAnchorPairsAndPinsWithItsPrivateKey() throws Exception {
+        server = anchorFixture();
+        exchange(TvTls.pairingSocket(client));
+        exchange(TvTls.clientSocket(client, cert(server)));
+    }
+
+    @Test public void samePublicKeyWithDifferentDerStillFailsExactPin() throws Exception {
+        server = anchorFixture();
+        X509Certificate altered = TvTls.certificate(fixtureBytes("altered.der"));
+        assertArrayEquals(cert(server).getPublicKey().getEncoded(), altered.getPublicKey().getEncoded());
+        assertFalse(Arrays.equals(cert(server).getEncoded(), altered.getEncoded()));
+        altered.checkValidity();
+        altered.verify(TvTls.certificate(fixtureBytes("signer.der")).getPublicKey());
+        assertThrows(java.security.GeneralSecurityException.class, () -> altered.verify(altered.getPublicKey()));
+        reject(TvTls.clientSocket(client, altered), CertificateException.class, "Peer certificate changed");
+    }
+
+    @Test public void invalidSelfSignatureAnchorCannotHandshakeWithoutMatchingPrivateKey() throws Exception {
+        server = anchorFixture();
+        X509Certificate anchor = cert(server);
+        // Establish policy acceptance first so a policy rejection cannot masquerade as key proof.
+        TvTls.pinnedTrustManager(anchor).checkServerTrusted(new X509Certificate[]{anchor}, "RSA");
+        KeyStore.PrivateKeyEntry wrong = TvIdentity.create(OTHER);
+        assertFalse(Arrays.equals(anchor.getPublicKey().getEncoded(), cert(wrong).getPublicKey().getEncoded()));
+        for (PrivateKey key : new PrivateKey[]{null, wrong.getPrivateKey()}) {
+            for (boolean pairing : new boolean[]{true, false}) {
+                // Construct a real context/socket with the fixture certificate and absent/wrong key.
+                // Only startHandshake may satisfy the negative assertion, never construction failure.
+                try (SSLSocket socket = pairing ? TvTls.pairingSocket(client) : TvTls.clientSocket(client, anchor);
+                     Loopback peer = new Loopback(anchor, key)) {
+                    peer.connect(socket);
+                    peer.serve(s -> {
+                        IOException failure = assertThrows(IOException.class, s::startHandshake);
+                        assertFalse("Server must reject, not time out", failure instanceof java.net.SocketTimeoutException);
+                    });
+                    IOException failure = assertThrows(IOException.class, socket::startHandshake);
+                    assertFalse("Client must reject, not time out", failure instanceof java.net.SocketTimeoutException);
+                    peer.awaitServer();
+                    assertTrue("Native handshake requested the RSA server identity", peer.socketRsaRequested);
+                }
+            }
+        }
+    }
+
+    // Deliberately PUBLIC test private key, packaged only in the instrumentation APK.
+    // OpenSSL generated two RSA keys with one DN, then signed the server CSR using the other.
+    // See src/androidTest/fixtures/generate-anchor-fixture.py; no certificate wrapper or DER editing.
+    private static KeyStore.PrivateKeyEntry anchorFixture() throws Exception {
+        X509Certificate anchor = TvTls.certificate(fixtureBytes("anchor.der"));
+        X509Certificate signer = TvTls.certificate(fixtureBytes("signer.der"));
+        assertEquals(anchor.getSubjectX500Principal(), anchor.getIssuerX500Principal());
+        assertEquals("1.2.840.113549.1.1.11", anchor.getSigAlgOID());
+        assertEquals(2048, ((RSAPublicKey) anchor.getPublicKey()).getModulus().bitLength());
+        anchor.checkValidity();
+        anchor.verify(signer.getPublicKey());
+        assertThrows(java.security.GeneralSecurityException.class, () -> anchor.verify(anchor.getPublicKey()));
+        PrivateKey key = java.security.KeyFactory.getInstance("RSA").generatePrivate(
+            new java.security.spec.PKCS8EncodedKeySpec(fixtureBytes("server.pk8")));
+        // Independently establish intact key possession using native JCA before the TLS proof.
+        java.security.Signature signature = java.security.Signature.getInstance("SHA256withRSA");
+        byte[] challenge = {21, 34, 55};
+        signature.initSign(key); signature.update(challenge);
+        byte[] proof = signature.sign();
+        signature.initVerify(anchor.getPublicKey()); signature.update(challenge);
+        assertTrue(signature.verify(proof));
+        return new KeyStore.PrivateKeyEntry(key, new java.security.cert.Certificate[]{anchor});
+    }
+
+    private static byte[] fixtureBytes(String name) throws IOException {
+        try (java.io.InputStream input = InstrumentationRegistry.getInstrumentation().getContext()
+                .getAssets().open("tls-anchor/" + name);
+             java.io.ByteArrayOutputStream output = new java.io.ByteArrayOutputStream()) {
+            byte[] buffer = new byte[1024];
+            int size;
+            while ((size = input.read(buffer)) != -1) {
+                if (output.size() + size > 16384) throw new IOException("Oversized public TLS fixture");
+                output.write(buffer, 0, size);
+            }
+            return output.toByteArray();
+        }
     }
 
     @Test public void wrongPinFailsDuringHandshakeBeforeApplicationData() throws Exception {
@@ -313,7 +396,10 @@ public class TvTlsTest {
         Future<?> serverRun;
 
         Loopback() throws Exception {
-            KeyStore.PrivateKeyEntry identity = server;
+            this(cert(server), server.getPrivateKey());
+        }
+
+        Loopback(X509Certificate certificate, PrivateKey privateKey) throws Exception {
             X509ExtendedKeyManager key = new X509ExtendedKeyManager() {
                 public String[] getClientAliases(String t, Principal[] i) { return null; }
                 public String chooseClientAlias(String[] t, Principal[] i, Socket s) { return null; }
@@ -327,10 +413,10 @@ public class TvTlsTest {
                     return alias;
                 }
                 public X509Certificate[] getCertificateChain(String alias) {
-                    return "fixture".equals(alias) ? new X509Certificate[]{cert(identity)} : null;
+                    return "fixture".equals(alias) ? new X509Certificate[]{certificate} : null;
                 }
                 public PrivateKey getPrivateKey(String alias) {
-                    return "fixture".equals(alias) ? identity.getPrivateKey() : null;
+                    return "fixture".equals(alias) ? privateKey : null;
                 }
             };
             SSLContext context = SSLContext.getInstance("TLS");

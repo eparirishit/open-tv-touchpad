@@ -1,14 +1,52 @@
-# N3 unified Nord remote — pairing blocked, diagnostic update installed
+# N3 unified Nord remote — TLS blocker fixed, owner pairing pending
 
 Contract: [approved N3 design](../superpowers/specs/2026-10-25-nord-tv-controls-design.md).
-Current blocker: the service at the owner-confirmed projector address presents a
-certificate that fails explicit trust-anchor self-signature verification. See the
-[proposed compatibility decision](../superpowers/specs/2026-10-25-tv-trust-anchor-compatibility.md).
-No trust-policy change has been applied.
+The prior blocker was an explicit self-signature rejection of the certificate
+presented at the owner-confirmed projector address. See the
+[approved compatibility decision](../superpowers/specs/2026-10-25-tv-trust-anchor-compatibility.md).
+The approved narrow fix is installed and verified on the Nord; owner pairing is pending.
 Source branch `nord-tv-controls`, implementation `8763f5a` (transport `6dfd599`).
-N3 owner acceptance is **BLOCKED at first TV pairing**. Reviewed version0.9 was
+N3 owner acceptance is **PENDING**. Reviewed version0.9 was
 installed with both enrollment stores unchanged and no automatic remote run.
 The owner's first Pair TV attempt failed; no successful TV enrollment is verified.
+
+## Approved compatibility fix — installed, native and live TLS verified
+
+The owner approved the narrow exception. Version0.11 removes only the explicit
+peer self-signature verification; native control validation, exact DER pinning,
+validity/algorithm policy and client self-signature checks remain. A public
+androidTest-only fixture uses independent signer/server RSA2048 keys with
+identical names, creating a native-parsable SHA256 certificate that fails
+self-verification without modifying DER or using custom certificate code.
+
+RED: the positive native test failed at the same explicit INVALID PEER SIGNATURE
+check. GREEN: all15 native TLS tests pass on the task API31 emulator, including
+pairing and exact-pinned handshakes with this anchor, actual handshake rejection
+for absent/wrong private keys, and exact-pin rejection of different certificate
+bytes with the same public key. Existing expired/wrong-pin, PSS-policy, parser,
+key-use and close tests pass. Child rejection remains a native policy test, not
+a live child handshake. Weak RSA/disallowed OID checks are unchanged source
+checks; this increment does not add independent negatives for those.
+
+All166 unit tests pass with no failures/errors/skips; lint remains0 errors and
+37 warnings; app and instrumentation APKs assemble. The app APK contains none
+of the four public test-key/certificate assets or instrumentation classes.
+Independent scoped review found no production or Nord-runner blocker.
+Installed version11 app SHA256:
+`22d18042b732ef1e129b13a140835b2467e900911fa8887bea0fba9dad8e630a`.
+The stopped Nord was updated with the same signing identity and both enrollment
+stores unchanged; no run started automatically. All15 native loopback TLS tests
+also pass on the physical AC2001/API31. A separate reviewed TLS-only diagnostic
+using the existing app identity now reports COMPLETE against the real projector,
+where0.10 failed. It sent no pairing/control frames and persisted no enrollment.
+Both temporary instrumentation installations were removed, records remain
+unchanged, and the probe is stopped. Owner code pairing and the remaining
+combined hardware acceptance checks are still pending; TLS success alone is not
+server enrollment or N3 PASS. The0.10 rollback APK is preserved locally.
+
+The one-use emulator runner was removed after preserving the explicit15-test
+result; its review-noted future-reuse shortcomings do not apply to the separately
+reviewed physical-device runners. No additional production scope was added.
 
 ## Implemented flow
 
@@ -125,7 +163,8 @@ runner verifies stopped state, source/artifact/signature identity, unchanged
 enrollments and test-package cleanup, and bounds execution with process teardown
 on timeout. Three review findings in package-presence/error cleanup were corrected
 before any live diagnostic execution. The immediate blocker is established;
-the proposed trust-anchor compatibility decision is pending owner approval.
+the trust-anchor compatibility decision was then awaiting owner approval, subsequently
+granted and verified in the current fix section above.
 The TLS-only diagnostic test APK SHA256 was
 `9b25190b4b869bd892f77f31ce6fc414b8a3e1b8fc1f549ecaaf1977a1cba1cc`;
 the main app remained the recorded0.10 artifact. Independent design review found

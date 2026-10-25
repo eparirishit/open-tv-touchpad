@@ -1,5 +1,21 @@
 # Project Progress
 
+## N3 certificate compatibility fix verified (2026-10-25)
+
+The owner-approved0.11 fix removes only the explicit peer certificate
+self-signature check. The fixture first reproduced the same rejection; after
+the fix, all15 native TLS tests pass on both emulator and Nord, including invalid
+self-signature pairing/pinned handshakes, missing/wrong private-key rejection,
+and different-DER/same-key pin rejection. All166 unit tests pass; lint0 errors/37
+warnings and APK assembly pass. Independent review found no production blocker.
+
+Version11 is installed with the same signer and unchanged enrollment stores.
+The real projector TLS-only diagnostic now completes with the existing app
+identity, without sending pairing/control frames. Test instrumentation is removed.
+The owner has been asked to retry TV-code pairing. **The immediate TLS blocker is
+fixed; owner pairing and combined N3 acceptance remain pending.** See
+[N3 evidence](gates/n3-report.md) for artifact identity and limits.
+
 ## N3 pairing diagnosis (2026-10-25)
 
 The0.10 UI now confirms PAIRING_TLS. A reviewed TLS-only native diagnostic and
@@ -7,7 +23,8 @@ independent Mac OpenSSL check establish the immediate blocker: the server's
 certificate fails the explicit self-signature check. No pairing/control frames
 were sent by these checks; enrollments are unchanged and instrumentation was
 removed. A [narrow trust-anchor compatibility decision](superpowers/specs/2026-10-25-tv-trust-anchor-compatibility.md)
-is proposed, awaiting owner approval. **Runtime trust policy remains unchanged.**
+was approved by the owner on2026-10-25. Implementation is limited to the explicit
+peer self-signature check; completed verification and installation are recorded above.
 
 The owner reproduced the0.9 pairing failure with the confirmed projector address.
 Both Remote v2 ports are reachable from the Nord and Mac; the app's failed phase

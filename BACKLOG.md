@@ -42,7 +42,9 @@ design must be approved before an item moves into an active milestone.
   acceptance; [remaining checks are not run](docs/gates/n3-report.md).
   Reviewed0.10 diagnostics identify peer self-signature rejection; the
   [trust-anchor decision](docs/superpowers/specs/2026-10-25-tv-trust-anchor-compatibility.md)
-  is pending. No trust-policy fix has been applied.
+  is approved and implemented in installed0.11. Native regressions pass on
+  emulator/Nord and the real projector TLS handshake completes; owner pairing
+  and subsequent combined acceptance remain pending.
   Existing Mac Python implementation is reference, not Android runtime code.
 - [ ] N4: review daily-use lifecycle and packaging after combined functionality.
 - [ ] Before broader distribution, verify screen-reader/font-scale/layout behavior;

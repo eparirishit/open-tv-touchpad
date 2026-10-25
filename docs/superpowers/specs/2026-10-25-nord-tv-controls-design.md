@@ -69,7 +69,11 @@ exact-leaf certificate check during the handshake, before any remote message.
 The peer must satisfy validity/algorithm checks as well as the exact pin. No
 trust-all runtime manager, hostname-verification bypass as a substitute for a
 pin, accepted child certificate, certificate rollover or silent re-enrollment.
-The TV's self-signed identity is checked by certificate, not an IP hostname/SAN.
+The TV identity is checked by certificate, not an IP hostname/SAN. The owner-approved
+[trust-anchor compatibility decision](2026-10-25-tv-trust-anchor-compatibility.md)
+permits an invalid peer certificate self-signature; code-bound pairing, TLS
+key-possession proof, exact DER pinning and native control validation remain
+mandatory. This exception does not apply to native client identity verification.
 An expired/changed certificate blocks TV controls and explains the need for
 explicit Forget TV controls and fresh on-TV pairing. No permissive fallback.
 

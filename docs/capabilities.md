@@ -1,6 +1,6 @@
 # Capabilities
 
-## Nord unified remote0.10 — installed, TV pairing blocked
+## Nord unified remote0.11 — TLS fixed, TV pairing pending
 
 The app now includes D-pad/OK, Home/Back, volume, play/pause and Netflix alongside
 the existing touchpad and scroll controls. TV controls require separate in-app
@@ -10,8 +10,10 @@ Any active-channel failure stops both. No Mac, router reservation or CA setup.
 Automated checks and review pass; the owner TV pairing attempt on0.9 failed,
 including a retry with the confirmed projector address. Version0.10 adds only
 closed failure-stage diagnostics. Native and Mac checks now confirm that explicit
-peer self-signature verification blocks TLS. A compatibility decision is pending;
-combined projector behavior remains unverified.
+peer self-signature verification blocks TLS. The owner approved a narrow
+compatibility exception. Version0.11 is installed; native regression checks pass
+on emulator and Nord, and the real projector TLS handshake now completes.
+TV-code pairing and combined projector behavior remain unverified.
 The five-minute foreground-only diagnostic limit remains.
 See [N3 evidence](gates/n3-report.md).
 

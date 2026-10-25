@@ -2,6 +2,15 @@
 
 These instructions apply to the entire repository.
 
+## Approved TV trust-anchor compatibility (2026-10-25)
+
+The owner approved removing only the explicit peer trust-anchor self-signature
+check and testing the exception. Follow
+`docs/superpowers/specs/2026-10-25-tv-trust-anchor-compatibility.md`.
+Preserve code-bound pairing, TLS key-possession proof, exact DER pinning, native
+trust-manager validation, validity/algorithm checks and client self-signature
+verification. This is not permission to ignore native validation failures.
+
 ## Approved N3 Nord TV controls (2026-10-25)
 
 The owner approved the earlier unified N3 plan after considering a separate
