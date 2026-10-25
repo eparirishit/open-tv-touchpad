@@ -21,6 +21,9 @@ public class NativeStopTest {
         assertTrue("Run.stop must exist", begin >= 0);
         int end = activity.indexOf("        void finishGuard() {", begin);
         assertTrue("Stop extraction must end at finishGuard", end > begin);
+        int scrollBegin = activity.indexOf("        final ScrollInput scrolling =");
+        int scrollEnd = activity.indexOf("        void trace(", scrollBegin);
+        assertTrue("Native scroll dispatch field must exist", scrollBegin >= 0 && scrollEnd > scrollBegin);
         String template;
         try (var input = getClass().getResourceAsStream("/StopCleanupHarness.java.template")) {
             assertNotNull(input);
@@ -29,11 +32,13 @@ public class NativeStopTest {
         Path temporary = Files.createTempDirectory("nord-stop-regression-");
         try {
             Path harness = temporary.resolve("StopCleanupHarness.java");
-            Files.write(harness, template.replace("__STOP_METHOD__", activity.substring(begin, end)).getBytes(StandardCharsets.UTF_8));
+            Files.write(harness, template.replace("__STOP_METHOD__", activity.substring(begin, end))
+                .replace("__SCROLL_FIELD__", activity.substring(scrollBegin, scrollEnd)).getBytes(StandardCharsets.UTF_8));
             Process compiler = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin", "javac").toString(),
                 "-d", temporary.toString(),
                 harness.toString(), source.resolve("InputSubmission.java").toString(),
-                source.resolve("TouchpadGesture.java").toString(), source.resolve("NativeRunGate.java").toString())
+                source.resolve("TouchpadGesture.java").toString(), source.resolve("NativeRunGate.java").toString(),
+                source.resolve("MouseReport.java").toString(), source.resolve("ScrollInput.java").toString())
                 .redirectErrorStream(true).start();
             String diagnostics = new String(compiler.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
             assertEquals(diagnostics, 0, compiler.waitFor());

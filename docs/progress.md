@@ -1,5 +1,35 @@
 # Project Progress
 
+## N2 scrolling implementation (2026-10-25)
+
+Source `a162384` implements the approved N2 increment. Owner approved the [N2 design](superpowers/specs/2026-10-25-nord-scroll-design.md)
+and one-time fresh pairing. Version0.6 implements four scroll buttons, a single
+five-byte wheel/pan mouse report and version2 enrollment. Version1 cannot select
+a peer; it is not rewritten on load. Existing foreground-only five-minute
+lifecycle and N1 finger gestures remain. Scroll-button down and admitted clicks
+cancel pending pad input; excess submissions within100ms are dropped.
+
+The full probe suite passes101 tests with no failures/errors/skips; lint has
+0errors/24warnings and debug assembly passes. The two added warnings concern the
+native button touch listener; it returns false so native click/accessibility
+handling remains. Independent implementation review passed with no actionable findings and an
+independent101-test run. The verified
+0.5 rollback APK is preserved. Owner confirmed both test bonds removed. The reviewed0.6 update is installed
+in place on the unique authorized Nord; version6 and unchanged legacy enrollment
+bytes are verified. Probe service was stopped. Launch returned success but the
+probe was not focused; owner layout/disabled-input checks were requested before
+fresh pairing. Owner subsequently confirmed both portrait/landscape layouts work and input
+remains disabled before pairing. Owner then confirmed fresh connection, four-direction movement and Netflix tap
+work on0.6. Owner then confirmed all four scroll directions work without unwanted clicks
+or pointer jumps. Owner also confirmed Stop blocks input, the physical remote works, and explicit
+saved reconnect restores movement/scrolling without re-pairing. The final owner
+response confirms foreground loss/return and five-minute expiry keep input
+disabled while the physical remote works. **N2 diagnostic behavior acceptance
+PASS** for the recorded0.6 artifact/setup. Source and APK remain unchanged from
+the reviewed/tested build. N3 TV controls and N4 daily-use lifecycle remain
+separate follow-ups; crash cleanup and broader reliability are not certified.
+See [N2 report](gates/n2-report.md). No historical gate becomes PASS.
+
 ## N1 touchpad implementation (2026-10-25)
 
 Owner approved implementation of the first Nord-direct increment. Source

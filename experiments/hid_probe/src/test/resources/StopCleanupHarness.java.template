@@ -7,7 +7,13 @@ public class StopCleanupHarness {
     static class Hid {
         int reports, disconnected, unregistered;
         boolean firstSucceeds;
+        boolean rejectFirst;
+        boolean permissionRevoked;
         boolean sendReport(BluetoothDevice peer, int id, byte[] data) {
+            check(id == 1 && data.length == 5);
+            if (reports >= 1) check(java.util.Arrays.equals(data, new byte[5]));
+            if (permissionRevoked) { reports++; throw new SecurityException("injected permission loss"); }
+            if (rejectFirst && reports == 0) { reports++; return false; }
             if (++reports == 1 && firstSucceeds) return true;
             throw new IllegalArgumentException("injected native failure");
         }
@@ -40,6 +46,9 @@ public class StopCleanupHarness {
     void finishProfile() {}
     void finishGuard() { guardFinished = true; }
     void cleanupProgress() { cleaned = true; }
+    boolean canAttempt() { return ownership.active(); }
+    boolean ready() { return !stopping; }
+__SCROLL_FIELD__
 __STOP_METHOD__
 
     StopCleanupHarness(boolean tap) {
@@ -48,19 +57,24 @@ __STOP_METHOD__
         ownership.await(NativeRunGate.Resource.REGISTRATION);
         hid.firstSucceeds = tap;
         gesture = new TouchpadGesture(5,
-            (x,y) -> InputSubmission.guard(() -> hid.sendReport(connected, 1, new byte[3]), () -> stop("input failed")),
+            (x,y) -> InputSubmission.guard(() -> hid.sendReport(connected, MouseReport.ID, MouseReport.move(x,y)), () -> stop("input failed")),
             () -> InputSubmission.guard(() -> InputSubmission.click(
-                () -> hid.sendReport(connected, 1, new byte[] {1,0,0}),
-                () -> hid.sendReport(connected, 1, new byte[3])), () -> stop("input failed")));
+                () -> hid.sendReport(connected, MouseReport.ID, MouseReport.clickDown()),
+                () -> hid.sendReport(connected, MouseReport.ID, MouseReport.neutral())), () -> stop("input failed")));
     }
     static void check(boolean condition) { if (!condition) throw new AssertionError(); }
     public static void main(String[] args) {
-        for (boolean tap : new boolean[] {false,true}) {
+        for (int mode = 0; mode < 5; mode++) {
+            boolean tap = mode == 1;
             StopCleanupHarness p = new StopCleanupHarness(tap);
+            p.hid.rejectFirst = mode == 3;
+            p.hid.permissionRevoked = mode == 4;
             p.gesture.down(7, 0, 0, 0);
             boolean escaped = false;
             try {
-                if (tap) p.gesture.up(7, 0, 0, 10);
+                if (mode >= 2) InputSubmission.guard(() -> p.scrolling.click(MouseReport.Direction.DOWN, 0),
+                    () -> p.stop("scroll failed"));
+                else if (tap) p.gesture.up(7, 0, 0, 10);
                 else { p.gesture.move(7, 6, 0); p.gesture.frame(p.gesture.generation(), 0); }
             } catch (IllegalArgumentException expected) { escaped = true; }
             check(!escaped && p.stopping && p.session.stopped && !p.gesture.hasPendingMotion());

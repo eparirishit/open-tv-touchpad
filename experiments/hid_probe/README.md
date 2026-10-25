@@ -1,4 +1,4 @@
-# Disposable Nord HID probe — 0.5-diagnostic
+# Disposable Nord HID probe — 0.6-diagnostic
 
 The owner accepted remembering the verified projector for this isolated diagnostic
 on 2026-10-24, including the OS-bond continuity limitation. This is not a product
@@ -6,8 +6,8 @@ companion, network bridge, or H1A PASS. The physical TV remote remains independe
 
 The owner approved the N1 direct-Nord touchpad on 2026-10-25. Version0.5 adds a
 finger-operated surface to this same isolated probe; it is not the complete
-unified TV remote. Scrolling, TV buttons and daily-use lifecycle remain separate
-increments in the [direct-remote design](../../docs/superpowers/specs/2026-10-25-nord-direct-remote-design.md).
+unified TV remote. Version0.6 adds four scroll buttons and a one-time fresh
+pairing migration. TV buttons and daily-use lifecycle remain separate increments in the [direct-remote design](../../docs/superpowers/specs/2026-10-25-nord-direct-remote-design.md).
 
 Uses native `BluetoothHidDevice` on API31+, the existing Gradle/JUnit toolchain,
 and no new dependencies or custom crypto. Separate application ID; opt-in Gradle
@@ -32,7 +32,7 @@ foreground notification with Stop and a fixed five-minute elapsed deadline.
   BOTH intended screens. Existing unrecorded bonds cannot be adopted. No pairing
   digits are read, entered, stored, or logged. The app never approves system
   prompts or uses hidden bond-removal APIs.
-- Durable enrollment contains only format version `1` and one validated peer
+- Durable enrollment contains only format version `2` and one validated peer
   address. No authorization, key, pairing code, queued input or gesture is saved.
   Missing, corrupt, unsupported or oversized records select no peer. App backup
   and device transfer remain excluded by the manifest/XML rules and native
@@ -92,8 +92,9 @@ foreground notification with Stop and a fixed five-minute elapsed deadline.
   and reposition freely. Pending motion is discarded when the finger lifts.
 - A stationary tap lasting at most250ms sends an immediate press/release. A swipe
   returning to its origin cannot become a click. Long press has no click/drag action.
-- A second finger cancels the gesture until all fingers lift. No scrolling or
-  held drag exists in this version. Keep the physical TV remote for navigation.
+- A second finger cancels the gesture until all fingers lift. Scrolling uses the
+  separate buttons; held drag remains unavailable. Keep the physical TV remote
+  for navigation.
 - Motion is coalesced to at most30Hz, with one accumulator capped at254 counts
   per axis and each submitted delta bounded to[-127,127]. Excess motion is
   discarded, not replayed after delay. Fractional motion is kept only in a gesture.
@@ -105,9 +106,48 @@ foreground notification with Stop and a fixed five-minute elapsed deadline.
 - Stop/Disconnect and Close remain visible below the pad, outside the scrollable
   setup area. Labeled arrows and Click provide accessible alternatives.
 
-The package, report descriptor and enrollment format are unchanged. Install with
-the same debug signing identity in place; no unpair/re-pair is required merely
-for this update. A failed connection must not trigger automatic enrollment deletion.
+## N2 scrolling and one-time migration
+
+Version0.6 uses a single five-byte report: buttons, X, Y, wheel, pan; report ID1
+is passed separately to Android. Up/down send wheel +1/-1; left/right send pan
+-1/+1. Each native button click sends one step, with at most one submission per
+100ms across all directions in a run. Excess clicks are dropped. No repeat,
+queue, two-finger scrolling or drag fallback is implemented. Button-down cancels
+pending pad motion/tap immediately; admitted clicks cancel again, including
+keyboard/accessibility and throttled clicks. Input still needs the existing
+foreground, selected-peer and neutral-first checks. Submission failure stops.
+
+The package is unchanged, but the HID descriptor and enrollment version change.
+Version1 records remain untouched on load and cannot select/connect a peer.
+A persistent notice explains the required migration. Only a fresh observed
+Numeric Comparison ceremony can save version2. This prevents automatic reuse
+of a host's potentially cached three-byte descriptor; the app cannot prove that
+the host's bond/cache was removed.
+
+After the reviewed0.6 build is ready:
+
+1. On0.5 tap Stop and wait for native teardown. Manually forget **only the
+   Nord–XGIMI test bond on BOTH devices**. Report readiness before installation.
+   Do not uninstall or clear app storage. No hidden unpairing is used.
+2. Install the reviewed0.6 APK in place with the same signing identity. Verify
+   version6, no saved peer usable for control, and disabled input before pairing.
+   An old version1 record, if still present, shows the migration notice.
+3. Check the actual Nord layout in portrait and landscape before the scroll trial:
+   all four labeled scroll buttons, pad, Stop and Close are reachable, and the
+   setup/status area can still scroll. Rotation ends any active run; start a fresh
+   run afterward. Do not use ADB input as acceptance evidence.
+4. Start → HID registered → Make visible. Pair using the physical TV remote;
+   compare and accept matching numbers on BOTH screens, then Save and connect
+   in the probe. Keep codes out of chat/logs. Never adopt an unrecorded old bond.
+
+The verified0.5 APK is preserved locally at ignored
+`.local/artifacts/nord-hid-probe-0.5-fdb4905.apk`; its hash is in the N1 report.
+Rollback requires Stop, manual removal of only the test bond on both devices,
+a supported same-signature downgrade to that artifact, and fresh compared
+pairing with the old descriptor. Version0.5 rejects version2 enrollment. Never
+uninstall/clear app data automatically to force a downgrade; retain artifacts
+and report any unsupported downgrade for an owner decision.
+
 Successful installation or unit tests do not establish actual-device acceptance.
 
 ## Bounded observational trace
@@ -170,15 +210,15 @@ in store failure tests. Native
 Bluetooth/service callback order, AtomicFile behavior on the phone, and actual
 report delivery require the live checks below; unit tests cannot establish them.
 N1 adds pure gesture/submission tests and a source-linked Stop regression: the
-test compiles the current Activity `Run.stop` method with fake native collaborators
-using the installed JDK, then injects report failures for both tap and scheduled
-motion. It checks cleanup ordering without duplicating the Stop implementation;
+test compiles the current Activity `Run.stop` method and scroll submission field
+with fake native collaborators
+using the installed JDK, then injects report failures for tap, scheduled motion
+and scrolling, including permission loss and a rejected native submission. It checks cleanup ordering without duplicating the Stop implementation;
 it is not Android framework or hardware execution.
 
 ## Existing enrollment checks (retain prior evidence)
 
-No installation or device action is part of this implementation task.
-After review and separately authorized installation:
+After review and the controlled migration above:
 
 1. Open the probe, grant Nearby devices, tap Start and wait for HID registered.
    With no saved projector, manually remove only the old test bond in both OSes
@@ -208,8 +248,8 @@ Held-button testing needs its own accepted contract; an immediate click cannot p
 
 ## N1 manual acceptance for the reviewed 0.5 artifact
 
-These checks are pending until actual owner observations are recorded. Preserve
-the existing compared bond and saved enrollment. ADB may install/diagnose but
+The recorded0.5 sequence passed; see [N1 evidence](../../docs/gates/n1-report.md).
+This historical procedure preserved the then-current bond. ADB may install/diagnose but
 must not inject the gestures used as evidence.
 
 1. Open → Start → wait for HID registered → Connect saved projector. Only after
@@ -230,3 +270,29 @@ must not inject the gestures used as evidence.
 
 Record source/APK hash and actual observations in the N1 report. Do not mark the
 whole N1 gate complete from movement alone, or erase the earlier reconnect failure.
+
+## N2 manual acceptance for the reviewed0.6 artifact
+
+The recorded0.6 sequence passed by owner observation on2026-10-25; see
+[the N2 report](../../docs/gates/n2-report.md). For a new trial, first complete migration and layout
+checks above. Each run has the same five-minute deadline.
+
+1. Use the physical remote to open Netflix. Confirm pad movement in all directions
+   and one safe profile/title tap still work. Avoid Play.
+2. With room to scroll both ways, place the pointer over the relevant browsing
+   area. Click Scroll down and up separately; confirm content moves both ways.
+   Place the pointer over a title row and test right and left separately. Confirm
+   no pointer jump or unwanted title opening from any scroll button.
+3. If an axis does nothing, reposition once away from an edge and repeat that
+   axis. If still unhandled, stop and report the direction/status. Do not use
+   drag or ADB as a fallback; one working axis is only partial acceptance.
+4. Tap Stop; pad/scroll controls must no longer send input and the physical remote
+   must work. Wait for native teardown, then Start → Connect saved projector
+   without pairing again; verify movement and a scroll step resume only then.
+5. Leave the connected app and return: input must stay disabled. In another fresh
+   run, leave it visible until five-minute expiry; pad/scroll input must disable
+   with no trailing action and the physical remote must still work.
+
+Broader screen-reader/font-scale, native crash cleanup, vendor encryption and
+repeated reconnect reliability are not certified by this sequence. H1A/H1B and
+product integration remain blocked independently of N2 behavior results.

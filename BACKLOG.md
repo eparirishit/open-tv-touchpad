@@ -21,7 +21,14 @@ design must be approved before an item moves into an active milestone.
 - [x] Complete N1 long-press rejection, foreground loss/return and expiry checks:
   owner confirmed all pass. [N1 diagnostic behavior acceptance](docs/gates/n1-report.md)
   is complete for0.5; no historical gate or product-readiness claim follows.
-- [ ] N2: design and verify two-axis HID scrolling; account for descriptor migration.
+- [x] Review/approve the [N2 scroll-button design](docs/superpowers/specs/2026-10-25-nord-scroll-design.md),
+  including fresh pairing after the descriptor/enrollment-version migration.
+- [x] N2: implement/review four scroll buttons and fresh-pairing migration;
+  101 tests pass, lint0errors/24warnings, debug build and independent review pass.
+- [x] N2: controlled migration/install, portrait/landscape layout, both scroll
+  axes and N1 movement/tap/lifecycle regressions on hardware. Owner confirmed
+  all planned checks; [N2 diagnostic behavior acceptance](docs/gates/n2-report.md)
+  passes for0.6. Broader reliability/product gates are unchanged.
 - [ ] N3: design and verify Android TV Remote v2 pairing/identity and fixed TV
   controls in the same interface. Existing Mac Python implementation is reference.
 - [ ] N4: review daily-use lifecycle and packaging after combined functionality.

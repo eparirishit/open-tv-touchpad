@@ -2,6 +2,17 @@
 
 These instructions apply to the entire repository.
 
+## Approved N2 Nord scrolling (2026-10-25)
+
+The owner approved `docs/superpowers/specs/2026-10-25-nord-scroll-design.md`
+including four scroll buttons and one-time fresh Bluetooth pairing. Follow
+`docs/superpowers/plans/2026-10-25-nord-scroll.md`. This supersedes N1's three-byte
+descriptor/version1 enrollment only for the isolated0.6 diagnostic: use the sole
+five-byte report and version2 enrollment; never adopt an old version1 selector.
+Do not install until reviewed and owner migration prep is confirmed. OS unpairing
+and comparison remain manual. Preserve all lifecycle/trust/release restrictions;
+N3 and product integration remain outside scope.
+
 ## Approved Nord direct touchpad increment (2026-10-25)
 
 The owner selected operating the Nord itself and instructed implementation of

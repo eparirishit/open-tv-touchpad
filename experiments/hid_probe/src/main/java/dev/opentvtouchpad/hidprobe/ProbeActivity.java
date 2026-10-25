@@ -26,6 +26,8 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.view.MotionEvent;
+import android.view.View;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,16 +36,6 @@ import static dev.opentvtouchpad.hidprobe.ProbeTrace.Event.*;
 
 /** Foreground-only diagnostic; the saved selector is not input authorization. */
 public final class ProbeActivity extends Activity {
-    // Report 1: three buttons plus signed relative X/Y; all reports are three bytes.
-    private static final byte[] DESCRIPTOR = {
-        0x05, 0x01, 0x09, 0x02, (byte) 0xa1, 0x01, (byte) 0x85, 0x01,
-        0x09, 0x01, (byte) 0xa1, 0x00, 0x05, 0x09, 0x19, 0x01,
-        0x29, 0x03, 0x15, 0x00, 0x25, 0x01, (byte) 0x95, 0x03,
-        0x75, 0x01, (byte) 0x81, 0x02, (byte) 0x95, 0x01, 0x75, 0x05,
-        (byte) 0x81, 0x03, 0x05, 0x01, 0x09, 0x30, 0x09, 0x31,
-        0x15, (byte) 0x81, 0x25, 0x7f, 0x75, 0x08, (byte) 0x95, 0x02,
-        (byte) 0x81, 0x06, (byte) 0xc0, (byte) 0xc0
-    };
     private static final NativeRunGate NATIVE_RUNS = new NativeRunGate();
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final List<Button> inputs = new ArrayList<>();
@@ -54,6 +46,7 @@ public final class ProbeActivity extends Activity {
     private boolean resumed;
     private boolean receiverRegistered;
     private TextView status;
+    private TextView migrationNotice;
     private Button start;
     private Button visible;
     private Button confirm;
@@ -84,6 +77,9 @@ public final class ProbeActivity extends Activity {
         layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         setup.addView(layout);
+        migrationNotice = text("Scrolling update needs fresh Bluetooth pairing. Remove only the Nord–XGIMI bond "
+            + "on both devices, then pair again and compare the numbers on both screens.", 16);
+        migrationNotice.setVisibility(enrollment.requiresReenrollment() ? View.VISIBLE : View.GONE);
         status = text(enrollment.failed() ? storageFailure() : savedStatus(), 18);
         text("Five-minute diagnostic. First enrollment requires matching numbers on BOTH intended devices. "
             + "A saved projector uses the current OS-managed bond; its original key cannot be pinned by this app.", 16);
@@ -99,8 +95,36 @@ public final class ProbeActivity extends Activity {
         inputs.add(button("Click once", this::click));
         button("Forget projector", this::forget);
         touchpad = new TouchpadView(this, this::move, this::click);
-        int touchpadDp = Math.min(180, Math.max(96, getResources().getConfiguration().screenHeightDp / 3));
+        boolean wide = getResources().getConfiguration().screenWidthDp >= 600;
+        int touchpadDp = wide ? 96 : Math.min(180, Math.max(96, getResources().getConfiguration().screenHeightDp / 3));
         root.addView(touchpad, new LinearLayout.LayoutParams(-1, (int) (touchpadDp * density)));
+        MouseReport.Direction[] directions = MouseReport.Direction.values();
+        int columns = wide ? 4 : 2;
+        for (int i = 0; i < directions.length; i += columns) {
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            root.addView(row, new LinearLayout.LayoutParams(-1, -2));
+            layout = row;
+            for (int j = i; j < Math.min(i + columns, directions.length); j++) {
+                MouseReport.Direction direction = directions[j];
+                String label = switch (direction) {
+                    case UP -> "Scroll up ↑";
+                    case DOWN -> "Scroll down ↓";
+                    case LEFT -> "Scroll left ←";
+                    case RIGHT -> "Scroll right →";
+                };
+                Button control = button(label, () -> scroll(direction));
+                control.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1));
+                control.setOnTouchListener((view, event) -> {
+                    if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                        if (run != null) run.scrolling.touchDown();
+                        else touchpad.cancelGesture();
+                    }
+                    return false;
+                });
+                inputs.add(control);
+            }
+        }
         LinearLayout footer = new LinearLayout(this);
         footer.setOrientation(LinearLayout.HORIZONTAL);
         root.addView(footer, new LinearLayout.LayoutParams(-1, -2));
@@ -239,6 +263,17 @@ public final class ProbeActivity extends Activity {
             trace(session.savedPeer() == null ? RUN_EMPTY : RUN_SAVED);
         }
 
+        final ScrollInput scrolling = new ScrollInput(() -> touchpad.cancelGesture(), () -> canAttempt() && ready(),
+            direction -> {
+                try {
+                    if (!hid.sendReport(connected, MouseReport.ID, MouseReport.scroll(direction))) {
+                        stop("Scroll report failed. No retry.");
+                    }
+                } catch (SecurityException error) {
+                    stop("Nearby devices permission unavailable.");
+                }
+            });
+
         void trace(ProbeTrace.Event event) {
             String line = trace.line(event, SystemClock.elapsedRealtime());
             if (line != null) Log.i("OpenTvHidTrace", line);
@@ -312,14 +347,14 @@ public final class ProbeActivity extends Activity {
                     trace(REGISTER_REQUEST);
                     registrationRequested = hid.registerApp(new BluetoothHidDeviceAppSdpSettings(
                         "Open TV HID Probe", "Disposable manual mouse test", "Open TV Touchpad",
-                        BluetoothHidDevice.SUBCLASS1_MOUSE, DESCRIPTOR), null, null,
+                        BluetoothHidDevice.SUBCLASS1_MOUSE, MouseReport.descriptor()), null, null,
                         getMainExecutor(), callback);
                     trace(registrationRequested ? REGISTER_ACCEPTED : REGISTER_REJECTED);
                     if (!registrationRequested) {
                         ownership.completed(REGISTRATION);
                         stop("HID registration request rejected. Another HID app may be active.");
                     }
-                } catch (SecurityException | IllegalStateException error) {
+                } catch (SecurityException | IllegalStateException | IllegalArgumentException error) {
                     trace(REGISTER_FAILED);
                     ownership.fail();
                     stop("HID registration failed; native state unconfirmed.");
@@ -398,7 +433,7 @@ public final class ProbeActivity extends Activity {
                         }
                         connected = peer;
                         handler.removeCallbacks(connectionDeadline);
-                        boolean neutral = hid.sendReport(peer, 1, new byte[3]);
+                        boolean neutral = hid.sendReport(peer, MouseReport.ID, MouseReport.neutral());
                         trace(neutral ? NEUTRAL_ACCEPTED : NEUTRAL_REJECTED);
                         if (!session.neutralSubmitted(generation, peer.getAddress(), neutral)) {
                             stop("Neutral report failed. No input enabled.");
@@ -409,7 +444,7 @@ public final class ProbeActivity extends Activity {
                         if (session.connected(generation, peer.getAddress(), false)) stop("Projector disconnected. No input enabled.");
                     }
                     updateControls();
-                } catch (SecurityException | IllegalStateException error) {
+                } catch (SecurityException | IllegalStateException | IllegalArgumentException error) {
                     trace(CONNECTION_CALLBACK_FAILED);
                     stop("Bluetooth connection callback failed.");
                 }
@@ -419,10 +454,10 @@ public final class ProbeActivity extends Activity {
                 if (!ownership.active()) return;
                 try {
                     if (!ready() || !connected.equals(peer)) return;
-                    if (type == BluetoothHidDevice.REPORT_TYPE_INPUT && id == 1 && (bufferSize == 0 || bufferSize >= 3)) {
-                        if (!hid.replyReport(peer, type, id, new byte[3])) stop("Report reply failed.");
+                    if (MouseReport.acceptsGetReport(type, id, bufferSize)) {
+                        if (!hid.replyReport(peer, type, id, MouseReport.neutral())) stop("Report reply failed.");
                     } else if (!hid.reportError(peer, BluetoothHidDevice.ERROR_RSP_UNSUPPORTED_REQ)) stop("Report error reply failed.");
-                } catch (SecurityException | IllegalStateException error) { stop("Report request failed."); }
+                } catch (SecurityException | IllegalStateException | IllegalArgumentException error) { stop("Report request failed."); }
             }
             @Override public void onSetProtocol(BluetoothDevice peer, byte protocol) {
                 if (ownership.active() && target != null && target.equals(peer)) {
@@ -485,7 +520,7 @@ public final class ProbeActivity extends Activity {
             handler.postDelayed(teardownDeadline, 5000);
             if (hid != null) {
                 if (connected != null) {
-                    try { hid.sendReport(connected, 1, new byte[3]); }
+                    try { hid.sendReport(connected, MouseReport.ID, MouseReport.neutral()); }
                     catch (SecurityException | IllegalStateException | IllegalArgumentException ignored) { /* Best-effort release, never delivery proof. */ }
                 }
                 try {
@@ -640,10 +675,7 @@ public final class ProbeActivity extends Activity {
                 stop("Nearby devices permission unavailable."); return;
             }
             if (!canAttempt() || !run.ready()) return;
-            if (dx < -127 || dx > 127 || dy < -127 || dy > 127) {
-                throw new IllegalArgumentException("Mouse delta out of bounds");
-            }
-            boolean accepted = run.hid.sendReport(run.connected, 1, new byte[] {0, (byte) dx, (byte) dy});
+            boolean accepted = run.hid.sendReport(run.connected, MouseReport.ID, MouseReport.move(dx, dy));
             run.trace(accepted ? MOVE_ACCEPTED : MOVE_REJECTED);
             if (!accepted) stop("Mouse movement report failed.");
         }, () -> stop("Mouse input failed. Check Nearby devices permission and Bluetooth."));
@@ -657,13 +689,14 @@ public final class ProbeActivity extends Activity {
             if (!canAttempt() || !run.ready()) return;
             Run current = run;
             boolean accepted = InputSubmission.click(
-                () -> current.hid.sendReport(current.connected, 1, new byte[] {1, 0, 0}),
-                () -> current.hid.sendReport(current.connected, 1, new byte[3]));
+                () -> current.hid.sendReport(current.connected, MouseReport.ID, MouseReport.clickDown()),
+                () -> current.hid.sendReport(current.connected, MouseReport.ID, MouseReport.neutral()));
             if (!accepted) stop("Click report failed. Disconnect requested.");
         }, () -> stop("Mouse input failed. Check Nearby devices permission and Bluetooth."));
     }
 
     private void updateControls() {
+        migrationNotice.setVisibility(enrollment.requiresReenrollment() ? View.VISIBLE : View.GONE);
         // An idle/recreated screen can explicitly retry after another owner's teardown finishes.
         start.setEnabled(resumed && !enrollment.failed() && (run == null || run.stopping));
         boolean registered = run != null && run.ownership.active() && session.isRegistered(run.generation);
@@ -684,6 +717,12 @@ public final class ProbeActivity extends Activity {
             status.setText(message);
             updateControls();
         }
+    }
+
+    private void scroll(MouseReport.Direction direction) {
+        InputSubmission.guard(() -> {
+            if (run != null) run.scrolling.click(direction, SystemClock.uptimeMillis());
+        }, () -> stop("Scroll input failed. Check Nearby devices permission and Bluetooth."));
     }
 
     @Override protected void onResume() {

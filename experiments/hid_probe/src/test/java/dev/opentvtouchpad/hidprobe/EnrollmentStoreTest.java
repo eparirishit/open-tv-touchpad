@@ -11,19 +11,27 @@ public class EnrollmentStoreTest {
         MemoryEnrollmentDisk disk = new MemoryEnrollmentDisk();
         EnrollmentStore store = new EnrollmentStore(disk);
         assertNull(store.peer());
+        assertFalse(store.requiresReenrollment());
         assertTrue(store.save(PEER));
-        assertArrayEquals("1\n02:00:00:00:00:01".getBytes(StandardCharsets.US_ASCII), disk.bytes);
+        assertArrayEquals("2\n02:00:00:00:00:01".getBytes(StandardCharsets.US_ASCII), disk.bytes);
         assertEquals(PEER, new EnrollmentStore(disk).peer());
+        assertFalse(new EnrollmentStore(disk).requiresReenrollment());
         assertTrue(store.forget());
         assertNull(new EnrollmentStore(disk).peer());
     }
 
     @Test public void missingCorruptUnsupportedAndOversizedRecordsNeverSelectPeer() {
-        for (String record : new String[] {"", "1", "2\n02:00:00:00:00:01", "1\ninvalid",
-                "1\n02:00:00:00:00:01\n", "1\n02:00:00:00:00:01extra", "x".repeat(1000)}) {
+        for (String record : new String[] {"", "1", "3\n02:00:00:00:00:01", "1\ninvalid",
+                "1\n02:00:00:00:00:01\n", "1\n02:00:00:00:00:01extra",
+                "1\n02:00:00:00:00:0G", "1\n02:00:00:00:00:0a", "1\r02:00:00:00:00:01",
+                "2\n02:00:00:00:00:0G", "2\n02:00:00:00:00:01\n", "x".repeat(1000)}) {
             MemoryEnrollmentDisk disk = new MemoryEnrollmentDisk();
             disk.bytes = record.getBytes(StandardCharsets.US_ASCII);
-            assertNull(new EnrollmentStore(disk).peer());
+            EnrollmentStore store = new EnrollmentStore(disk);
+            assertNull(record, store.peer());
+            assertFalse(record, store.requiresReenrollment());
+            assertFalse(record, store.failed());
+            assertArrayEquals(record.getBytes(StandardCharsets.US_ASCII), disk.bytes);
         }
     }
 

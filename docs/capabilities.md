@@ -1,5 +1,23 @@
 # Capabilities
 
+## Nord scrolling — diagnostic behavior accepted (2026-10-25)
+
+Version0.6 adds four labeled scroll buttons, one wheel/pan step per admitted
+click, and immediate cancellation of pending pad input. The sole report format
+is five bytes; version2 enrollment requires one fresh compared pairing after
+manual removal of only the test bond on both devices. Existing version1 records
+cannot authorize input. Automated tests/build and independent review pass with no actionable findings;
+version6 is installed in place after owner-confirmed removal of both test bonds,
+with legacy enrollment bytes preserved. Owner confirms usable portrait/landscape layouts and disabled input before
+pairing. Owner subsequently confirmed fresh pairing/connection, pointer movement and
+Netflix tapping work on0.6. Owner also confirmed vertical up/down and horizontal left/right work without
+unwanted clicks or pointer jumps. Owner confirmed Stop blocks input while the physical remote works, and explicit
+saved reconnect restores movement/scrolling without re-pairing. The final owner
+response confirms leaving/returning stays stopped and five-minute expiry
+disables input while the physical remote works. N2 diagnostic behavior acceptance
+passes for this artifact/setup; the five-minute foreground-only limit remains.
+See [N2 report](gates/n2-report.md). No new network capability or product claim.
+
 ## Nord touchpad diagnostic implementation (2026-10-25)
 
 Version0.5 (`fdb4905`) implements one-finger relative movement and stationary
