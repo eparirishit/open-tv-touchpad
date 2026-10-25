@@ -1,5 +1,19 @@
 # Capabilities
 
+## Bounded probe diagnostics (2026-10-25)
+
+Probe0.4 (`d0a8c44`) adds fixed-event, sequence/elapsed-time Android logs for the
+restart investigation, capped at 64 lines per run. It adds no connection or input
+behavior. Local verification passes 53 tests/build/lint; independent review found
+no actionable issues and installation/version4 is verified on the Nord. Initial
+tool-requested foreground launch was not confirmed; the owner subsequently
+performed the manual restart test and confirmed connection and actual left/up
+pointer movement. The first requested0.4 attempt passed, corroborated by a
+contiguous fixed-tag trace through registration, explicit connection, neutral
+submission and movement reports. The earlier0.3 failure did not reproduce and
+remains unexplained; reliability is not established by one successful attempt.
+There is no new network permission or trace export endpoint.
+
 ## Browser-only hub implementation (2026-10-24)
 
 The accepted local-only design now has certificate identity, native approval,

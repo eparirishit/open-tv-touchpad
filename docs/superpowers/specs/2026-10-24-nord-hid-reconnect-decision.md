@@ -140,3 +140,16 @@ generally non-extractable. Admission now explicitly requires an outstanding owne
 attempt without claiming knowledge of which side initiated the native connection.
 No code or new hardware evidence follows from this review. Owner acceptance was
 subsequently received as recorded at the top of this document.
+
+## Authorized diagnostic follow-up (2026-10-25)
+
+The owner authorized continuing with a small privacy-safe trace to investigate
+the observed first-attempt restart disconnect. The
+[bounded trace plan](../plans/2026-10-25-nord-reconnect-trace.md) governs this
+observational addition: fixed enum events, per-run sequence/elapsed time only,
+at most 64 Android log lines per run including a truncation marker, no identifiers
+or raw values. Android's bounded log buffer can retain these lines after closure;
+the app creates no trace file or endpoint. Input and lifecycle behavior remain
+unchanged. A recorded callback still cannot identify the physical link's reason
+or prove vendor encryption. This does not authorize automatic reconnect or relax
+any admission/teardown gate.

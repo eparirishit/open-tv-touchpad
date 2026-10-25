@@ -9,8 +9,8 @@ android {
         applicationId = "dev.opentvtouchpad.hidprobe"
         minSdk = 31
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.3-diagnostic"
+        versionCode = 4
+        versionName = "0.4-diagnostic"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

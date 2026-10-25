@@ -1,5 +1,24 @@
 # Project Progress
 
+## Bounded reconnect trace (2026-10-25)
+
+The owner authorized the [diagnostic trace](superpowers/plans/2026-10-25-nord-reconnect-trace.md)
+for one restart reproduction. Version0.4 (`d0a8c44`) is implemented, independently
+reviewed with no findings, and installed on the verified Nord. Main reran 53 unit
+tests, lint (0 errors, 20 existing warnings), debug build and packaged permission
+checks. Only fixed event names, sequence and elapsed time are emitted, capped at
+64 local Android log lines per run. Connection behavior is unchanged; no fix or
+root cause is inferred. The owner prepared fresh compared enrollment and stopped
+0.3 before the data-preserving update. Installed version4 is verified; foreground
+launch was not confirmed and the bounded crash check found no probe crash.
+The owner then manually performed the single0.4 restart trial and confirmed
+“Connected; left/up moves the pointer”. The current-process fixed-tag capture
+contains contiguous events1–33 without truncation: registration, explicit Connect,
+selected connection after1325ms, neutral acceptance and movement acceptance. No
+disconnect/failure appears in that prefix; the earlier issue did not reproduce.
+The diagnostic task is complete without a behavior fix. The first-attempt failure
+and H1A/H1B/product integration gates remain unresolved.
+
 ## Reconnect trust decision accepted (2026-10-24)
 
 The [Nord reconnect proposal](superpowers/specs/2026-10-24-nord-hid-reconnect-decision.md)

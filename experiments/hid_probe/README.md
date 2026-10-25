@@ -1,4 +1,4 @@
-# Disposable Nord HID probe — 0.3-diagnostic
+# Disposable Nord HID probe — 0.4-diagnostic
 
 The owner accepted remembering the verified projector for this isolated diagnostic
 on 2026-10-24, including the OS-bond continuity limitation. This is not a product
@@ -80,6 +80,48 @@ foreground notification with Stop and a fixed five-minute elapsed deadline.
   No held drag, keyboard, continuous motion, background input or remote endpoint.
   Crash/radio loss may prevent release; actual cleanup remains a hardware check.
 
+## Bounded observational trace
+
+Version 0.4 (versionCode 4) adds observations only; it does not fix reconnect,
+change input admission or native operation order, or establish a new gate result.
+Each existing run owns a pure `ProbeTrace`. Its Activity helper writes only to
+the fixed Android log tag `OpenTvHidTrace`, with this message format:
+
+```text
+v1 seq=1 elapsed_ms=0 event=RUN_SAVED
+```
+
+The message contains only a fixed format version, a per-run sequence, elapsed
+milliseconds since run creation, and a closed enum name. No free-form payload,
+peer identifier/name/address, pairing value, coordinate, report bytes, exception
+text or absolute time is accepted by the formatter. Sequence and elapsed time
+restart per run; there is no persistent run identifier. Events describe observed
+registration requests/results and callbacks, explicit native connect requests and
+returns, selected/other peer connection states, admission rejection, neutral/move
+submission returns, selected-peer protocol mode, pause, Stop, teardown completion,
+service/profile loss and deadlines. Selected means the target or saved selector,
+not a claim of authentication. Submission acceptance is not delivery evidence.
+The service's existing fixed expiry reason identifies its five-minute deadline;
+other service stop reasons share `SERVICE_STOP`. No new timer is introduced.
+
+At most 64 messages are emitted per run: up to 63 observations, then a final
+`TRUNCATED` marker in slot 64 instead of that observation; later events return no
+line. Old callbacks retain their ownership checks. Trace state never controls
+Bluetooth, storage, session admission or cleanup. Android's bounded log buffer
+may retain lines after app closure. There is no app-owned trace file/export UI,
+network capture, new dependency, continuous collector or global log clear.
+Missing/truncated capture is incomplete evidence; a missing event is not proof it
+never happened. Manual input can exhaust the budget. Click/report-reply and
+best-effort teardown report submissions are not individually traced.
+
+For the separately authorized single restart reproduction, first complete a new
+compared enrollment if Forget cleared the app record; never adopt an unrecorded
+OS bond. After Stop and completed teardown, reopen the process, Start and Connect
+saved projector once. Leave a failure visible without retrying until current
+process, fixed-tag messages are captured and validated. On success, manually
+confirm actual left/up pointer movement. Tie every observation to the new source
+and APK hashes; absence of a reproduced failure does not close the earlier one.
+
 ## Build and local checks
 
 With SDK36 and the repository's pinned wrapper/plugin:
@@ -92,12 +134,13 @@ ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}" ./gradlew --offline \
 
 The parent project's normal build excludes this module; release is disabled.
 The APK is under this directory's ignored `build/outputs/apk/debug/`.
-JUnit exercises real session, codec/persistence policy and native-owner barrier
-logic. Only the Android file boundary is replaced in store failure tests. Native
+JUnit exercises real session, codec/persistence policy, native-owner barrier and
+trace format/time/order/budget logic. Only the Android file boundary is replaced
+in store failure tests. Native
 Bluetooth/service callback order, AtomicFile behavior on the phone, and actual
 report delivery require the live checks below; unit tests cannot establish them.
 
-## Manual checks still pending for 0.3
+## Manual checks for the 0.4 artifact (not run by implementation)
 
 No installation or device action is part of this implementation task.
 After review and separately authorized installation:

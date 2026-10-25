@@ -54,6 +54,12 @@ M1 remains blocked until a complete M0 report verifies as `PASS`.
   user confirmed connected state then actual left/up pointer movement.
 - [ ] Diagnose 0.3 first-attempt restart disconnect; retry success does not erase
   the unexplained initial failure. No speculative reconnect bypass is approved.
+- [x] Add/review/install the authorized bounded 0.4 event trace (`d0a8c44`):
+  53 tests, build/lint and packaged-permission checks pass; no review findings.
+  No connection behavior change or automatic retry is included.
+- [x] Capture one 0.4 saved restart connection attempt: user confirmed connection
+  and left/up movement; contiguous trace shows connection after1325ms and accepted
+  neutral/movement reports. Earlier disconnect did not reproduce; keep it open.
 - [x] Verify 0.3 explicit Forget and bond-only input rejection: after Stop →
   Forget → Start with OS bond retained, the user confirmed no saved projector
   and disabled Connect/movement.

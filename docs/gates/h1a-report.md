@@ -398,3 +398,62 @@ This does not certify Forget persistence after process death, automatic revocati
 on OS bond removal/re-pairing, storage-failure handling on hardware, or a new
 incoming connection attempt. No code/device changes or repeat tests were needed
 to record this result. The check is complete; broader H1A/H1B gates remain unchanged.
+
+## Bounded first-attempt trace prepared (2026-10-25)
+
+The owner authorized the observational trace and confirmed fresh compared
+enrollment in0.3 followed by Stop/native teardown completion before installation.
+
+- Source: `d0a8c444ddd43083cca4f5fe7db48fd4cfbebba3`.
+- Version: `0.4-diagnostic` (4).
+- APK SHA-256: `15f2fa63a95e631ab97421ecc1f1562c1c59b5f62236fc035971caad30140d37`.
+- Verification: 53 unit tests, no failures/errors; debug build passes; lint has
+  0 errors and the existing 20 localization/SDK-age warnings. Main repeated these
+  checks and verified version4, debug flag and the four allowed Bluetooth/service
+  permissions with no INTERNET. Default-build exclusion/release disablement remain.
+- Independent full-diff/new-file/caller review: no findings. The formatter accepts
+  closed enum events and clock values only; output is capped at 64 lines per run
+  including a truncation marker. Log tag is `OpenTvHidTrace`. No identifiers, codes,
+  report bytes, gesture coordinates, exception messages or absolute times are
+  emitted. No trace file or export endpoint is added. Android's bounded log buffer
+  may retain/evict entries; absent or truncated capture is incomplete evidence.
+- Input gates, native-call order, timers, descriptor/report bytes, storage and
+  service lifecycle are unchanged. This instrumented build is not a behavior fix.
+- Installation selected the unique OnePlus AC2001/API31, verified the APK hash,
+  stopped only the probe and used `install -r` without data clearing. Installed
+  version4 was verified. Launch was requested but the probe was not reported
+  resumed. A bounded target-filtered crash check found no probe crash; it does not
+  prove a successful launch. No radio/bond change, input command or log clear ran.
+
+The owner was asked to manually force-stop/reopen the installed probe, Start,
+then Connect saved projector exactly once, test left/up only if connected, and
+leave the result visible without retrying. The user confirmed **“Connected;
+left/up moves the pointer”.** **Single 0.4 restart connection and actual movement:
+PASS by user observation**, scoped to this artifact/setup and this attempt.
+
+A read-only capture selected the unique manufacturer-verified Nord and current
+probe process, then read at most 512 fixed-tag log entries. Only lines matching
+the formatter's closed enum/schema were admitted; the latest run contains a
+contiguous sequence1–33 with nondecreasing elapsed times and no TRUNCATED marker.
+No raw unvalidated logs, device/process identifiers or absolute timestamps were
+saved/displayed. This is a contiguous capture prefix, not a complete-session or
+crash trace. Its relevant observations are:
+
+| Sequence | Elapsed from run start | Observed event |
+| --- | --- | --- |
+| 1 | 2ms | RUN_SAVED |
+| 2–4 | 119ms, 133ms, 169ms | REGISTER_REQUEST, REGISTER_ACCEPTED, REGISTERED |
+| 5–6 | 9684ms, 9688ms | CONNECT_REQUEST, CONNECT_ACCEPTED |
+| 7–8 | 9700ms, 11009ms | SELECTED_CONNECTING, SELECTED_CONNECTED |
+| 9 | 11017ms | NEUTRAL_ACCEPTED |
+| 10–33 | 14355–20074ms | MOVE_ACCEPTED |
+
+The observed connection callback arrived 1325ms after the explicit request;
+neutral submission followed 8ms later. No selected disconnect, rejection,
+foreground-loss or deadline event appears in this captured prefix. Native report
+acceptance alone is not delivery proof; actual movement comes from the user's
+observation. The earlier first-attempt failure did **not reproduce** in this
+single trial. It remains unresolved; no reconnect workaround, retry policy or
+behavior fix was added. Logging can perturb timing, so successful instrumentation
+does not rule out a timing-dependent issue. H1A remains NOT PASSED; this trace
+cannot attest vendor encryption or explain the earlier disconnect's cause.
