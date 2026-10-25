@@ -44,6 +44,11 @@ class AccessibilityManifestTest {
                 Manifest.permission.SYSTEM_ALERT_WINDOW,
             ),
         )
+        assertFalse(
+            packageInfo.requestedPermissions.orEmpty().contains(
+                Manifest.permission.WRITE_SECURE_SETTINGS,
+            ),
+        )
 
         val accessibilityManager =
             context.getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
@@ -65,6 +70,21 @@ class AccessibilityManifestTest {
             installedService.flags and
                 AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS != 0,
         )
+    }
+
+    @Test
+    fun calibrationActivityIsDebugOnlyAndNotExported() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val packageInfo = context.packageManager.getPackageInfo(
+            context.packageName,
+            PackageManager.GET_ACTIVITIES,
+        )
+        val calibration = packageInfo.activities.orEmpty().single {
+            it.name == "dev.opentvtouchpad.setup.CalibrationActivity"
+        }
+
+        assertFalse(calibration.exported)
+        assertEquals(null, calibration.permission)
     }
 
     @Test

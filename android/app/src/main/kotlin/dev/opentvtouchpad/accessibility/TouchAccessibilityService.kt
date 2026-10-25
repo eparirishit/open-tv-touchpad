@@ -27,19 +27,23 @@ class TouchAccessibilityService : AccessibilityService() {
     private var controllerOverlay: ServiceOverlay? = null
     private val gestureOutcomeListeners = linkedSetOf<(GestureOutcome) -> Unit>()
     private var latestGestureOutcome: GestureOutcome? = null
+    private var restartRequired = false
     private lateinit var windowManager: WindowManager
 
     override fun onServiceConnected() {
         super.onServiceConnected()
         synchronized(runtimeLock) {
+            restartRequired = false
             windowManager = getSystemService(WindowManager::class.java)
             cursorOverlay = CursorOverlay(this, windowManager, ::currentDisplayBounds)
-            gestureCoordinator = GestureCoordinator(
+            lateinit var coordinator: GestureCoordinator
+            coordinator = GestureCoordinator(
                 port = AndroidGesturePort(this, ::currentDisplayBounds),
                 clock = SystemClock::elapsedRealtime,
                 callbackTimeoutMillis = CALLBACK_TIMEOUT_MILLIS,
-                onFinished = ::publishGestureOutcome,
+                onFinished = { outcome -> publishGestureOutcome(coordinator, outcome) },
             )
+            gestureCoordinator = coordinator
             publishConnectedService(this)
             controllerOverlay = ServiceOverlayFactory.create(
                 this,
@@ -52,10 +56,7 @@ class TouchAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit
 
     override fun onInterrupt() {
-        synchronized(runtimeLock) {
-            gestureCoordinator?.cancel(CancelReason.ANDROID)
-            cursorOverlay?.hide()
-        }
+        shutdownRuntime(CancelReason.ANDROID)
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
@@ -69,6 +70,7 @@ class TouchAccessibilityService : AccessibilityService() {
     }
 
     fun submitGesture(spec: GestureSpec): SubmitResult = synchronized(runtimeLock) {
+        if (restartRequired) return@synchronized SubmitResult.REJECTED
         val coordinator = gestureCoordinator ?: return@synchronized SubmitResult.REJECTED
         coordinator.submit(spec).also { result ->
             if (result == SubmitResult.ACCEPTED) {
@@ -85,6 +87,12 @@ class TouchAccessibilityService : AccessibilityService() {
     fun cancelGesture() {
         synchronized(runtimeLock) {
             gestureCoordinator?.cancel(CancelReason.EXPLICIT)
+        }
+    }
+
+    fun requireRestart() {
+        synchronized(runtimeLock) {
+            restartRequired = true
         }
     }
 
@@ -118,8 +126,12 @@ class TouchAccessibilityService : AccessibilityService() {
         }
     }
 
-    internal fun publishGestureOutcome(outcome: GestureOutcome) {
+    internal fun publishGestureOutcome(
+        sourceCoordinator: GestureCoordinator,
+        outcome: GestureOutcome,
+    ) {
         val listeners = synchronized(runtimeLock) {
+            if (gestureCoordinator !== sourceCoordinator) return
             latestGestureOutcome = outcome
             gestureOutcomeListeners.toList()
         }
@@ -147,9 +159,7 @@ class TouchAccessibilityService : AccessibilityService() {
         synchronized(runtimeLock) {
             gestureCoordinator?.cancel(reason)
             mainHandler.removeCallbacks(timeoutCheck)
-            cursorOverlay?.hide()
-            cursorOverlay?.remove()
-            controllerOverlay?.remove()
+            shutdownOverlays()
             gestureOutcomeListeners.clear()
             latestGestureOutcome = null
             gestureCoordinator = null
@@ -157,6 +167,12 @@ class TouchAccessibilityService : AccessibilityService() {
             controllerOverlay = null
             if (connectedService === this) publishConnectedService(null)
         }
+    }
+
+    private fun shutdownOverlays() {
+        controllerOverlay?.remove()
+        cursorOverlay?.hide()
+        cursorOverlay?.remove()
     }
 
     @Suppress("DEPRECATION")

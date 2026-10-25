@@ -18,6 +18,8 @@ import dev.opentvtouchpad.input.GesturePort
 import dev.opentvtouchpad.input.GestureSpec
 import dev.opentvtouchpad.input.PointF
 import dev.opentvtouchpad.input.SubmitResult
+import dev.opentvtouchpad.setup.GateViewModel
+import dev.opentvtouchpad.setup.ServiceGateRuntime
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -187,7 +189,7 @@ class AndroidGesturePortTest {
     }
 
     @Test
-    fun interruptCancelsGestureWithoutDisconnectingServiceRuntime() {
+    fun interruptTearsDownRuntimeWithoutWaitingForAndroidCallback() {
         val service = TouchAccessibilityService()
         val port = RecordingGesturePort()
         val coordinator = GestureCoordinator(
@@ -208,18 +210,19 @@ class AndroidGesturePortTest {
             get(service) as Handler
         }
         val firstTap = GestureSpec.Tap(PointF(10f, 10f), durationMillis = 80)
-        val secondTap = GestureSpec.Tap(PointF(20f, 20f), durationMillis = 80)
-
         try {
+            setConnectedService(service)
             assertEquals(SubmitResult.ACCEPTED, service.submitGesture(firstTap))
 
             service.onInterrupt()
 
             assertEquals(1, port.cancellationCount)
-            port.callbacks.single().onCancelled()
-            assertEquals(SubmitResult.ACCEPTED, service.submitGesture(secondTap))
+            assertNull(service.privateField("gestureCoordinator"))
+            assertNull(TouchAccessibilityService.connectedService)
+            assertEquals(SubmitResult.REJECTED, service.submitGesture(firstTap))
         } finally {
             mainHandler.removeCallbacks(timeoutCheck)
+            setConnectedService(null)
         }
     }
 
@@ -254,25 +257,103 @@ class AndroidGesturePortTest {
     }
 
     @Test
-    fun interruptSerializesBehindCapturedSubmissionAndCancelsAcceptedDrag() {
+    fun interruptClearsPendingWorkAndDisablesCursorUntilReconnect() {
         val fixture = LifecycleRaceFixture()
 
         try {
             fixture.runRace(TouchAccessibilityService::onInterrupt)
+            fixture.service.showCursorAt(30, 30)
+            fixture.service.moveCursorTo(40, 40)
 
             assertEquals(1, fixture.port.cancellationCount.get())
-            assertTrue(fixture.mainHandler.hasCallbacks(fixture.timeoutCheck))
+            assertFalse(fixture.mainHandler.hasCallbacks(fixture.timeoutCheck))
             assertEquals(View.GONE, fixture.windowManager.view!!.visibility)
-            assertEquals(0, fixture.windowManager.removeCount)
-            assertSame(fixture.coordinator, fixture.service.privateField("gestureCoordinator"))
-            assertSame(fixture.overlay, fixture.service.privateField("cursorOverlay"))
-            assertSame(fixture.service, TouchAccessibilityService.connectedService)
-            fixture.port.callbacks.single().onCancelled()
-            assertEquals(SubmitResult.ACCEPTED, fixture.service.submitGesture(fixture.successor))
-            fixture.port.callbacks.last().onCancelled()
+            assertEquals(1, fixture.windowManager.removeCount)
+            assertEquals(1, fixture.windowManager.added.size)
+            assertTrue(fixture.windowManager.updated.isEmpty())
+            assertNull(fixture.service.privateField("gestureCoordinator"))
+            assertNull(fixture.service.privateField("cursorOverlay"))
+            assertNull(TouchAccessibilityService.connectedService)
+            assertEquals(SubmitResult.REJECTED, fixture.service.submitGesture(fixture.successor))
         } finally {
             fixture.close()
         }
+    }
+
+    @Test
+    fun lateRetiredCoordinatorOutcomeDoesNotReachReconnectedProbe() {
+        val service = TouchAccessibilityService()
+        val handler = QueuedHandler(
+            (service.privateField("mainHandler") as Handler).looper,
+        )
+        service.setPrivateField("mainHandler", handler)
+        val retiredPort = RecordingGesturePort()
+        lateinit var retiredCoordinator: GestureCoordinator
+        retiredCoordinator = GestureCoordinator(
+            port = retiredPort,
+            clock = { 0L },
+            callbackTimeoutMillis = 2_000,
+            onFinished = { outcome ->
+                service.publishGestureOutcome(retiredCoordinator, outcome)
+            },
+        )
+        service.setPrivateField("gestureCoordinator", retiredCoordinator)
+        setConnectedService(service)
+        val retiredTap = GestureSpec.Tap(PointF(10f, 10f), durationMillis = 80)
+        val successorPort = RecordingGesturePort()
+        lateinit var successorCoordinator: GestureCoordinator
+        successorCoordinator = GestureCoordinator(
+            port = successorPort,
+            clock = { 0L },
+            callbackTimeoutMillis = 2_000,
+            onFinished = { outcome ->
+                service.publishGestureOutcome(successorCoordinator, outcome)
+            },
+        )
+        val successorTap = GestureSpec.Tap(PointF(20f, 20f), durationMillis = 80)
+        val successorOutcomes = mutableListOf<GestureOutcome>()
+
+        try {
+            assertEquals(SubmitResult.ACCEPTED, service.submitGesture(retiredTap))
+            service.onInterrupt()
+            service.setPrivateField("gestureCoordinator", successorCoordinator)
+            setConnectedService(service)
+            service.addGestureOutcomeListener(successorOutcomes::add)
+            assertEquals(SubmitResult.ACCEPTED, service.submitGesture(successorTap))
+
+            retiredPort.callbacks.single().onCancelled()
+            handler.runQueued()
+
+            assertTrue(successorOutcomes.isEmpty())
+            assertNull(service.latestGestureOutcome())
+            assertTrue(service.isGestureInFlight())
+            assertEquals(1, successorPort.callbacks.size)
+        } finally {
+            service.onInterrupt()
+            setConnectedService(null)
+        }
+    }
+
+    @Test
+    fun restartRequiredFromOneCallerRejectsAnotherCallerAtService() {
+        val service = TouchAccessibilityService()
+        val port = RecordingGesturePort()
+        val coordinator = GestureCoordinator(
+            port = port,
+            clock = { 0L },
+            callbackTimeoutMillis = 2_000,
+        )
+        service.setPrivateField("gestureCoordinator", coordinator)
+        val overlayViewModel = GateViewModel(
+            ServiceGateRuntime { service },
+            systemTapTimeoutMillis = 137L,
+        )
+        val activityTap = GestureSpec.Tap(PointF(20f, 20f), durationMillis = 80)
+
+        overlayViewModel.requireRestart()
+
+        assertEquals(SubmitResult.REJECTED, service.submitGesture(activityTap))
+        assertTrue(port.callbacks.isEmpty())
     }
 
     @Test
@@ -292,10 +373,16 @@ class AndroidGesturePortTest {
             callbackDurationMillis = 527,
             cancellationReason = CancelReason.ANDROID,
         )
+        val coordinator = GestureCoordinator(
+            port = RecordingGesturePort(),
+            clock = { 0L },
+            callbackTimeoutMillis = 2_000,
+        )
+        service.setPrivateField("gestureCoordinator", coordinator)
         service.addGestureOutcomeListener(detachedListener)
         service.addGestureOutcomeListener(attachedListener)
 
-        service.publishGestureOutcome(outcome)
+        service.publishGestureOutcome(coordinator, outcome)
         service.removeGestureOutcomeListener(detachedListener)
         handler.runQueued()
 

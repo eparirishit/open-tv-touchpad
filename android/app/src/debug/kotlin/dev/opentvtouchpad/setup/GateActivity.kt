@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.provider.Settings
 import android.view.KeyEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.widget.Button
 import android.widget.TextView
 import dev.opentvtouchpad.R
@@ -16,6 +17,7 @@ import dev.opentvtouchpad.accessibility.TouchAccessibilityService
 class GateActivity : Activity() {
     private lateinit var viewModel: GateViewModel
     private lateinit var actionButtons: Map<GateAction, Button>
+    private lateinit var commandButtons: Map<Button, () -> Unit>
     private val serviceConnectionListener = { viewModel.refresh() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -24,6 +26,7 @@ class GateActivity : Activity() {
 
         viewModel = GateViewModel(
             ServiceGateRuntime { TouchAccessibilityService.connectedService },
+            ViewConfiguration.getTapTimeout().toLong(),
         )
         actionButtons = mapOf(
             GateAction.SHOW_CURSOR to findViewById(R.id.show_cursor),
@@ -40,8 +43,20 @@ class GateActivity : Activity() {
         actionButtons.forEach { (action, button) ->
             button.setOnClickListener { viewModel.perform(action, isRepeat = false) }
         }
-        findViewById<Button>(R.id.accessibility_settings).setOnClickListener {
-            openAccessibilitySettings()
+        commandButtons = mapOf(
+            findViewById<Button>(R.id.manual_activated) to {
+                viewModel.recordManualTargetResult(ManualTargetResult.ACTIVATED)
+            },
+            findViewById<Button>(R.id.manual_not_activated) to {
+                viewModel.recordManualTargetResult(ManualTargetResult.NOT_ACTIVATED)
+            },
+            findViewById<Button>(R.id.launch_calibration) to {
+                startActivity(Intent(this, CalibrationActivity::class.java))
+            },
+            findViewById<Button>(R.id.accessibility_settings) to ::openAccessibilitySettings,
+        )
+        commandButtons.forEach { (button, command) ->
+            button.setOnClickListener { command() }
         }
     }
 
@@ -78,33 +93,23 @@ class GateActivity : Activity() {
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.keyCode !in CONFIRM_KEYS) return super.dispatchKeyEvent(event)
         val action = actionButtons.entries.firstOrNull { it.value === currentFocus }?.key
-            ?: return super.dispatchKeyEvent(event)
+        val command = (currentFocus as? Button)?.let(commandButtons::get)
 
         if (event.action == KeyEvent.ACTION_DOWN) {
-            viewModel.perform(action, isRepeat = event.repeatCount > 0)
+            if (action != null) {
+                viewModel.perform(action, isRepeat = event.repeatCount > 0)
+            } else if (event.repeatCount == 0) {
+                command?.invoke() ?: return super.dispatchKeyEvent(event)
+            }
         }
-        return true
+        return action != null || command != null
     }
 
     private fun render(state: GateUiState) {
         findViewById<TextView>(R.id.gate_status).setText(
             if (state.connected) R.string.gate_status_connected else R.string.gate_status_disabled,
         )
-        findViewById<TextView>(R.id.display_bounds).text = state.bounds?.let {
-            getString(R.string.gate_bounds_value, it.width, it.height)
-        } ?: getString(R.string.gate_bounds_unavailable)
-        findViewById<TextView>(R.id.last_dispatch_result).text = getString(
-            R.string.gate_dispatch_value,
-            state.lastDispatchResult?.name ?: getString(R.string.gate_none),
-        )
-        findViewById<TextView>(R.id.callback_duration).text = getString(
-            R.string.gate_callback_value,
-            state.callbackDurationMillis?.toString() ?: getString(R.string.gate_none),
-        )
-        findViewById<TextView>(R.id.cancellation_reason).text = getString(
-            R.string.gate_cancellation_value,
-            state.cancellationReason?.name ?: getString(R.string.gate_none),
-        )
+        renderProbeDiagnostics(state)
 
         actionButtons.forEach { (action, button) ->
             button.isEnabled = if (action == GateAction.CANCEL) {
@@ -124,6 +129,37 @@ class GateActivity : Activity() {
                 settingsButton.requestFocus()
             }
         }
+    }
+
+    private fun renderProbeDiagnostics(state: GateUiState) {
+        val none = getString(R.string.gate_none)
+        findViewById<TextView>(R.id.probe_mode).text = getString(
+            R.string.probe_mode_value,
+            state.tapProbeMode.name,
+        )
+        findViewById<TextView>(R.id.probe_admission).text = getString(
+            R.string.probe_admission_value,
+            state.lastDispatchResult?.name ?: none,
+        )
+        findViewById<TextView>(R.id.probe_callback).text = getString(
+            R.string.probe_callback_value,
+            state.callbackOutcome?.name ?: none,
+        )
+        findViewById<TextView>(R.id.probe_callback_duration).text = getString(
+            R.string.probe_callback_duration_value,
+            state.callbackDurationMillis?.toString() ?: none,
+        )
+        findViewById<TextView>(R.id.probe_display).text = state.bounds?.let {
+            getString(R.string.probe_display_value, it.width, it.height)
+        } ?: getString(R.string.probe_display_unavailable)
+        findViewById<TextView>(R.id.probe_controller).text = getString(
+            R.string.probe_controller_value,
+            state.controllerState.name,
+        )
+        findViewById<TextView>(R.id.probe_manual_result).text = getString(
+            R.string.probe_manual_result_value,
+            state.manualTargetResult?.name ?: none,
+        )
     }
 
     private companion object {

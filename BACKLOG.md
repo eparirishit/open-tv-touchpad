@@ -5,9 +5,15 @@ design must be approved before an item moves into an active milestone.
 
 ## Blocking Decision
 
-- [ ] Review the M0 failure and decide whether to change the certified target,
-  input backend, or gate contract. M1 remains blocked until that decision is
-  recorded and the applicable gate passes.
+- [x] Select a bounded M0.1 gesture investigation before changing the certified
+  target or input backend.
+- [x] Review and approve the written M0.1 design.
+- [x] Plan, implement, and execute M0.1 after written-design approval.
+- [x] Do not rerun M0: verified M0.1 outcome `STOP` did not authorize it.
+- [ ] Approve a different certified target, input backend, or M0 contract before
+  further implementation.
+
+M1 remains blocked until a complete M0 report verifies as `PASS`.
 
 ## Blocked Approved Milestones
 

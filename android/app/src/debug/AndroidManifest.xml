@@ -9,6 +9,10 @@
 
     <application android:banner="@drawable/tv_banner">
         <activity
+            android:name=".setup.CalibrationActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".setup.GateActivity"
             android:exported="true">
             <intent-filter>

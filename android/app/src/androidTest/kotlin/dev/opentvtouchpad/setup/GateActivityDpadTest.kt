@@ -21,6 +21,7 @@ import dev.opentvtouchpad.input.DisplayBounds
 import dev.opentvtouchpad.input.PointF
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -62,6 +63,10 @@ class GateActivityDpadTest {
             "swipe_horizontal",
             "drag_path",
             "cancel",
+            "manual_activated",
+            "manual_not_activated",
+            "launch_calibration",
+            "accessibility_settings",
         )
         val actionIds = actionNames.map(::requiredId)
 
@@ -75,6 +80,62 @@ class GateActivityDpadTest {
             instrumentation.sendKeySync(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_DOWN))
             instrumentation.waitForIdleSync()
             assertEquals(expectedId, activity.currentFocus?.id)
+        }
+    }
+
+    @Test
+    fun manualResultAndCalibrationLaunchAreClosedDpadControls() {
+        val manualResult = activity.findViewById<TextView>(requiredId("probe_manual_result"))
+
+        pressConfirm("manual_activated")
+        assertTrue(manualResult.text.toString().endsWith("ACTIVATED"))
+
+        pressConfirm("manual_not_activated")
+        assertTrue(manualResult.text.toString().endsWith("NOT_ACTIVATED"))
+
+        val monitor = instrumentation.addMonitor(CALIBRATION_ACTIVITY, null, false)
+        try {
+            pressConfirm("launch_calibration")
+            val launched = instrumentation.waitForMonitorWithTimeout(monitor, 2_000L)
+            assertTrue("Calibration activity did not launch", launched != null)
+            assertEquals(CALIBRATION_ACTIVITY, launched?.componentName?.className)
+            launched?.finish()
+        } finally {
+            instrumentation.removeMonitor(monitor)
+        }
+    }
+
+    @Test
+    fun activityDoesNotOfferUnsupportedM01ProbeModes() {
+        listOf(
+            "probe_mode_baseline",
+            "probe_mode_system_timeout",
+            "probe_mode_controller_handoff",
+        ).forEach { idName ->
+            assertEquals(null, activity.findViewById<View>(requiredId(idName)))
+        }
+    }
+
+    @Test
+    fun probeDiagnosticsExposeOnlyTheApprovedClosedFields() {
+        val diagnosticIds = listOf(
+            "probe_mode",
+            "probe_admission",
+            "probe_callback",
+            "probe_callback_duration",
+            "probe_display",
+            "probe_controller",
+            "probe_manual_result",
+        ).map(::requiredId)
+
+        assertEquals(7, diagnosticIds.toSet().size)
+        diagnosticIds.forEach { id ->
+            val value = activity.findViewById<TextView>(id).text.toString()
+            assertFalse(value.contains("package", ignoreCase = true))
+            assertFalse(value.contains("screen", ignoreCase = true))
+            assertFalse(value.contains("coordinate", ignoreCase = true))
+            assertFalse(value.contains("x="))
+            assertFalse(value.contains("y="))
         }
     }
 
@@ -294,7 +355,17 @@ class GateActivityDpadTest {
         return id
     }
 
+    private fun pressConfirm(idName: String) {
+        instrumentation.runOnMainSync {
+            activity.findViewById<View>(requiredId(idName)).requestFocus()
+        }
+        instrumentation.sendKeySync(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER))
+        instrumentation.sendKeySync(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER))
+        instrumentation.waitForIdleSync()
+    }
+
     private companion object {
+        const val CALIBRATION_ACTIVITY = "dev.opentvtouchpad.setup.CalibrationActivity"
         const val SERVICE_CONNECTION_TIMEOUT_MILLIS = 5_000L
     }
 }

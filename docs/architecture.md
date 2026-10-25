@@ -12,10 +12,10 @@ successfully bound its accessibility service, displayed its cursor, and moved
 that cursor, but two user-triggered taps did not activate a centered Netflix
 profile tile.
 
-The evidence does not establish whether Netflix rejected the dispatched
-gesture, the firmware mishandled it, or the target surface could not consume
-it. It does establish that the required end-to-end tap behavior was absent on
-the certified setup.
+The completed M0.1 investigation isolates the failure below Netflix: all three
+fixed gesture modes were accepted and then cancelled on both Netflix and the
+first-party calibration target. The verified classification is
+`PROJECTOR_OR_GESTURE_DISPATCH`.
 
 ## Consequence
 
@@ -33,3 +33,10 @@ Further implementation requires a separately reviewed change to at least one
 of the certified device/application target, the input backend, or the M0 gate
 contract. Until then, the repository preserves the debug evidence and remains
 stopped at M0.
+
+## M0.1 Result
+
+The bounded investigation completed on 2026-10-24 with verified outcome
+`STOP` and stop reason `COMPATIBILITY_EXHAUSTED`. Controller handoff did not
+prevent cancellation. The approved accessibility-dispatch architecture is not
+viable on the certified XGIMI setup; an M0 rerun and M1 remain blocked.
