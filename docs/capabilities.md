@@ -9,7 +9,8 @@ It provides a charcoal Remote page with touchpad, scrolling and mouse
 alternatives, plus a separate Setup page and fixed Stop/Close footer. Labels scale,
 controls wrap and content scrolls on small screens. It preserves explicit Start/
 Connect and the five-minute foreground-only diagnostic. No TV-key capabilities
-are added; N3/N4 remain pending. See [UI report](gates/nord-ui-report.md).
+are added by0.7. N3 implementation is approved and in progress behind its native
+TLS gate; N4 remains pending. See [UI report](gates/nord-ui-report.md).
 
 ## Nord scrolling — diagnostic behavior accepted (2026-10-25)
 

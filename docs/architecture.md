@@ -1,5 +1,19 @@
 # Architecture Status
 
+## Approved Nord unified remote (2026-10-25)
+
+The current direction is the Nord as a handheld remote. The approved
+[N3 contract](superpowers/specs/2026-10-25-nord-tv-controls-design.md) combines
+existing Bluetooth HID mouse/tap/scroll with Remote v2 TV keys over exact-pinned
+native TLS. One Activity run owns both channels, its five-minute deadline and
+Stop. A separate fail-closed TV enrollment store and non-exportable AndroidKeyStore
+identity preserve the Bluetooth record. Initial TV-code pairing is a separate
+no-input run; combined Connect enables input only after both channels are ready.
+No router reservation, Mac bridge or CA installation is needed for this direction.
+N3a platform validation is in progress; no real-TV integration or N3 PASS yet.
+The older hub/projector architectures and gate evidence below remain historical
+or deferred, and do not authorize an insecure runtime fallback.
+
 ## Browser-only hub implementation (2026-10-24)
 
 The accepted local-only design now has certificate identity, native approval,

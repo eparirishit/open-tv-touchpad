@@ -1,4 +1,4 @@
-# Disposable Nord HID probe — 0.7-diagnostic
+# Disposable Nord HID probe — N3 platform foundation
 
 The owner accepted remembering the verified projector for this isolated diagnostic
 on 2026-10-24, including the OS-bond continuity limitation. This is not a product
@@ -18,10 +18,20 @@ for this UI update. The five-minute foreground-only limit is unchanged. See the
 [UI design](../../docs/superpowers/specs/2026-10-25-nord-remote-ui-design.md) and
 [verification report](../../docs/gates/nord-ui-report.md).
 
+The owner approved [N3 unified TV controls](../../docs/superpowers/specs/2026-10-25-nord-tv-controls-design.md).
+The reviewed0.8 platform diagnostic retains the0.7 UI and adds native Keystore/TLS,
+bounded wire/pairing and TV-enrollment helpers. It has no runtime TV caller yet.
+INTERNET is present solely for the approved N3a androidTest loopback fixture at
+this stage. The fixture uses test-only native identities and never reads retained
+enrollment or connects to the projector. It passed independent review,126 unit tests,14 emulator tests and12 native
+TLS tests on the Nord. The installed update preserves Bluetooth enrollment. [Platform evidence](../../docs/gates/n3-platform-report.md).
+
 Uses native `BluetoothHidDevice` on API31+, the existing Gradle/JUnit toolchain,
-and no new runtime dependencies or custom crypto. Separate application ID; opt-in Gradle
-module; debug-only variant. No INTERNET, scan, location, accessibility or storage
-permission. Nothing starts the app in response to a Bluetooth broadcast.
+and pinned protobuf Java lite for N3 wire messages; no custom crypto. Separate
+application ID; opt-in Gradle module; debug-only variant. No scan, location,
+accessibility or storage permission. Nothing starts the app in response to a
+Bluetooth broadcast. Version0.7 remains the preserved owner-tested behavior baseline;0.8 is installed
+for the platform proof and has no live TV-controls caller yet.
 
 `ProbeActivity` owns public Bluetooth calls and the manual UI. Its `singleInstance`
 launch mode prevents multiple screens from holding conflicting enrollment views,

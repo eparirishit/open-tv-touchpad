@@ -36,22 +36,23 @@ Main owns manifest/version build config and device runner.
 
 Interfaces: package-private `TvIdentity.create(String alias)` and `load(String alias)`
 return `KeyStore.PrivateKeyEntry`; `delete(String alias)`. Create must refuse an
-existing alias. Native RSA2048 certificate, signing SHA256/384/512 PKCS1/PSS as
-provider supports; no exportable fallback. `TvTls.clientContext(entry, peer)` returns
-SSLContext with a single identity and native trust + exact leaf pin. Separate
-`TvTls.pairingContext(entry)` has bootstrap-only trust and no control caller.
+existing alias. Native RSA2048 certificate, signing SHA256/384/512 PKCS1/PSS and the
+provider-required raw-RSA signing permissions (no encryption/decryption purpose); no exportable fallback. `TvTls.clientSocket(entry, peer)` returns an unconnected
+SSLSocket with a single identity, native trust + exact leaf pin and only TLS1.2/1.3
+enabled. Separate `TvTls.pairingSocket(entry)` has bootstrap-only trust and no
+control caller. SSLContext construction stays private.
 `TvTls.certificate(byte[] der)` uses native CertificateFactory with bounded input.
 Workers may refine signatures within the same ownership if documented before integration.
 
-- [ ] Write native tests first, observe compile failure against missing helpers.
-- [ ] Implement identity creation/loading/deletion, no key bytes exported, valid
+- [x] Write native tests first, observe compile failure against missing helpers.
+- [x] Implement identity creation/loading/deletion, no key bytes exported, valid
   self-signature. Use native parser/trust factory and narrowly scoped key manager.
-- [ ] Loopback mutual-TLS test with ephemeral fixture identities under test-only
+- [x] Loopback mutual-TLS test with ephemeral fixture identities under test-only
   aliases: correct pin passes and verifies client cert; wrong/expired/child peers
   fail; pairing bootstrap and control policy are separate; close unblocks I/O.
-- [ ] Main adds INTERNET/version8 only to debug diagnostic, builds all existing
+- [x] Main adds INTERNET/version8 only to debug diagnostic, builds all existing
   unit/native tests, independent review before installing on stopped Nord.
-- [ ] Execute reviewed TLS fixture on emulator then Nord. No retained enrollment
+- [x] Execute reviewed TLS fixture on emulator then Nord. No retained enrollment
   access in test code; main compares enrollment before/after. Delete fixture aliases,
   close sockets, remove only instrumentation APK. Record exact evidence. On native
   incompatibility stop this gate, preserve existing0.7 and report without weakening.
@@ -68,15 +69,15 @@ Interfaces: `TvWire.read(InputStream)` -> byte[] with64KiB/five-byte-prefix boun
 SHA256 standard transcript over unsigned RSA fields and code bytes. No sockets.
 Command enum owns exact allowed keys and constant Netflix URI.
 
-- [ ] Fetch exact v0.3.2 schemas/license and resolve immutable upstream commit;
+- [x] Fetch exact v0.3.2 schemas/license and resolve immutable upstream commit;
   lock protobuf-javalite/protoc compatible supported versions, hashes and licenses;
   advisory query. Record actual findings, not assumed clean status.
-- [ ] Write failing tests for fragmented/malformed/truncated/oversized frames,
+- [x] Write failing tests for fragmented/malformed/truncated/oversized frames,
   signed/unsigned RSA encoding, malformed/wrong code, unexpected/duplicate pairing
   replies, command enum and fixed URI. Use independent synthetic vectors.
-- [ ] Implement bounded framing plus generated parser recursion16; no generic
+- [x] Implement bounded framing plus generated parser recursion16; no generic
   arbitrary-key/URL command API. One handshake phase accepts one expected reply.
-- [ ] Verify unit tests and reproducible generation; independent scoped review.
+- [x] Verify unit tests and reproducible generation; independent scoped review.
 
 ## Task 3: Durable TV enrollment
 
@@ -85,13 +86,13 @@ Interfaces: record (format1, locator, alias, client-cert fingerprint, exact peer
 state ABSENT/VALID/UNUSABLE; `save`, `forget`, `changeLocator` use AtomicFile/readback.
 Key presence/fingerprint validation supplied by native identity adapter; no HID file reuse.
 
-- [ ] Test <=16KiB parsing, version/schema/address validation, corrupted/missing-key
+- [x] Test <=16KiB parsing, version/schema/address validation, corrupted/missing-key
   records, failed read/write/readback, explicit empty tombstone and process failure latch.
-- [ ] Implement one fixed app-owned alias and separate noBackup record. Forget
+- [x] Implement one fixed app-owned alias and separate noBackup record. Forget
   tombstones/readbacks before key deletion, unknown states cannot become ABSENT.
 - [ ] Test locator changes preserve peer pin; no candidate adoption or silent key
   replacement; test delayed commit cannot follow revoked enrollment in integration.
-- [ ] Review before task4 uses storage; no credentials in tests/logs/artifacts.
+- [x] Review before task4 uses storage; no credentials in tests/logs/artifacts.
 
 ## Task 4: Bounded remote connection
 

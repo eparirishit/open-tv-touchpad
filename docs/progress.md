@@ -1,17 +1,38 @@
 # Project Progress
 
-## N3 TV-controls design (2026-10-25)
+## N3 TV-controls implementation (2026-10-25)
 
-Owner requested proceeding to N3 after0.7 smoke passed. Source tracing and current
-platform/protocol research produced the [concrete N3 design](superpowers/specs/2026-10-25-nord-tv-controls-design.md):
-Bluetooth mouse plus pinned Remote v2 TLS, native Keystore credentials, manual
-editable private-IP locator, one shared foreground run and Stop. N3 security/platform
-contract approval remains pending; no network permission, dependency or runtime
-code has been added and the installed0.7 remains unchanged. Independent lifecycle
-assessment identified pause/worker-teardown and queued-input admission requirements,
-now included in the design. Three further concrete draft ambiguities were fixed
-and independently re-reviewed with no remaining actionable findings. The design
-is ready for owner approval; this is not implementation or platform acceptance.
+Owner approved the [unified N3 design](superpowers/specs/2026-10-25-nord-tv-controls-design.md)
+and [implementation plan](superpowers/plans/2026-10-25-nord-tv-controls.md).
+The active branch is `nord-tv-controls`. The installed0.7 remains unchanged.
+N3 adds Bluetooth mouse plus pinned Remote v2 TLS, native Keystore credentials,
+a stopped-only editable private-IP locator, and one shared foreground run/Stop.
+
+The opt-in debug foundation implements locked protobuf schemas/runtime, bounded
+framing, closed commands, pairing-transcript helpers, native identity/TLS and
+separate fail-closed TV enrollment storage. All126 unit tests pass. Debug/test
+assembly passes; lint reports0 errors/28 warnings. The API31 emulator passes14
+native tests (12 TLS/identity and two existing UI tests). INTERNET is added only
+to the opt-in diagnostic for N3; the current APK has no runtime TV caller.
+
+The native failure was resolved without exporting keys: Conscrypt needs explicit
+raw-RSA signing authorization, and native certificate generation uses RSA-PSS.
+Strong PSS parameters are parsed/validated with the platform provider; runtime
+TLS is restricted to1.2/1.3 and retains exact certificate pinning/native validation.
+Wrong/expired-certificate tests now require certificate-policy causes, rather
+than accepting an unrelated server failure. Independent storage review found no
+concrete defects; scoped native re-review resolved both original blockers with
+no remaining actionable findings.
+
+The native provider prerequisite now passes on the Nord AC2001/API31:12/12 TLS
+fixture tests, same-signature version8 installation, Bluetooth enrollment bytes
+unchanged before/after, test identities cleaned and instrumentation APK removed.
+The apparent missing-device result was a sandbox access failure; permitted
+inspection found the existing authorized connection. No new address was needed.
+No TV connection, pairing or input was used in this fixture. Source foundations:
+`691f5f2` (wire), `9aec0b2` (TLS), `81a1ebe` (storage). Bounded transport and combined
+UI/lifecycle implementation are now in progress. N3 overall is not accepted until
+integration review and owner hardware checks pass. See [platform evidence](gates/n3-platform-report.md).
 
 ## Nord UI refresh (2026-10-25)
 
