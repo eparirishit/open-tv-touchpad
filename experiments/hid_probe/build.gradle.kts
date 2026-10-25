@@ -9,8 +9,8 @@ android {
         applicationId = "dev.opentvtouchpad.hidprobe"
         minSdk = 31
         targetSdk = 36
-        versionCode = 11
-        versionName = "0.11-diagnostic"
+        versionCode = 12
+        versionName = "0.12-diagnostic"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     sourceSets["main"].java.srcDir("src/generated/java")

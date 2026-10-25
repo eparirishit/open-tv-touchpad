@@ -1,5 +1,34 @@
 # Project Progress
 
+## N3 combined controls and saved restart passed on0.12 (2026-10-25)
+
+The owner confirmed the requested Start/Connect, Home/D-pad/OK, Netflix launch,
+pointer/title tap/scroll, Back/volume and Stop checks work as expected; the
+physical remote remains usable. This verifies the combined smoke on the recorded
+0.12 artifact without new code or installation. The owner also confirmed Force
+stop/reopen preserves both pairings, input remains disabled until Start/Connect,
+and Home/pointer/scroll work without another code, followed by Stop. Play/pause,
+timed launch stability, deliberate link-loss and layout acceptance remain open.
+The owner also confirmed foreground loss/return leaves all app controls disabled
+and the explicit five-minute expiry stops all controls; the physical remote
+works in both checks on0.12. Overall N3 is not yet PASS.
+See [N3 report](gates/n3-report.md) for exact coverage and artifact identity.
+
+## N3 TV pairing verified on0.12 (2026-10-25)
+
+The owner0.11 pairing retry reaches CONTROL_EXCHANGE then fails after10–15
+seconds. Thus code binding/secret acknowledgment and pinned control TLS completed,
+but overall enrollment did not finish. Version0.12 tests the smallest difference
+from the working Mac reference: include optional POWER status in negotiation
+(mask611 when offered). There is no power command or relaxation of readiness,
+message ordering, authentication or timeout. The expected-feature regression
+is RED at579 before the change; all166 unit tests and build/lint pass afterward.
+Reviewed0.12 is installed with signing identity and enrollments preserved; the
+owner confirms "TV controls paired; app stopped." Inspection confirms version12,
+no probe service, and both enrollment records present and nonempty. The pairing
+blocker is resolved; combined-control/reconnect/lifecycle acceptance remains
+pending. Source9f29047; artifact identity is in the [N3 report](gates/n3-report.md).
+
 ## N3 certificate compatibility fix verified (2026-10-25)
 
 The owner-approved0.11 fix removes only the explicit peer certificate

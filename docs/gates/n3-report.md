@@ -1,14 +1,57 @@
-# N3 unified Nord remote — TLS blocker fixed, owner pairing pending
+# N3 unified Nord remote — pairing, combined smoke and saved restart passed on0.12
 
 Contract: [approved N3 design](../superpowers/specs/2026-10-25-nord-tv-controls-design.md).
+The owner also confirmed the full app-restart check: Stop/teardown, Android
+Force stop, reopen with input disabled until explicit Start/Connect, then Home,
+pointer movement and a scroll step without another pairing code, followed by
+Stop. Both pairings were retained. This is a successful owner-observed restart
+trial on0.12, not proof of crash cleanup, projector reboot or long-run reliability.
+
+The owner subsequently confirmed "works as expected" for the requested0.12
+combined-control smoke: explicit Start/Connect, Home/D-pad/OK, Netflix launch,
+pointer movement, title opening, scrolling, Back, volume, Stop preventing app
+control, and the physical remote remaining usable. This is owner-reported
+behavior on the same recorded artifact, not an automated input test.
+The owner also confirmed foreground loss/return keeps all app input disabled,
+and explicit five-minute expiry stops all app controls; the physical remote
+remains usable in both checks on the same0.12 artifact.
+Play/pause, timed post-launch stability and link-failure
+acceptance remain pending; no overall N3 PASS is claimed.
+
+The preceding owner retry on0.11 failed at CONTROL_EXCHANGE, after the code/secret
+acknowledgment and pinned control TLS. The owner reports10–15 seconds between
+Confirm TV code and failure. This is consistent with a negotiation deadline, but
+does not identify the last received frame or prove missing RemoteStart.
+
+Version0.12 is installed as a bounded compatibility experiment: negotiate optional
+POWER status32 alongside the existing features, matching upstream/H0 mask611
+instead of579. No power input command is added. Server-feature intersection,
+required KEY/APP_LINK checks, ordered RemoteStart readiness, trust, deadlines,
+enrollment and Stop are unchanged. RED negotiation test expected611 and received
+579; after the one-bit correction all166 unit tests pass, lint/build pass.
+Installed0.12 APK SHA256:
+`6fbfdc65357d1a0336f5c18099234ce1d33c42954cc5a3ab7b6da4cbd131eb72`.
+Independent review found no actionable production/installer findings. The stopped
+Nord was updated with matching signing identity and both enrollment stores
+unchanged; foreground was confirmed and no run started automatically. The0.11
+rollback artifact is preserved. The owner then confirmed: "TV controls paired;
+app stopped." Read-only inspection confirms version12, no running probe service,
+and both Bluetooth/TV enrollment files present and nonempty; their private
+contents were not printed. This verifies first TV-code pairing and the pairing
+run stopping after enrollment on0.12. No raw wire trace was collected; success
+after the one-bit change supports the compatibility correction without claiming
+a captured server-side explanation. Source:9f29047 (TLS fix78a2f1c).
+
 The prior blocker was an explicit self-signature rejection of the certificate
 presented at the owner-confirmed projector address. See the
 [approved compatibility decision](../superpowers/specs/2026-10-25-tv-trust-anchor-compatibility.md).
-The approved narrow fix is installed and verified on the Nord; owner pairing is pending.
+The approved narrow fix is installed; owner TV pairing now passes on0.12.
 Source branch `nord-tv-controls`, implementation `8763f5a` (transport `6dfd599`).
 N3 owner acceptance is **PENDING**. Reviewed version0.9 was
 installed with both enrollment stores unchanged and no automatic remote run.
-The owner's first Pair TV attempt failed; no successful TV enrollment is verified.
+The initial failures are retained below; first enrollment now passes. Combined
+control smoke and saved restart now pass; remaining lifecycle hardware
+acceptance remain pending.
 
 ## Approved compatibility fix — installed, native and live TLS verified
 
@@ -173,16 +216,25 @@ retained check holds, but identified deliberate loss of certificate
 self-consistency validation. Native validator rejection is not bypassable under
 the proposed amendment; positive/negative platform fixtures remain required.
 
-## Owner acceptance — pairing failed, remaining checks NOT RUN for version0.9
+## Owner acceptance — pairing and combined smoke PASS on0.12; remaining checks pending
 
-- TV-code pairing: first attempt failed as above; combined Start/Connect NOT RUN.
-- Saved reconnect and full app/process restart without re-pairing.
-- Home/D-pad/OK, Back, volume-/+, play/pause on owner-selected content.
-- Netflix launch, both channels still usable after20 seconds.
-- Pointer movement, title/profile click and both scroll axes.
-- Stop blocks both, physical remote still works; foreground loss/return stays stopped.
-- Five-minute expiry; deliberate Wi-Fi loss and Bluetooth loss each stop both.
-- Portrait/landscape, enlarged text and pairing keyboard remain usable.
+- TV-code pairing and stopped-after-enrollment: PASS on0.12, owner confirmation
+  and persisted-record/stopped-state inspection above.
+- Explicit combined Start/Connect: owner smoke PASS.
+- Saved reconnect after full app Force stop/reopen without re-pairing: owner PASS.
+  Input stayed disabled until explicit Start/Connect; Home, pointer and scroll
+  worked, then Stop. No projector reboot or held-input crash test was performed.
+- Home/D-pad/OK, Back and volume: owner smoke PASS. Play/pause remains NOT RUN.
+- Netflix launch: owner smoke PASS. Explicit20-second stability remains NOT RUN.
+- Pointer movement, title click and scrolling: owner smoke PASS. Profile selection
+  and separate checks of both scroll axes on0.12 remain NOT RUN.
+- Stop blocks app control and physical remote works: owner smoke PASS.
+- Foreground loss/return with both channels: owner PASS; all app controls remain
+  disabled after return and the physical remote still works.
+- Five-minute expiry: owner PASS after the explicit expired status; all app
+  controls stop and the physical remote still works.
+- Deliberate Wi-Fi loss and Bluetooth loss each stop both: NOT RUN on0.12.
+- Portrait/landscape, enlarged text and pairing keyboard: remaining layout acceptance NOT RUN on0.12.
 
 Hardware address change remains NOT RUN unless observed. No write/send callback
 proves a projector action. The five-minute foreground diagnostic limit remains;
@@ -202,11 +254,11 @@ daily-use lifecycle/packaging and cross-device access are deferred to later work
 
 ## Remaining interoperability limits
 
-The app negotiates mask579 (ping/key/volume/app-link), omitting H0's POWER status
-bit. Both parse RemoteStart as readiness/power status. Available client/schema
-sources do not prove whether that status bit controls delivery of RemoteStart;
-only the owner TV test can establish this. A missing start times out and stops,
-never bypasses readiness. No power input capability is exposed.
+Through0.11 the app negotiated mask579, omitting H0's POWER status bit.
+Installed0.12 adds that optional receive capability, producing611 when offered.
+Available client/schema sources do not prove whether that bit controls delivery
+of RemoteStart; owner verification remains required. A missing start still times
+out and stops, never bypassing readiness. No power input capability is exposed.
 Native TLS1.3 negotiation and live child-certificate handshakes remain unproven;
 TLS1.2 mutual authentication and native child-policy rejection are proven.
 

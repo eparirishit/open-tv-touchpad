@@ -9,10 +9,10 @@ public class TvControlProtocolTest {
     @Test public void negotiatesOnlySupportedFeaturesAndWaitsForOrderedStart() throws Exception {
         TvControlProtocol protocol = new TvControlProtocol();
         RemoteMessage reply = parse(protocol.receive(configure(1023)));
-        assertEquals(579, reply.getRemoteConfigure().getCode1());
+        assertEquals(611, reply.getRemoteConfigure().getCode1());
         assertFalse(protocol.ready());
         reply = parse(protocol.receive(active()));
-        assertEquals(579, reply.getRemoteSetActive().getActive());
+        assertEquals(611, reply.getRemoteSetActive().getActive());
         assertFalse(protocol.ready());
         assertNull(protocol.receive(start()));
         assertTrue(protocol.ready());

@@ -5,7 +5,8 @@ import java.io.IOException;
 
 /** One ordered Remote v2 negotiation; peer metadata never leaves this parser. */
 final class TvControlProtocol {
-    private static final int SUPPORTED = 1 | 2 | 64 | 512;
+    // Include upstream's power-status feature while waiting for RemoteStart; no power input is exposed.
+    private static final int SUPPORTED = 1 | 2 | 32 | 64 | 512;
     private static final int REQUIRED = 2 | 512;
     private int phase, features;
 

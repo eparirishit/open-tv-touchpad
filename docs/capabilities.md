@@ -1,21 +1,25 @@
 # Capabilities
 
-## Nord unified remote0.11 — TLS fixed, TV pairing pending
+## Nord unified remote0.12 — pairing and combined-control smoke verified
 
-The app now includes D-pad/OK, Home/Back, volume, play/pause and Netflix alongside
-the existing touchpad and scroll controls. TV controls require separate in-app
-code pairing and exact-pinned TLS over local Wi-Fi; the mouse still uses Bluetooth.
-Combined Connect verifies TV first and enables input only when both are ready.
-Any active-channel failure stops both. No Mac, router reservation or CA setup.
-Automated checks and review pass; the owner TV pairing attempt on0.9 failed,
-including a retry with the confirmed projector address. Version0.10 adds only
-closed failure-stage diagnostics. Native and Mac checks now confirm that explicit
-peer self-signature verification blocks TLS. The owner approved a narrow
-compatibility exception. Version0.11 is installed; native regression checks pass
-on emulator and Nord, and the real projector TLS handshake now completes.
-TV-code pairing and combined projector behavior remain unverified.
-The five-minute foreground-only diagnostic limit remains.
-See [N3 evidence](gates/n3-report.md).
+The app includes D-pad/OK, Home/Back, volume, play/pause and Netflix alongside the
+Bluetooth touchpad and scroll controls. The owner confirmed TV-code pairing
+completes and stops on0.12; inspection confirms separate persisted TV/Bluetooth
+enrollment records and stopped state. The approved peer trust-anchor exception
+retains code binding, exact certificate pinning, native TLS validation and
+private-key proof. Negotiation includes optional power-status events, with no
+power input command.
+
+Combined Connect verifies TV first and enables input only when both channels are
+ready; either active-channel failure is designed to stop both. The owner verified
+Start/Connect, Home/D-pad/OK, Netflix launch, pointer/title tap/scroll, Back/volume,
+and Stop with the physical remote still usable. Saved reconnect after full app
+Force stop/reopen also passes: input waits for explicit Start/Connect and TV keys,
+pointer and scrolling work without re-pairing. Foreground loss/return and explicit
+five-minute expiry also pass owner checks: all app controls stop and the physical
+remote remains usable. Play/pause and deliberate link-loss checks remain pending.
+The five-minute foreground-only diagnostic limit remains. No Mac, router
+reservation or CA setup is required. See [N3 evidence](gates/n3-report.md).
 
 ## Nord UI refresh — owner smoke passed (2026-10-25)
 

@@ -9,19 +9,25 @@ native TLS. One Activity run owns both channels, its five-minute deadline and
 Stop. A separate fail-closed TV enrollment store and non-exportable AndroidKeyStore
 identity preserve the Bluetooth record. Initial TV-code pairing is a separate
 no-input run; combined Connect enables input only after both channels are ready.
+Installed0.12 includes optional Remote v2 POWER status negotiation alongside
+ping/key/volume/app-link, matching the working reference while preserving the
+same required features and ordered RemoteStart readiness. It exposes no power
+input and does not treat a negotiation timeout as success.
 No router reservation, Mac bridge or CA installation is needed for this direction.
-Native platform validation passes on the Nord; reviewed version0.9 integrates
-the two channels and is installed. First owner TV pairing failed at an unknown
-stage; combined TV behavior remains unverified. No trust-policy change is justified;
-no N3 acceptance PASS yet. See [N3 evidence](gates/n3-report.md).
-Installed0.10 retains this flow and adds only a closed failure-stage enum captured
+Installed0.12 passes owner pairing and the combined-control smoke, including
+Stop and continued physical-remote use. Saved reconnect after app Force stop/reopen
+also passes, with explicit Start/Connect still required. Foreground loss/return
+and explicit five-minute expiry disable all app input by owner observation; the
+physical remote remains usable. Deliberate link-failure acceptance is pending; no overall N3 PASS is claimed.
+See [N3 evidence](gates/n3-report.md). Version0.10 added a closed failure-stage enum captured
 atomically with the first terminal failure, then shown by the existing guarded
 UI callback. Later cleanup cannot replace that stage or expose exception data.
 Native and independent Mac evidence now identify the explicit peer self-signature
 check as the TLS blocker. The [approved leaf trust-anchor decision](superpowers/specs/2026-10-25-tv-trust-anchor-compatibility.md)
 removes only explicit peer self-signature verification in installed0.11 after
 regression proof on emulator and Nord. Real projector pairing TLS now completes;
-owner code enrollment remains pending.
+owner code enrollment and combined-input smoke pass on0.12, with remaining
+hardware acceptance tracked separately.
 Pairing authentication and native validation are preserved. TLS-only diagnostic instrumentation is explicit opt-in, sends no
 pairing/control frames and does not mutate runtime identity or enrollment.
 The older hub/projector architectures and gate evidence below remain historical

@@ -205,6 +205,11 @@ Successful installation or unit tests do not establish actual-device acceptance.
 
 ## Diagnosing TV pairing
 
+Version0.12 requests optional power-status events during Remote v2 negotiation,
+matching the working reference. Ordered readiness is still required and there is
+no power input command. Owner pairing now completes and stops on0.12; combined
+controls and lifecycle hardware acceptance remain pending.
+
 Version0.11 applies the owner-approved leaf trust-anchor exception: an invalid
 peer self-signature alone does not block the otherwise checked candidate/pin.
 Code-bound authentication, native TLS/private-key proof, exact DER pinning,

@@ -38,13 +38,20 @@ design must be approved before an item moves into an active milestone.
   transport foundation. Nord12 native TLS checks pass; final combined suite164unit/17emulator passes.
 - [x] N3b: bounded transport, combined lifecycle/admission and TV controls UI;
   reviewed version0.9 installed with enrollment preserved.
-- [ ] N3c: diagnose first owner TV pairing failure, then combined hardware
-  acceptance; [remaining checks are not run](docs/gates/n3-report.md).
+- [ ] N3c: finish combined hardware acceptance after verified TV pairing; [remaining checks are not run](docs/gates/n3-report.md).
   Reviewed0.10 diagnostics identify peer self-signature rejection; the
   [trust-anchor decision](docs/superpowers/specs/2026-10-25-tv-trust-anchor-compatibility.md)
   is approved and implemented in installed0.11. Native regressions pass on
-  emulator/Nord and the real projector TLS handshake completes; owner pairing
-  and subsequent combined acceptance remain pending.
+  emulator/Nord and the real projector TLS handshake completes. Combined
+  acceptance remains pending.
+  Owner0.11 reaches CONTROL_EXCHANGE then fails after10–15 seconds; installed0.12
+  adds optional power-status negotiation and owner pairing now succeeds. Persisted
+  records and stopped state are confirmed. Owner combined-control smoke now passes,
+  including Netflix/pointer/scroll/TV buttons and Stop with physical remote usable.
+  Full app Force stop/reopen and explicit saved reconnect now pass without
+  re-pairing; input waits for Start/Connect. Foreground loss/return and explicit
+  five-minute expiry now pass, with all app input disabled and the physical remote
+  usable. Deliberate link-loss and other remaining N3c checks stay open.
   Existing Mac Python implementation is reference, not Android runtime code.
 - [ ] N4: review daily-use lifecycle and packaging after combined functionality.
 - [ ] Before broader distribution, verify screen-reader/font-scale/layout behavior;
