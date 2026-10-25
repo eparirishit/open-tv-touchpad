@@ -1,0 +1,99 @@
+package dev.opentvtouchpad.hidprobe;
+import java.util.List;
+public class StopCleanupHarness {
+    static final int STOP = 1;
+    static class BluetoothDevice {}
+    static class BluetoothProfile { static final int STATE_DISCONNECTED = 0; }
+    static class Hid {
+        int reports, disconnected, unregistered;
+        boolean firstSucceeds;
+        boolean rejectFirst;
+        boolean permissionRevoked, disconnectFails, enumerationFails, stateFails;
+        boolean sendReport(BluetoothDevice peer, int id, byte[] data) {
+            check(id == 1 && data.length == 5);
+            if (reports >= 1) check(java.util.Arrays.equals(data, new byte[5]));
+            if (permissionRevoked) { reports++; throw new SecurityException("injected permission loss"); }
+            if (rejectFirst && reports == 0) { reports++; return false; }
+            if (++reports == 1 && firstSucceeds) return true;
+            throw new IllegalArgumentException("injected native failure");
+        }
+        int getConnectionState(BluetoothDevice peer) { if (stateFails) throw new SecurityException("state permission lost"); return 2; }
+        boolean disconnect(BluetoothDevice peer) { disconnected++; if (disconnectFails) throw new IllegalStateException("disconnect failed"); return true; }
+        List<BluetoothDevice> getConnectedDevices() { if (enumerationFails) throw new SecurityException("enumeration permission lost"); return List.of(); }
+        boolean unregisterApp() { unregistered++; return true; }
+    }
+    static class Tv {
+        boolean stopped, throwsOnStop;
+        void stop() { stopped = true; if (throwsOnStop) throw new IllegalStateException("injected TV close failure"); }
+    }
+    final Tv tv = new Tv();
+    boolean codeCleared;
+    void clearTvCode() { codeCleared = true; }
+    static class Enrollment { boolean failed() { return false; } }
+    static class Session { boolean stopped; void stop() { stopped = true; } }
+    static class Handler { void removeCallbacks(Runnable r) {} void postDelayed(Runnable r, long delay) {} }
+    static class Status { void setText(String text) {} }
+    final NativeRunGate gates = new NativeRunGate();
+    final NativeRunGate.Run ownership = gates.start();
+    final Enrollment enrollment = new Enrollment();
+    final Session session = new Session();
+    final Handler handler = new Handler();
+    final Status status = new Status();
+    final Hid hid = new Hid();
+    final BluetoothDevice connected = new BluetoothDevice(), target = connected;
+    final Runnable registrationDeadline = () -> {}, connectionDeadline = () -> {}, teardownDeadline = () -> {};
+    boolean stopping, registrationRequested = true, unregistered, guardFinished, cleaned;
+    String terminalReason;
+    TouchpadGesture gesture;
+    final Pad touchpad = new Pad();
+    class Pad { void cancelGesture() { gesture.cancel(); } }
+    String storageFailure() { return "storage failure"; }
+    void trace(int event) {}
+    void updateControls() {}
+    void finishProfile() {}
+    void finishGuard() { guardFinished = true; }
+    void cleanupProgress() { cleaned = true; }
+    boolean canAttempt() { return ownership.active(); }
+    boolean ready() { return !stopping; }
+__SCROLL_FIELD__
+__STOP_METHOD__
+
+    StopCleanupHarness(boolean tap) {
+        ownership.await(NativeRunGate.Resource.SERVICE);
+        ownership.await(NativeRunGate.Resource.PROFILE);
+        ownership.await(NativeRunGate.Resource.REGISTRATION);
+        hid.firstSucceeds = tap;
+        gesture = new TouchpadGesture(5,
+            (x,y) -> InputSubmission.guard(() -> hid.sendReport(connected, MouseReport.ID, MouseReport.move(x,y)), () -> stop("input failed")),
+            () -> InputSubmission.guard(() -> InputSubmission.click(
+                () -> hid.sendReport(connected, MouseReport.ID, MouseReport.clickDown()),
+                () -> hid.sendReport(connected, MouseReport.ID, MouseReport.neutral())), () -> stop("input failed")));
+    }
+    static void check(boolean condition) { if (!condition) throw new AssertionError(); }
+    public static void main(String[] args) {
+        for (int mode = 0; mode < 9; mode++) {
+            boolean tap = mode == 1;
+            StopCleanupHarness p = new StopCleanupHarness(tap);
+            p.hid.rejectFirst = mode == 3;
+            p.hid.permissionRevoked = mode == 4;
+            p.tv.throwsOnStop = mode == 5;
+            p.hid.disconnectFails = mode == 6;
+            p.hid.enumerationFails = mode == 7;
+            p.hid.stateFails = mode == 8;
+            p.gesture.down(7, 0, 0, 0);
+            boolean escaped = false;
+            try {
+                if (mode >= 2) InputSubmission.guard(() -> p.scrolling.click(MouseReport.Direction.DOWN, 0),
+                    () -> p.stop("scroll failed"));
+                else if (tap) p.gesture.up(7, 0, 0, 10);
+                else { p.gesture.move(7, 6, 0); p.gesture.frame(p.gesture.generation(), 0); }
+            } catch (IllegalArgumentException expected) { escaped = true; }
+            check(!escaped && p.stopping && p.session.stopped && !p.gesture.hasPendingMotion());
+            check(p.tv.stopped && p.codeCleared);
+            check(p.guardFinished && p.cleaned && p.hid.disconnected == (mode == 8 ? 0 : 1) && p.hid.unregistered == 1);
+            check(!p.ownership.active() && !p.gates.available());
+            System.out.println((tap ? "tap release" : "scheduled movement") +
+                ": native failure contained; input fenced; remaining cleanup attempted");
+        }
+    }
+}

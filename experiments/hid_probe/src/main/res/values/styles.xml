@@ -1,0 +1,12 @@
+<resources>
+    <style name="RemoteTheme" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">#81C995</item>
+        <item name="android:windowBackground">#303030</item>
+        <item name="android:statusBarColor">#303030</item>
+        <item name="android:navigationBarColor">#202020</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowActionModeOverlay">true</item>
+    </style>
+</resources>

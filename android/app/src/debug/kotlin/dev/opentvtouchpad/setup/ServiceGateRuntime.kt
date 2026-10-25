@@ -27,11 +27,19 @@ internal class ServiceGateRuntime(
         serviceProvider()?.moveCursorTo(point.x.toInt(), point.y.toInt())
     }
 
+    override fun hideCursor() {
+        serviceProvider()?.hideCursor()
+    }
+
     override fun submitGesture(spec: GestureSpec): SubmitResult =
         serviceProvider()?.submitGesture(spec) ?: SubmitResult.REJECTED
 
     override fun cancelGesture() {
         serviceProvider()?.cancelGesture()
+    }
+
+    override fun requireRestart() {
+        serviceProvider()?.requireRestart()
     }
 
     override fun setGestureOutcomeListener(listener: ((GestureOutcome) -> Unit)?) {

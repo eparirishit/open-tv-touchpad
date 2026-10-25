@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="@string/probe_calibration_title"
+        android:textSize="28sp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="@string/probe_calibration_instruction"
+        android:textSize="20sp" />
+
+    <TextView
+        android:id="@+id/calibration_result"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="@string/probe_manual_not_recorded"
+        android:textSize="20sp" />
+
+    <GridLayout
+        android:id="@+id/calibration_targets"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:columnCount="3"
+        android:rowCount="3">
+
+        <Button
+            android:id="@+id/calibration_target_1"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:tag="other"
+            android:text="@string/probe_calibration_other" />
+
+        <Button
+            android:id="@+id/calibration_target_2"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:tag="other"
+            android:text="@string/probe_calibration_other" />
+
+        <Button
+            android:id="@+id/calibration_target_3"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:tag="other"
+            android:text="@string/probe_calibration_other" />
+
+        <Button
+            android:id="@+id/calibration_target_4"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:tag="other"
+            android:text="@string/probe_calibration_other" />
+
+        <Button
+            android:id="@+id/calibration_target_center"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:tag="intended"
+            android:text="@string/probe_calibration_intended" />
+
+        <Button
+            android:id="@+id/calibration_target_6"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:tag="other"
+            android:text="@string/probe_calibration_other" />
+
+        <Button
+            android:id="@+id/calibration_target_7"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:tag="other"
+            android:text="@string/probe_calibration_other" />
+
+        <Button
+            android:id="@+id/calibration_target_8"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:tag="other"
+            android:text="@string/probe_calibration_other" />
+
+        <Button
+            android:id="@+id/calibration_target_9"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:tag="other"
+            android:text="@string/probe_calibration_other" />
+    </GridLayout>
+</LinearLayout>

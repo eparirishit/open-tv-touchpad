@@ -58,13 +58,13 @@ resources="$tmp_dir/resources.txt"
 "$dexdump" -s "$release_apk" >"$dex_strings"
 "$aapt2" dump resources "$release_apk" >"$resources"
 
-manifest_pattern='dev\.opentvtouchpad\.setup\.GateActivity'
-class_pattern='Ldev/opentvtouchpad/setup/Gate|Ldev/opentvtouchpad/setup/ServiceGateRuntime;|Ldev/opentvtouchpad/accessibility/DpadControllerOverlay'
-resource_pattern='layout/(activity_gate|controller_overlay)|string/gate_'
+manifest_pattern='dev\.opentvtouchpad\.setup\.(GateActivity|CalibrationActivity)'
+class_pattern='Ldev/opentvtouchpad/setup/Gate|Ldev/opentvtouchpad/setup/ServiceGateRuntime;|Ldev/opentvtouchpad/setup/Settings(ActionPolicy|Navigator)|Ldev/opentvtouchpad/accessibility/Android(FrameScheduler|MonotonicDeadlineScheduler|MainLoopScheduler);|L[^;]*(TapProbe|ControllerHandoff|CalibrationActivity|AndroidControllerHandoffExecutor|ManualTargetResult|ProbeCallbackOutcome|ProbeControllerState)[^;]*;|Ldev/opentvtouchpad/accessibility/DpadControllerOverlay'
+resource_pattern='layout/(activity_gate|controller_overlay|activity_calibration|probe_[[:alnum:]_]+)|string/(gate_|m0_1_|probe_)|id/(calibration_[[:alnum:]_]+|probe_[[:alnum:]_]+|manual_[[:alnum:]_]+|launch_calibration([^[:alnum:]_]|$))'
 
 assert_absent "GateActivity declaration" "$manifest_pattern" "$merged_manifest"
 assert_absent "GateActivity declaration" "$manifest_pattern" "$apk_manifest"
 assert_absent "gate class" "$class_pattern" "$dex_strings"
 assert_absent "gate resource" "$resource_pattern" "$resources"
 
-echo "Release gate isolation verified: no M0 gate manifest, classes, layouts, or strings"
+echo "Release gate isolation verified: no M0/M0.1 manifest, classes, or resources"

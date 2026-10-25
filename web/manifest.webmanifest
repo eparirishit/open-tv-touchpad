@@ -1,0 +1,12 @@
+{
+  "id": "/",
+  "name": "Open TV Touchpad",
+  "short_name": "TV Touchpad",
+  "description": "A local remote through your Mac hub. TV integration awaits protected-link verification.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#10191e",
+  "theme_color": "#10191e",
+  "icons": [{"src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}]
+}

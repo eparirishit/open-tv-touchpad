@@ -2,7 +2,112 @@
 
 These instructions apply to the entire repository.
 
+## Approved TV trust-anchor compatibility (2026-10-25)
+
+The owner approved removing only the explicit peer trust-anchor self-signature
+check and testing the exception. Follow
+`docs/superpowers/specs/2026-10-25-tv-trust-anchor-compatibility.md`.
+Preserve code-bound pairing, TLS key-possession proof, exact DER pinning, native
+trust-manager validation, validity/algorithm checks and client self-signature
+verification. This is not permission to ignore native validation failures.
+
+## Approved N3 Nord TV controls (2026-10-25)
+
+The owner approved the earlier unified N3 plan after considering a separate
+Google TV companion. Follow `docs/superpowers/specs/2026-10-25-nord-tv-controls-design.md`
+and its implementation plan. This supersedes the no-network/no-TV-key boundary
+only in the opt-in debug Nord diagnostic: reviewed TLS/Keystore fixture gate,
+then code-bound Remote v2 pairing and exact pinned control, with existing HID.
+N3a permits the specified test-only loopback fixture before N3b. Preserve the
+five-minute run, combined Stop, existing HID enrollment and all other gates.
+No plaintext runtime ADB, unpinned runtime TLS, background control or product release.
+
+## Requested Nord remote presentation (2026-10-25)
+
+The owner requested a minimal Google TV-inspired UI and supplied the connected
+Nord app as reference. Follow the Nord remote UI design/plan dated2026-10-25.
+This changes presentation only in the diagnostic0.7: native Remote/Setup views,
+existing touchpad/scroll/pointer controls, no new transport or TV-key commands.
+Keep0.6 descriptor/enrollment/trust/lifecycle unchanged; no fresh pairing required.
+Build and review before a same-signature update; verify the probe is stopped.
+
+## Approved N2 Nord scrolling (2026-10-25)
+
+The owner approved `docs/superpowers/specs/2026-10-25-nord-scroll-design.md`
+including four scroll buttons and one-time fresh Bluetooth pairing. Follow
+`docs/superpowers/plans/2026-10-25-nord-scroll.md`. This supersedes N1's three-byte
+descriptor/version1 enrollment only for the isolated0.6 diagnostic: use the sole
+five-byte report and version2 enrollment; never adopt an old version1 selector.
+Do not install until reviewed and owner migration prep is confirmed. OS unpairing
+and comparison remain manual. Preserve all lifecycle/trust/release restrictions;
+N3 and product integration remain outside scope.
+
+## Approved Nord direct touchpad increment (2026-10-25)
+
+The owner selected operating the Nord itself and instructed implementation of
+N1 in `docs/superpowers/specs/2026-10-25-nord-direct-remote-design.md`.
+Its plan is `docs/superpowers/plans/2026-10-25-nord-touchpad.md`. This extends
+only the isolated HID diagnostic with finger movement/tap and shared input
+failure handling. Keep its descriptor, enrollment, permissions and five-minute
+foreground-only lifecycle. N2 scrolling, N3 Android TV Remote v2 and N4 product
+lifecycle remain follow-ups. Mac/PWA and controller bridges are deferred; no
+historical gate becomes PASS and no product backend is authorized by N1.
+
+## Approved Hub Proof (2026-10-24)
+
+The user approved the unified remote proposal and its first local hardware proof.
+`docs/superpowers/specs/2026-10-24-unified-remote-hub-proof.md` governs the
+isolated `experiments/hub_remote/` spike and supersedes the projector-only,
+no-runtime-ADB, and no-Home/Back/app-launch restrictions ONLY for that spike.
+M0 FAIL and M0.1 STOP remain historical facts; this is a separate H0 gate, not
+an M0 workaround or permission to start M1/product delivery. No LAN/browser
+control endpoint is authorized by this proof. Preserve all other boundaries.
+
+## Accepted local PWA hub contract (2026-10-24)
+
+The user approved local-only certificate trust and explicitly selected:
+"Require a protected projector link: proceed with browser-only work while
+verifying a suitable link; TV integration waits."
+`docs/superpowers/specs/2026-10-24-local-pwa-hub-design.md` and its implementation
+plan govern `hub/`, `web/` and their tests. H1B browser-only work is authorized;
+no real device backend is permitted before H1A protected-link PASS and H1B PASS.
+There is no trusted-LAN plaintext ADB product exception. H0 remains an isolated
+historical proof; do not migrate its adapters yet.
+
+For this hub only, the accepted constrained-intermediate/native-Mac Keychain
+identity, opaque HTTPS sessions, plain JavaScript PWA and native owner approval
+supersede the old Android Keystore/ECDH/TypeScript/projector-only requirements.
+The trusted native Mac fingerprint display replaces the TV fingerprint display.
+M0/M1 restrictions and Android boundaries below continue to govern the historical
+Android app. All shared validation, review, secrecy and documentation rules apply.
+
 ## Project Contract
+
+### Accepted Nord retained-bond diagnostic (2026-10-24)
+
+The owner selected “remembering the verified projector approach” after the
+OS-bond continuity limitation was explained. The accepted
+`docs/superpowers/specs/2026-10-24-nord-hid-reconnect-decision.md` supersedes the
+probe's fresh-pairing-after-every-stop restriction only for its isolated B
+diagnostic. Persist only the selected peer record, not input authorization;
+require explicit Start/Connect and trust the OS-managed current bond under the
+documented assumption. Do not claim app-pinned original-key continuity. H1A/H1B,
+no-network/no-background-input boundaries and all product integration gates remain.
+
+### Isolated Nord HID diagnostic (2026-10-24)
+
+The owner's “sure, continue” authorizes the proposed small phone diagnostic app
+for registration, authenticated-pairing feasibility and manual mouse/Stop checks.
+`experiments/hid_probe/README.md` bounds this disposable spike with foreground-only
+input. Its setup may use a non-exported, non-restarting native foreground service
+with a Stop notification and five-minute deadline to survive system pairing UI.
+It must not admit comparison confirmation or mouse input while the Activity is
+paused; after confirmation, a pause ends the test. This diagnostic lifecycle fix
+does not authorize a background-control bridge.
+It has a separate application ID, no network permission, no production adapter,
+and only an explicitly enabled debug build. It may be installed on the verified
+Nord for these checks. Normal Android builds exclude it. H1A/H1B requirements
+and the product integration block remain unchanged; no probe result alone is PASS.
 
 - Build the smallest complete implementation of the approved Open TV Touchpad V1 specification and plans.
 - Treat `docs/superpowers/specs/` as the product and security contract, `docs/superpowers/plans/` as the implementation order, and accepted files in `docs/adr/` as dependency and architecture decisions.

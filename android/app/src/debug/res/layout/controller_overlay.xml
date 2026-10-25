@@ -3,97 +3,214 @@
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="8dp">
+    android:padding="4dp">
 
     <TextView
         android:id="@+id/gate_status"
-        android:layout_width="match_parent"
+        android:layout_width="312dp"
         android:layout_height="wrap_content"
         android:background="#D9000000"
         android:gravity="center"
-        android:text="@string/gate_status_disabled" />
+        android:maxLines="1"
+        android:text="@string/gate_status_disabled"
+        android:textSize="10sp" />
 
     <GridLayout
-        android:layout_width="wrap_content"
+        android:layout_width="468dp"
         android:layout_height="wrap_content"
         android:background="#D9000000"
-        android:columnCount="2">
+        android:columnCount="3">
+
+        <TextView
+            android:id="@+id/probe_mode"
+            android:layout_width="156dp"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:text="@string/probe_mode_initial"
+            android:textSize="10sp" />
+
+        <TextView
+            android:id="@+id/probe_admission"
+            android:layout_width="156dp"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:text="@string/probe_admission_initial"
+            android:textSize="10sp" />
+
+        <TextView
+            android:id="@+id/probe_callback"
+            android:layout_width="156dp"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:text="@string/probe_callback_initial"
+            android:textSize="10sp" />
+
+        <TextView
+            android:id="@+id/probe_callback_duration"
+            android:layout_width="156dp"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:text="@string/probe_callback_duration_initial"
+            android:textSize="10sp" />
+
+        <TextView
+            android:id="@+id/probe_display"
+            android:layout_width="156dp"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:text="@string/probe_display_unavailable"
+            android:textSize="10sp" />
+
+        <TextView
+            android:id="@+id/probe_controller"
+            android:layout_width="156dp"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:text="@string/probe_controller_initial"
+            android:textSize="10sp" />
+
+        <TextView
+            android:id="@+id/probe_manual_result"
+            android:layout_width="156dp"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:text="@string/probe_manual_result_initial"
+            android:textSize="10sp" />
+    </GridLayout>
+
+    <GridLayout
+        android:layout_width="468dp"
+        android:layout_height="wrap_content"
+        android:background="#D9000000"
+        android:columnCount="3">
+
+        <Button
+            android:id="@+id/probe_mode_baseline"
+            android:layout_width="156dp"
+            android:layout_height="40dp"
+            android:text="@string/probe_mode_baseline_short"
+            android:textSize="10sp" />
+
+        <Button
+            android:id="@+id/probe_mode_system_timeout"
+            android:layout_width="156dp"
+            android:layout_height="40dp"
+            android:text="@string/probe_mode_system_timeout_short"
+            android:textSize="10sp" />
+
+        <Button
+            android:id="@+id/probe_mode_controller_handoff"
+            android:layout_width="156dp"
+            android:layout_height="40dp"
+            android:text="@string/probe_mode_controller_handoff_short"
+            android:textSize="10sp" />
 
         <Button
             android:id="@+id/show_cursor"
             android:layout_width="156dp"
-            android:layout_height="48dp"
+            android:layout_height="40dp"
             android:enabled="false"
-            android:text="@string/gate_show_cursor" />
+            android:text="@string/gate_show_cursor"
+            android:textSize="10sp" />
 
         <Button
             android:id="@+id/move_up"
             android:layout_width="156dp"
-            android:layout_height="48dp"
+            android:layout_height="40dp"
             android:enabled="false"
-            android:text="@string/gate_move_up" />
+            android:text="@string/gate_move_up"
+            android:textSize="10sp" />
 
         <Button
             android:id="@+id/move_down"
             android:layout_width="156dp"
-            android:layout_height="48dp"
+            android:layout_height="40dp"
             android:enabled="false"
-            android:text="@string/gate_move_down" />
+            android:text="@string/gate_move_down"
+            android:textSize="10sp" />
 
         <Button
             android:id="@+id/move_left"
             android:layout_width="156dp"
-            android:layout_height="48dp"
+            android:layout_height="40dp"
             android:enabled="false"
-            android:text="@string/gate_move_left" />
+            android:text="@string/gate_move_left"
+            android:textSize="10sp" />
 
         <Button
             android:id="@+id/move_right"
             android:layout_width="156dp"
-            android:layout_height="48dp"
+            android:layout_height="40dp"
             android:enabled="false"
-            android:text="@string/gate_move_right" />
+            android:text="@string/gate_move_right"
+            android:textSize="10sp" />
 
         <Button
             android:id="@+id/tap"
             android:layout_width="156dp"
-            android:layout_height="48dp"
+            android:layout_height="40dp"
             android:enabled="false"
-            android:text="@string/gate_tap" />
+            android:text="@string/gate_tap"
+            android:textSize="10sp" />
 
         <Button
             android:id="@+id/swipe_vertical"
             android:layout_width="156dp"
-            android:layout_height="48dp"
+            android:layout_height="40dp"
             android:enabled="false"
-            android:text="@string/gate_swipe_vertical" />
+            android:text="@string/gate_swipe_vertical"
+            android:textSize="10sp" />
 
         <Button
             android:id="@+id/swipe_horizontal"
             android:layout_width="156dp"
-            android:layout_height="48dp"
+            android:layout_height="40dp"
             android:enabled="false"
-            android:text="@string/gate_swipe_horizontal" />
+            android:text="@string/gate_swipe_horizontal"
+            android:textSize="10sp" />
 
         <Button
             android:id="@+id/drag_path"
             android:layout_width="156dp"
-            android:layout_height="48dp"
+            android:layout_height="40dp"
             android:enabled="false"
-            android:text="@string/gate_drag_path" />
+            android:text="@string/gate_drag_path"
+            android:textSize="10sp" />
 
         <Button
             android:id="@+id/cancel"
             android:layout_width="156dp"
-            android:layout_height="48dp"
+            android:layout_height="40dp"
             android:enabled="false"
-            android:text="@string/gate_cancel" />
+            android:text="@string/gate_cancel"
+            android:textSize="10sp" />
+
+        <Button
+            android:id="@+id/manual_activated"
+            android:layout_width="156dp"
+            android:layout_height="40dp"
+            android:text="@string/probe_record_activated"
+            android:textSize="10sp" />
+
+        <Button
+            android:id="@+id/manual_not_activated"
+            android:layout_width="156dp"
+            android:layout_height="40dp"
+            android:text="@string/probe_record_not_activated"
+            android:textSize="10sp" />
+
+        <Button
+            android:id="@+id/launch_calibration"
+            android:layout_width="156dp"
+            android:layout_height="40dp"
+            android:text="@string/probe_launch_calibration_short"
+            android:textSize="10sp" />
 
         <Button
             android:id="@+id/accessibility_settings"
-            android:layout_width="312dp"
-            android:layout_height="48dp"
-            android:layout_columnSpan="2"
-            android:text="@string/gate_accessibility_settings" />
+            android:layout_width="156dp"
+            android:layout_height="40dp"
+            android:text="@string/probe_accessibility_settings_short"
+            android:textSize="10sp" />
     </GridLayout>
 </LinearLayout>

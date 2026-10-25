@@ -27,29 +27,47 @@
             android:textSize="20sp" />
 
         <TextView
-            android:id="@+id/display_bounds"
+            android:id="@+id/probe_mode"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="@string/gate_bounds_unavailable" />
+            android:text="@string/probe_mode_initial" />
 
         <TextView
-            android:id="@+id/last_dispatch_result"
+            android:id="@+id/probe_admission"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/gate_none" />
+            android:text="@string/probe_admission_initial" />
 
         <TextView
-            android:id="@+id/callback_duration"
+            android:id="@+id/probe_callback"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/gate_none" />
+            android:text="@string/probe_callback_initial" />
 
         <TextView
-            android:id="@+id/cancellation_reason"
+            android:id="@+id/probe_callback_duration"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/gate_none" />
+            android:text="@string/probe_callback_duration_initial" />
+
+        <TextView
+            android:id="@+id/probe_display"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/probe_display_unavailable" />
+
+        <TextView
+            android:id="@+id/probe_controller"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/probe_controller_initial" />
+
+        <TextView
+            android:id="@+id/probe_manual_result"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/probe_manual_result_initial" />
 
         <Button
             android:id="@+id/show_cursor"
@@ -138,16 +156,40 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:enabled="false"
-            android:nextFocusDown="@id/accessibility_settings"
+            android:nextFocusDown="@id/manual_activated"
             android:nextFocusUp="@id/drag_path"
             android:text="@string/gate_cancel" />
+
+        <Button
+            android:id="@+id/manual_activated"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:nextFocusDown="@id/manual_not_activated"
+            android:nextFocusUp="@id/cancel"
+            android:text="@string/probe_record_activated" />
+
+        <Button
+            android:id="@+id/manual_not_activated"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:nextFocusDown="@id/launch_calibration"
+            android:nextFocusUp="@id/manual_activated"
+            android:text="@string/probe_record_not_activated" />
+
+        <Button
+            android:id="@+id/launch_calibration"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:nextFocusDown="@id/accessibility_settings"
+            android:nextFocusUp="@id/manual_not_activated"
+            android:text="@string/probe_launch_calibration" />
 
         <Button
             android:id="@+id/accessibility_settings"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:nextFocusDown="@id/show_cursor"
-            android:nextFocusUp="@id/cancel"
+            android:nextFocusUp="@id/launch_calibration"
             android:text="@string/gate_accessibility_settings" />
     </LinearLayout>
 </ScrollView>

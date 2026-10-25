@@ -17,3 +17,7 @@ web/dist/
 *.p12
 *.pem
 *.key
+.venv/
+__pycache__/
+*.pyc
+.local/

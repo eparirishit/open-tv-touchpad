@@ -1,5 +1,6 @@
 package dev.opentvtouchpad.setup
 
+import dev.opentvtouchpad.accessibility.ControllerHandoffTerminalState
 import dev.opentvtouchpad.input.CancelReason
 import dev.opentvtouchpad.input.DisplayBounds
 import dev.opentvtouchpad.input.GestureOutcome
@@ -21,16 +22,40 @@ internal enum class GateAction {
     CANCEL,
 }
 
+internal enum class ProbeCallbackOutcome {
+    COMPLETED,
+    CANCELLED,
+    TIMEOUT,
+    HANDOFF_FRAME_TIMEOUT,
+}
+
+internal enum class ProbeControllerState {
+    PRESENT,
+    HANDOFF,
+    REMOVED,
+}
+
+internal enum class ManualTargetResult {
+    ACTIVATED,
+    NOT_ACTIVATED,
+}
+
 internal data class GateUiState(
     val connected: Boolean = false,
     val bounds: DisplayBounds? = null,
     val cursor: PointF? = null,
     val lastDispatchResult: SubmitResult? = null,
+    val callbackOutcome: ProbeCallbackOutcome? = null,
     val callbackDurationMillis: Long? = null,
     val cancellationReason: CancelReason? = null,
     val gestureInFlight: Boolean = false,
     val controlsEnabled: Boolean = false,
     val settingsGuidanceVisible: Boolean = true,
+    val tapProbeMode: TapProbeMode = TapProbeMode.BASELINE_80_MS,
+    val controllerHandoffTerminalState: ControllerHandoffTerminalState? = null,
+    val controllerState: ProbeControllerState = ProbeControllerState.REMOVED,
+    val manualTargetResult: ManualTargetResult? = null,
+    val restartRequired: Boolean = false,
 )
 
 internal data class GateRuntimeState(
@@ -47,9 +72,13 @@ internal interface GateRuntime {
 
     fun moveCursorTo(point: PointF)
 
+    fun hideCursor()
+
     fun submitGesture(spec: GestureSpec): SubmitResult
 
     fun cancelGesture()
+
+    fun requireRestart()
 
     fun setGestureOutcomeListener(listener: ((GestureOutcome) -> Unit)?)
 
@@ -58,11 +87,15 @@ internal interface GateRuntime {
 
 internal class GateViewModel(
     private val runtime: GateRuntime,
+    private val systemTapTimeoutMillis: Long,
 ) {
     var state = GateUiState()
         private set
 
     private var observer: (GateUiState) -> Unit = {}
+    private var preparedTapProbe: TapProbeRequest? = null
+    private var tapProbeOutcomeListener: ((GestureOutcome) -> Unit)? = null
+    private var probeAttemptInFlight = false
 
     fun observe(observer: (GateUiState) -> Unit) {
         this.observer = observer
@@ -71,7 +104,96 @@ internal class GateViewModel(
 
     fun detach() {
         runtime.setGestureOutcomeListener(null)
+        tapProbeOutcomeListener = null
+        probeAttemptInFlight = false
         observer = {}
+    }
+
+    fun selectTapProbeMode(mode: TapProbeMode) {
+        update(state.copy(tapProbeMode = mode))
+    }
+
+    fun recordManualTargetResult(result: ManualTargetResult) {
+        update(state.copy(manualTargetResult = result))
+    }
+
+    fun publishControllerState(controllerState: ProbeControllerState) {
+        update(state.copy(controllerState = controllerState))
+    }
+
+    fun prepareTapProbe(): TapProbeRequest? {
+        if (
+            !runtime.isConnected ||
+            !state.controlsEnabled ||
+            runtime.currentGestureState().gestureInFlight
+        ) return null
+
+        publishCurrentBounds()
+        val config = TapProbePolicy.config(state.tapProbeMode, systemTapTimeoutMillis)
+        return TapProbeRequest(
+            config = config,
+            gesture = GestureSpec.Tap(requireCursor(), config.durationMillis),
+        ).also { preparedTapProbe = it }
+    }
+
+    fun submitTapProbe(request: TapProbeRequest): SubmitResult {
+        if (request !== preparedTapProbe) return SubmitResult.REJECTED
+
+        preparedTapProbe = null
+        update(state.copy(manualTargetResult = null))
+        val result = runtime.submitGesture(request.gesture)
+        probeAttemptInFlight = result == SubmitResult.ACCEPTED
+        if (!probeAttemptInFlight) tapProbeOutcomeListener = null
+        publishDispatchResult(result)
+        return result
+    }
+
+    fun setTapProbeOutcomeListener(listener: ((GestureOutcome) -> Unit)?) {
+        tapProbeOutcomeListener = listener
+    }
+
+    fun hideCursor() {
+        runtime.hideCursor()
+    }
+
+    fun clearPendingInput() {
+        preparedTapProbe = null
+        tapProbeOutcomeListener = null
+        probeAttemptInFlight = false
+    }
+
+    fun requireRestart() {
+        runtime.requireRestart()
+        update(state.copy(restartRequired = true, controlsEnabled = false))
+    }
+
+    fun publishControllerHandoffTerminalState(state: ControllerHandoffTerminalState) {
+        val isFrameTimeout = state == ControllerHandoffTerminalState.HANDOFF_FRAME_TIMEOUT
+        update(
+            this.state.copy(
+                controllerHandoffTerminalState = state,
+                lastDispatchResult = if (isFrameTimeout) null else this.state.lastDispatchResult,
+                callbackOutcome = when (state) {
+                    ControllerHandoffTerminalState.COMPLETED -> ProbeCallbackOutcome.COMPLETED
+                    ControllerHandoffTerminalState.CANCELLED -> ProbeCallbackOutcome.CANCELLED
+                    ControllerHandoffTerminalState.TIMEOUT -> ProbeCallbackOutcome.TIMEOUT
+                    ControllerHandoffTerminalState.HANDOFF_FRAME_TIMEOUT ->
+                        ProbeCallbackOutcome.HANDOFF_FRAME_TIMEOUT
+                    ControllerHandoffTerminalState.REJECTED -> null
+                },
+                callbackDurationMillis = if (isFrameTimeout) {
+                    null
+                } else {
+                    this.state.callbackDurationMillis
+                },
+                cancellationReason = if (isFrameTimeout) null else this.state.cancellationReason,
+                controllerState = if (state == ControllerHandoffTerminalState.COMPLETED) {
+                    ProbeControllerState.HANDOFF
+                } else {
+                    ProbeControllerState.REMOVED
+                },
+            ),
+        )
     }
 
     fun refresh() {
@@ -87,15 +209,30 @@ internal class GateViewModel(
         }
         runtime.setGestureOutcomeListener(::onGestureFinished)
         val gestureState = runtime.currentGestureState()
+        val preserveFrameTimeout =
+            state.controllerHandoffTerminalState == ControllerHandoffTerminalState.HANDOFF_FRAME_TIMEOUT
         update(
             state.copy(
                 connected = true,
                 bounds = bounds,
                 cursor = state.cursor?.let(bounds::clamp) ?: bounds.center(),
-                callbackDurationMillis = gestureState.latestOutcome?.callbackDurationMillis,
-                cancellationReason = gestureState.latestOutcome?.cancellationReason,
+                callbackOutcome = if (preserveFrameTimeout) {
+                    state.callbackOutcome
+                } else {
+                    gestureState.latestOutcome?.toProbeCallbackOutcome()
+                },
+                callbackDurationMillis = if (preserveFrameTimeout) {
+                    state.callbackDurationMillis
+                } else {
+                    gestureState.latestOutcome?.callbackDurationMillis
+                },
+                cancellationReason = if (preserveFrameTimeout) {
+                    state.cancellationReason
+                } else {
+                    gestureState.latestOutcome?.cancellationReason
+                },
                 gestureInFlight = gestureState.gestureInFlight,
-                controlsEnabled = !gestureState.gestureInFlight,
+                controlsEnabled = !gestureState.gestureInFlight && !state.restartRequired,
                 settingsGuidanceVisible = false,
             ),
         )
@@ -148,10 +285,15 @@ internal class GateViewModel(
 
     private fun dispatch(spec: GestureSpec) {
         val result = runtime.submitGesture(spec)
+        publishDispatchResult(result)
+    }
+
+    private fun publishDispatchResult(result: SubmitResult) {
         val inFlight = result != SubmitResult.REJECTED
         update(
             state.copy(
                 lastDispatchResult = result,
+                callbackOutcome = null,
                 callbackDurationMillis = null,
                 cancellationReason = null,
                 gestureInFlight = inFlight,
@@ -161,14 +303,19 @@ internal class GateViewModel(
     }
 
     private fun onGestureFinished(outcome: GestureOutcome) {
+        val probeListener = tapProbeOutcomeListener.takeIf { probeAttemptInFlight }
+        if (probeAttemptInFlight) tapProbeOutcomeListener = null
+        probeAttemptInFlight = false
         update(
             state.copy(
                 callbackDurationMillis = outcome.callbackDurationMillis,
+                callbackOutcome = outcome.toProbeCallbackOutcome(),
                 cancellationReason = outcome.cancellationReason,
                 gestureInFlight = false,
-                controlsEnabled = state.connected,
+                controlsEnabled = state.connected && !state.restartRequired,
             ),
         )
+        probeListener?.invoke(outcome)
     }
 
     private fun tap(): GestureSpec.Tap {
@@ -224,6 +371,13 @@ internal class GateViewModel(
     }
 
     private fun requireCursor(): PointF = checkNotNull(state.cursor)
+
+    private fun GestureOutcome.toProbeCallbackOutcome(): ProbeCallbackOutcome =
+        when (cancellationReason) {
+            null -> ProbeCallbackOutcome.COMPLETED
+            CancelReason.TIMEOUT -> ProbeCallbackOutcome.TIMEOUT
+            else -> ProbeCallbackOutcome.CANCELLED
+        }
 
     private fun update(next: GateUiState) {
         state = next
