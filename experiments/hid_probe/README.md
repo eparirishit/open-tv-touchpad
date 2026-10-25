@@ -1,8 +1,13 @@
-# Disposable Nord HID probe — 0.4-diagnostic
+# Disposable Nord HID probe — 0.5-diagnostic
 
 The owner accepted remembering the verified projector for this isolated diagnostic
 on 2026-10-24, including the OS-bond continuity limitation. This is not a product
 companion, network bridge, or H1A PASS. The physical TV remote remains independent.
+
+The owner approved the N1 direct-Nord touchpad on 2026-10-25. Version0.5 adds a
+finger-operated surface to this same isolated probe; it is not the complete
+unified TV remote. Scrolling, TV buttons and daily-use lifecycle remain separate
+increments in the [direct-remote design](../../docs/superpowers/specs/2026-10-25-nord-direct-remote-design.md).
 
 Uses native `BluetoothHidDevice` on API31+, the existing Gradle/JUnit toolchain,
 and no new dependencies or custom crypto. Separate application ID; opt-in Gradle
@@ -76,9 +81,34 @@ foreground notification with Stop and a fixed five-minute elapsed deadline.
   BONDED even after Stop, revokes the record and stops input. Missing bond at Start
   or Connect also invalidates enrollment. Forget clears the app record/session;
   removing the OS bond is a separate manual action in system settings.
-- Only fixed small arrows and one immediate left-button press/release exist.
-  No held drag, keyboard, continuous motion, background input or remote endpoint.
+- Fixed small arrows, a one-finger relative touchpad and immediate left-button
+  press/release exist. No held drag, keyboard, background input or remote endpoint.
   Crash/radio loss may prevent release; actual cleanup remains a hardware check.
+
+## N1 touchpad behavior
+
+- Slide one finger to move the projector pointer. Movement starts beyond Android's
+  touch-slop threshold; gain is1.0 HID count per density-independent pixel. Lift
+  and reposition freely. Pending motion is discarded when the finger lifts.
+- A stationary tap lasting at most250ms sends an immediate press/release. A swipe
+  returning to its origin cannot become a click. Long press has no click/drag action.
+- A second finger cancels the gesture until all fingers lift. No scrolling or
+  held drag exists in this version. Keep the physical TV remote for navigation.
+- Motion is coalesced to at most30Hz, with one accumulator capped at254 counts
+  per axis and each submitted delta bounded to[-127,127]. Excess motion is
+  discarded, not replayed after delay. Fractional motion is kept only in a gesture.
+- Stop, disabled input, focus loss, app pause and detaching the pad cancel gesture
+  state and scheduled dispatch. A fresh down is required after re-enabling.
+  Bluetooth reports still pass the existing native ownership/admission checks.
+- Native submission exceptions share one failure-to-Stop boundary across arrows,
+  Click, touch events and scheduled motion; click still attempts release in finally.
+- Stop/Disconnect and Close remain visible below the pad, outside the scrollable
+  setup area. Labeled arrows and Click provide accessible alternatives.
+
+The package, report descriptor and enrollment format are unchanged. Install with
+the same debug signing identity in place; no unpair/re-pair is required merely
+for this update. A failed connection must not trigger automatic enrollment deletion.
+Successful installation or unit tests do not establish actual-device acceptance.
 
 ## Bounded observational trace
 
@@ -139,8 +169,13 @@ trace format/time/order/budget logic. Only the Android file boundary is replaced
 in store failure tests. Native
 Bluetooth/service callback order, AtomicFile behavior on the phone, and actual
 report delivery require the live checks below; unit tests cannot establish them.
+N1 adds pure gesture/submission tests and a source-linked Stop regression: the
+test compiles the current Activity `Run.stop` method with fake native collaborators
+using the installed JDK, then injects report failures for both tap and scheduled
+motion. It checks cleanup ordering without duplicating the Stop implementation;
+it is not Android framework or hardware execution.
 
-## Manual checks for the 0.4 artifact (not run by implementation)
+## Existing enrollment checks (retain prior evidence)
 
 No installation or device action is part of this implementation task.
 After review and separately authorized installation:
@@ -170,3 +205,28 @@ Never record peer addresses or pairing digits. H1A remains NOT PASSED; H1B remai
 independent. Exact vendor encryption enforcement, native teardown ordering,
 reconnect, and held-button fault cleanup are not established by these local checks.
 Held-button testing needs its own accepted contract; an immediate click cannot prove it.
+
+## N1 manual acceptance for the reviewed 0.5 artifact
+
+These checks are pending until actual owner observations are recorded. Preserve
+the existing compared bond and saved enrollment. ADB may install/diagnose but
+must not inject the gestures used as evidence.
+
+1. Open → Start → wait for HID registered → Connect saved projector. Only after
+   connection should the pad enable. With the physical remote open Netflix's
+   profile chooser or browsing screen. Slide on the Nord pad in all directions;
+   lift/reposition without jumps. Swipe and return to the starting point: no click.
+2. Position the projector pointer over a safe profile/title and tap once on the
+   Nord pad. Confirm actual profile/title opening. Avoid Play. Long stationary
+   press and adding a second finger must not click. Lift both fingers, then check
+   a fresh single-finger gesture works.
+3. Stop during movement, then touch the pad: no more input. Check physical TV
+   remote use. Start/Connect explicitly; no pending old motion should resume.
+4. While connected, leave the app and return. Controls must remain stopped until
+   a fresh Start/Connect. A finger held while input becomes disabled must not gain
+   authorization when input re-enables; lift and start a new gesture.
+5. In a fresh run, allow the five-minute deadline to expire while the app is
+   visible. Confirm pad disables and no input resumes without explicit reconnect.
+
+Record source/APK hash and actual observations in the N1 report. Do not mark the
+whole N1 gate complete from movement alone, or erase the earlier reconnect failure.

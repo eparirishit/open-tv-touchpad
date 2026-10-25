@@ -1,5 +1,50 @@
 # Project Progress
 
+## N1 touchpad implementation (2026-10-25)
+
+Owner approved implementation of the first Nord-direct increment. Source
+`fdb4905` builds0.5-diagnostic with finger movement and tap-to-click through the
+existing HID gate. Stop/Close remain visible; queued motion is canceled on
+terminal/lifecycle events. No descriptor, enrollment, permission or session-limit
+change. Gradle passes76 probe tests, lint0errors/22warnings and debug assembly.
+Independent review found a Stop-cleanup exception gap; it is fixed with a failing-
+then-passing source-linked regression. Scoped re-review passed with no actionable
+findings. In-place installation/version5 and unchanged enrollment bytes are
+verified. Launch requested successfully and process running; UI foreground was
+not confirmed because the display was asleep. The owner subsequently confirmed
+“Movement and tap both work” after the requested connection/movement/Netflix-target
+sequence. The next owner response confirmed all three checks: no swipe-return
+click, multitouch cancellation/fresh-gesture recovery, and Stop with physical-
+remote usability. The owner's final response confirmed long-press rejection,
+foreground loss/return staying stopped, and five-minute expiry with no pad input
+and continued physical-remote use. **N1 diagnostic behavior acceptance PASS**
+for this artifact; planned implementation/review/manual sequence complete.
+No code changed during these live checks. Broader accessibility, crash cleanup,
+firmware encryption and daily-use reliability are not certified. N2 scrolling is
+the next separately designed increment. See [N1 report](gates/n1-report.md).
+
+## Nord handheld remote selected (2026-10-25)
+
+The owner revised priorities to using the Nord itself as the remote. Mac/PWA,
+iPhone/laptop access and a Mac-to-Nord bridge are deferred. The building-managed
+network cannot provide the requested address reservation; no trust certificate
+or listener was created. The [direct Nord design](superpowers/specs/2026-10-25-nord-direct-remote-design.md)
+proposes a touchpad increment in the existing foreground-only HID diagnostic,
+then separate scrolling, Android TV Remote v2 and product-lifecycle increments.
+The first increment was subsequently approved and implemented as recorded above;
+N2–N4 remain separately scoped follow-ups. No historical gate changes to PASS.
+
+## Browser setup preflight (2026-10-25)
+
+The owner requested moving on from the intermittent reconnect investigation.
+It remains deferred and unresolved; the successful 0.4 trace remains valid for
+that single trial. H1A/H1B and product integration gates are unchanged.
+Browser setup preflight confirms macOS arm64, Python3.13.3, Tk8.6, the native
+macOS keyring backend and installed versions matching the hub dependency lock.
+No default hub state directory or visible port8443 listener was found. The Mac's
+active default-route interface has a DHCP lease; router reservation is not yet
+confirmed. Identity creation and HTTPS startup await stable-address setup.
+
 ## Bounded reconnect trace (2026-10-25)
 
 The owner authorized the [diagnostic trace](superpowers/plans/2026-10-25-nord-reconnect-trace.md)

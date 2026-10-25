@@ -8,6 +8,30 @@ earlier proposed-status descriptions below for this hub work only.
 Backlog items are not approved V1 implementation work. Security and platform
 design must be approved before an item moves into an active milestone.
 
+## Current direction: Nord handheld remote (2026-10-25)
+
+- [x] Owner selected using the Nord directly, not a controller bridge.
+- [x] Review/approve the [N1 touchpad design](docs/superpowers/specs/2026-10-25-nord-direct-remote-design.md).
+- [x] Implement N1 finger movement/tap with unchanged HID trust/lifecycle:
+  `fdb4905`,76 tests, lint0errors/22warnings and debug build pass.
+- [x] Complete N1 scoped review and in-place install: version5 verified,
+  enrollment bytes preserved, no actionable review findings left.
+- [x] Verify N1 functional movement and Netflix target tap: owner reported both work.
+- [x] Verify N1 swipe-return/multitouch cancellation and Stop/physical-remote use.
+- [x] Complete N1 long-press rejection, foreground loss/return and expiry checks:
+  owner confirmed all pass. [N1 diagnostic behavior acceptance](docs/gates/n1-report.md)
+  is complete for0.5; no historical gate or product-readiness claim follows.
+- [ ] N2: design and verify two-axis HID scrolling; account for descriptor migration.
+- [ ] N3: design and verify Android TV Remote v2 pairing/identity and fixed TV
+  controls in the same interface. Existing Mac Python implementation is reference.
+- [ ] N4: review daily-use lifecycle and packaging after combined functionality.
+- [ ] Before broader distribution, verify screen-reader/font-scale/layout behavior;
+  current native alternative controls have not received a complete device audit.
+
+Mac/PWA trust setup and browser matrix, phone/laptop bridge and Windows hosting
+are deferred by this priority change. Retain their code and gate evidence; no
+pending gate becomes PASS and no production transport exception is implied.
+
 ## Blocking Decision
 
 - [x] Select a bounded M0.1 gesture investigation before changing the certified
@@ -54,6 +78,8 @@ M1 remains blocked until a complete M0 report verifies as `PASS`.
   user confirmed connected state then actual left/up pointer movement.
 - [ ] Diagnose 0.3 first-attempt restart disconnect; retry success does not erase
   the unexplained initial failure. No speculative reconnect bypass is approved.
+  Investigation deferred at the owner's request on 2026-10-25; this is not a
+  fix, user-error finding or gate waiver. Nord direct control is now the priority.
 - [x] Add/review/install the authorized bounded 0.4 event trace (`d0a8c44`):
   53 tests, build/lint and packaged-permission checks pass; no review findings.
   No connection behavior change or automatic retry is included.

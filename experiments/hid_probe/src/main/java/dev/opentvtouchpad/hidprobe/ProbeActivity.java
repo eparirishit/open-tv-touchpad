@@ -59,28 +59,34 @@ public final class ProbeActivity extends Activity {
     private Button confirm;
     private Button connect;
     private LinearLayout layout;
+    private TouchpadView touchpad;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         // Keep a storage-failure latch across configuration recreation; the store holds no Context.
         if (enrollment == null) enrollment = new EnrollmentStore(new AtomicEnrollmentFile(getNoBackupFilesDir()));
         session = new ProbeSession(enrollment);
-        ScrollView scroll = new ScrollView(this);
-        layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        int pad = (int) (16 * getResources().getDisplayMetrics().density);
-        layout.setPadding(pad, pad, pad, pad);
-        scroll.addView(layout);
-        setContentView(scroll);
-        scroll.setOnApplyWindowInsetsListener((view, insets) -> {
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        layout = root;
+        float density = getResources().getDisplayMetrics().density;
+        int pad = (int) (12 * density);
+        root.setPadding(pad, pad, pad, pad);
+        setContentView(root);
+        root.setOnApplyWindowInsetsListener((view, insets) -> {
             android.graphics.Insets bars = insets.getInsets(android.view.WindowInsets.Type.systemBars());
-            layout.setPadding(pad + bars.left, pad + bars.top, pad + bars.right, pad + bars.bottom);
+            root.setPadding(pad + bars.left, pad + bars.top, pad + bars.right, pad + bars.bottom);
             return insets;
         });
-        text("Open TV HID Probe", 24);
+        text("Open TV Touchpad — Nord test", 22);
+        ScrollView setup = new ScrollView(this);
+        root.addView(setup, new LinearLayout.LayoutParams(-1, 0, 1));
+        layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        setup.addView(layout);
+        status = text(enrollment.failed() ? storageFailure() : savedStatus(), 18);
         text("Five-minute diagnostic. First enrollment requires matching numbers on BOTH intended devices. "
             + "A saved projector uses the current OS-managed bond; its original key cannot be pinned by this app.", 16);
-        status = text(enrollment.failed() ? storageFailure() : savedStatus(), 18);
         start = button("Start five-minute HID run", this::requestStart);
         connect = button("Connect saved projector", this::connectSaved);
         visible = button("First enrollment: make visible for 120 seconds", this::makeVisible);
@@ -91,9 +97,18 @@ public final class ProbeActivity extends Activity {
         inputs.add(button("Move up", () -> move(0, -16)));
         inputs.add(button("Move down", () -> move(0, 16)));
         inputs.add(button("Click once", this::click));
-        button("Stop / Disconnect (keep saved projector)", () -> stop("Stopped. Enrollment retained."));
         button("Forget projector", this::forget);
-        button("Close probe", () -> { stop("Closed."); finish(); });
+        touchpad = new TouchpadView(this, this::move, this::click);
+        int touchpadDp = Math.min(180, Math.max(96, getResources().getConfiguration().screenHeightDp / 3));
+        root.addView(touchpad, new LinearLayout.LayoutParams(-1, (int) (touchpadDp * density)));
+        LinearLayout footer = new LinearLayout(this);
+        footer.setOrientation(LinearLayout.HORIZONTAL);
+        root.addView(footer, new LinearLayout.LayoutParams(-1, -2));
+        layout = footer;
+        Button stopButton = button("Stop / Disconnect", () -> stop("Stopped. Enrollment retained."));
+        stopButton.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1));
+        Button closeButton = button("Close probe", () -> { stop("Closed."); finish(); });
+        closeButton.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1));
         IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_PAIRING_REQUEST);
         filter.addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
         filter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
@@ -125,6 +140,7 @@ public final class ProbeActivity extends Activity {
         Button button = new Button(this);
         button.setText(title);
         button.setAllCaps(false);
+        button.setMinHeight((int) (48 * getResources().getDisplayMetrics().density));
         button.setOnClickListener(view -> {
             try { action.run(); }
             catch (SecurityException | IllegalStateException | IllegalArgumentException error) {
@@ -456,6 +472,7 @@ public final class ProbeActivity extends Activity {
 
         void stop(String message) {
             if (!ownership.owns() || stopping) return;
+            touchpad.cancelGesture();
             stopping = true;
             trace(STOP);
             terminalReason = enrollment.failed() ? storageFailure() : message;
@@ -469,7 +486,7 @@ public final class ProbeActivity extends Activity {
             if (hid != null) {
                 if (connected != null) {
                     try { hid.sendReport(connected, 1, new byte[3]); }
-                    catch (SecurityException | IllegalStateException ignored) { /* Best-effort release, never delivery proof. */ }
+                    catch (SecurityException | IllegalStateException | IllegalArgumentException ignored) { /* Best-effort release, never delivery proof. */ }
                 }
                 try {
                     if (target != null && hid.getConnectionState(target) != BluetoothProfile.STATE_DISCONNECTED
@@ -479,7 +496,7 @@ public final class ProbeActivity extends Activity {
                     }
                     if (registrationRequested && !unregistered && !hid.unregisterApp()) ownership.fail();
                     finishProfile();
-                } catch (SecurityException | IllegalStateException error) { ownership.fail(); }
+                } catch (SecurityException | IllegalStateException | IllegalArgumentException error) { ownership.fail(); }
             }
             finishGuard();
             cleanupProgress();
@@ -507,7 +524,7 @@ public final class ProbeActivity extends Activity {
                 adapter.closeProfileProxy(BluetoothProfile.HID_DEVICE, hid);
                 hid = null;
                 ownership.completed(PROFILE);
-            } catch (SecurityException | IllegalStateException error) { ownership.fail(); }
+            } catch (SecurityException | IllegalStateException | IllegalArgumentException error) { ownership.fail(); }
             cleanupProgress();
         }
 
@@ -618,25 +635,32 @@ public final class ProbeActivity extends Activity {
     }
 
     private void move(int dx, int dy) {
-        if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-            stop("Nearby devices permission unavailable."); return;
-        }
-        if (!canAttempt() || !run.ready()) return;
-        boolean accepted = run.hid.sendReport(run.connected, 1, new byte[] {0, (byte) dx, (byte) dy});
-        run.trace(accepted ? MOVE_ACCEPTED : MOVE_REJECTED);
-        if (!accepted) stop("Mouse movement report failed.");
+        InputSubmission.guard(() -> {
+            if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                stop("Nearby devices permission unavailable."); return;
+            }
+            if (!canAttempt() || !run.ready()) return;
+            if (dx < -127 || dx > 127 || dy < -127 || dy > 127) {
+                throw new IllegalArgumentException("Mouse delta out of bounds");
+            }
+            boolean accepted = run.hid.sendReport(run.connected, 1, new byte[] {0, (byte) dx, (byte) dy});
+            run.trace(accepted ? MOVE_ACCEPTED : MOVE_REJECTED);
+            if (!accepted) stop("Mouse movement report failed.");
+        }, () -> stop("Mouse input failed. Check Nearby devices permission and Bluetooth."));
     }
 
     private void click() {
-        if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-            stop("Nearby devices permission unavailable."); return;
-        }
-        if (!canAttempt() || !run.ready()) return;
-        boolean pressed = false;
-        boolean released;
-        try { pressed = run.hid.sendReport(run.connected, 1, new byte[] {1, 0, 0}); }
-        finally { released = run.hid.sendReport(run.connected, 1, new byte[3]); }
-        if (!pressed || !released) stop("Click report failed. Disconnect requested.");
+        InputSubmission.guard(() -> {
+            if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                stop("Nearby devices permission unavailable."); return;
+            }
+            if (!canAttempt() || !run.ready()) return;
+            Run current = run;
+            boolean accepted = InputSubmission.click(
+                () -> current.hid.sendReport(current.connected, 1, new byte[] {1, 0, 0}),
+                () -> current.hid.sendReport(current.connected, 1, new byte[3]));
+            if (!accepted) stop("Click report failed. Disconnect requested.");
+        }, () -> stop("Mouse input failed. Check Nearby devices permission and Bluetooth."));
     }
 
     private void updateControls() {
@@ -649,9 +673,11 @@ public final class ProbeActivity extends Activity {
         boolean ready = false;
         try { ready = run != null && run.ready(); } catch (SecurityException | IllegalStateException ignored) { }
         for (Button button : inputs) button.setEnabled(ready);
+        touchpad.setEnabled(ready);
     }
 
     private void stop(String message) {
+        if (touchpad != null) touchpad.cancelGesture();
         if (run != null && !run.stopping && run.ownership.owns()) run.stop(message);
         else {
             session.stop();
@@ -668,6 +694,7 @@ public final class ProbeActivity extends Activity {
     }
 
     @Override protected void onPause() {
+        if (touchpad != null) touchpad.cancelGesture();
         resumed = false;
         if (run != null) {
             if (run.ownership.owns()) run.trace(PAUSE);
@@ -676,6 +703,11 @@ public final class ProbeActivity extends Activity {
         }
         updateControls();
         super.onPause();
+    }
+
+    @Override public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (!hasFocus && touchpad != null) touchpad.cancelGesture();
     }
 
     @Override protected void onDestroy() {

@@ -4,6 +4,18 @@ Status: **NOT PASSED**. Browser-only code is implemented and its scoped reviews 
 actual OS trust/Keychain and supported-browser evidence remains incomplete.
 No projector backend is composed. H1A remains independently NOT PASSED.
 
+## Setup preflight (2026-10-25)
+
+At source checkpoint `f8d7dc2`, read-only checks confirmed macOS arm64,
+Python3.13.3, importable Tk8.6, native macOS keyring backend selection and all
+installed package versions matching `hub/requirements.lock`. No default hub
+state directory or visible port8443 listener was found. The active default-route
+interface has a DHCP lease; this does not establish a router reservation.
+Stable-address confirmation is pending. No identity, Keychain entry or trust
+installation was created, and HTTPS was not started. Backend selection alone
+does not prove real Keychain access; package-version checks do not reverify wheel
+hashes. The client matrix remains untested.
+
 ## Local evidence (2026-10-24)
 
 - Pinned dependency metadata/license inspection and OSV querybatch:17 exact

@@ -1,5 +1,25 @@
 # Capabilities
 
+## Nord touchpad diagnostic implementation (2026-10-25)
+
+Version0.5 (`fdb4905`) implements one-finger relative movement and stationary
+tap-to-click using the existing Bluetooth mouse report. Motion is bounded and
+coalesced, with cancellation on lift/Stop/disable/focus loss and no swipe-click
+or automatic reconnect. Stop/Close stay outside the scrolling setup area; native
+directional/Click buttons remain. Local tests/build and independent review pass.
+Version5 is installed on the Nord with enrollment bytes unchanged. Launch/process
+are verified; initial tool-requested foreground was not confirmed with the display
+asleep. The owner subsequently confirmed “Movement and tap both work” using the
+new touchpad on Netflix: functional movement/target activation are observed.
+The owner also confirmed swipe-return and multitouch do not click, a fresh
+gesture works after all fingers lift, and Stop disables pad input while the
+physical TV remote remains usable. The final owner response confirmed long press
+does not click, foreground loss/return stays stopped, and five-minute expiry
+disables pad input while preserving physical-remote use. The planned N1 diagnostic
+behavior sequence passes; see the [N1 report](gates/n1-report.md). Broader
+accessibility, crash cleanup and daily-use reliability remain unverified. Scrolling, held drag,
+TV buttons and a daily-use session policy are not part of0.5.
+
 ## Bounded probe diagnostics (2026-10-25)
 
 Probe0.4 (`d0a8c44`) adds fixed-event, sequence/elapsed-time Android logs for the

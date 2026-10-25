@@ -2,6 +2,17 @@
 
 These instructions apply to the entire repository.
 
+## Approved Nord direct touchpad increment (2026-10-25)
+
+The owner selected operating the Nord itself and instructed implementation of
+N1 in `docs/superpowers/specs/2026-10-25-nord-direct-remote-design.md`.
+Its plan is `docs/superpowers/plans/2026-10-25-nord-touchpad.md`. This extends
+only the isolated HID diagnostic with finger movement/tap and shared input
+failure handling. Keep its descriptor, enrollment, permissions and five-minute
+foreground-only lifecycle. N2 scrolling, N3 Android TV Remote v2 and N4 product
+lifecycle remain follow-ups. Mac/PWA and controller bridges are deferred; no
+historical gate becomes PASS and no product backend is authorized by N1.
+
 ## Approved Hub Proof (2026-10-24)
 
 The user approved the unified remote proposal and its first local hardware proof.
