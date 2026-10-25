@@ -49,6 +49,24 @@ stayed stopped with movement/Click disabled and the physical remote still worked
 No automatic input resumption was observed. This is not successful reconnect,
 out-of-range loss or process-crash/held-button cleanup evidence.
 
+The owner accepted [retained OS-managed enrollment](superpowers/specs/2026-10-24-nord-hid-reconnect-decision.md)
+with explicit Connect, including the inability to verify original-key continuity
+after missed bond replacement. Probe 0.3 (`7643aa8`) is now implemented, reviewed
+and installed/open on the verified Nord. Its UI provides Start, Connect saved
+projector, verified first enrollment, Forget and Stop. Local verification passes
+48 tests and build/lint. The user confirmed “Reconnect works; physical remote
+works” for the first fresh enrollment → Stop → Start → Connect saved projector
+trial without another pairing ceremony. Explicit saved-projector reconnect is
+observed on this setup. In the full process-restart trial (2026-10-25), the first
+saved connection failed with a disconnect/disabled-input status; a retry connected
+by user report. The same session's left/up check then moved the pointer without
+another restart/pairing step. Saved enrollment and working reconnect after process
+restart are observed on retry. Explicit Forget followed by Start with the OS
+bond retained passed by user observation: no saved projector, Connect and movement
+disabled. The remaining bond alone did not restore control. Reliable first-attempt
+reconnect, OS bond-change revocation, durable Forget across process death and
+fault cleanup are not established. No background or network control was added.
+
 ## Separate H0 local Mac proof
 
 - Local native window combines fixed TV buttons and a scrcpy touchpad.

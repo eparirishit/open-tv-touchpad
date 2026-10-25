@@ -32,6 +32,17 @@ Android app. All shared validation, review, secrecy and documentation rules appl
 
 ## Project Contract
 
+### Accepted Nord retained-bond diagnostic (2026-10-24)
+
+The owner selected “remembering the verified projector approach” after the
+OS-bond continuity limitation was explained. The accepted
+`docs/superpowers/specs/2026-10-24-nord-hid-reconnect-decision.md` supersedes the
+probe's fresh-pairing-after-every-stop restriction only for its isolated B
+diagnostic. Persist only the selected peer record, not input authorization;
+require explicit Start/Connect and trust the OS-managed current bond under the
+documented assumption. Do not claim app-pinned original-key continuity. H1A/H1B,
+no-network/no-background-input boundaries and all product integration gates remain.
+
 ### Isolated Nord HID diagnostic (2026-10-24)
 
 The owner's “sure, continue” authorizes the proposed small phone diagnostic app

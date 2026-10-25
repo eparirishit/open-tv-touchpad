@@ -1,5 +1,35 @@
 # Project Progress
 
+## Reconnect trust decision accepted (2026-10-24)
+
+The [Nord reconnect proposal](superpowers/specs/2026-10-24-nord-hid-reconnect-decision.md)
+compares the current fresh-pairing contract with retained OS-managed enrollment
+and explicit Connect. Android12 cannot expose original bond-key continuity to
+this app after an unobserved bond replacement. The owner selected “remembering
+the verified projector approach,” accepting the documented OS-bond trust basis.
+The [implementation plan](superpowers/plans/2026-10-24-nord-hid-reconnect.md)
+extends only the isolated diagnostic with saved enrollment and explicit Connect.
+The 0.3 diagnostic is implemented, independently reviewed with no actionable
+findings, and installed/launched on the verified Nord. Source `7643aa8` passes
+48 unit tests, debug build and lint (0 errors, 20 localization/SDK-age warnings).
+Saved enrollment is separate from each run's authorization; Start/Connect is
+explicit, Stop retains only enrollment, and Forget/observed re-pairing revokes it.
+Native teardown must complete before another run begins. The first live fresh
+enrollment → Stop → Start → Connect saved projector check passed by user report:
+“Reconnect works; physical remote works”. This establishes explicit saved-bond
+reconnect for this artifact/setup, not process-restart persistence or fault cleanup.
+On 2026-10-25 the process-restart trial initially stopped with “Projector
+disconnected. No input enabled. Native teardown completed. Tap start for a new
+run”; the owner then reported a retry connected. An initial right-only movement
+check appeared unsuccessful, but the same session's left/up check moved the
+pointer by user observation. Saved enrollment and working input after restart are
+established on retry; the first-attempt failure remains unexplained. No code was
+changed. The subsequent Stop → Forget → Start check with the OS bond retained
+passed by user report: “No saved projector; Connect and movement disabled”. This
+establishes explicit app revocation and rejection of bond-only control, not
+observed OS bond-change revocation or durable Forget across process death.
+H1A/H1B and integration gates remain unchanged.
+
 ## Spare-phone transport investigation (2026-10-24)
 
 Live read-only diagnostics confirmed the Nord AC2001 runs Android12/API31,

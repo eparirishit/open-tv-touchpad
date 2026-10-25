@@ -27,7 +27,9 @@ import android.widget.TextView;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Foreground-only diagnostic. No network, automatic pairing, or persisted trust. */
+import static dev.opentvtouchpad.hidprobe.NativeRunGate.Resource.*;
+
+/** Foreground-only diagnostic; the saved selector is not input authorization. */
 public final class ProbeActivity extends Activity {
     // Report 1: three buttons plus signed relative X/Y; all reports are three bytes.
     private static final byte[] DESCRIPTOR = {
@@ -39,35 +41,27 @@ public final class ProbeActivity extends Activity {
         0x15, (byte) 0x81, 0x25, 0x7f, 0x75, 0x08, (byte) 0x95, 0x02,
         (byte) 0x81, 0x06, (byte) 0xc0, (byte) 0xc0
     };
+    private static final NativeRunGate NATIVE_RUNS = new NativeRunGate();
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private final ProbeSession session = new ProbeSession();
     private final List<Button> inputs = new ArrayList<>();
+    private static EnrollmentStore enrollment;
+    private ProbeSession session;
     private BluetoothAdapter adapter;
-    private BluetoothHidDevice hid;
-    private BluetoothDevice candidate;
-    private BluetoothDevice connected;
-    private long generation;
-    private boolean started;
+    private Run run;
     private boolean resumed;
-    private boolean guardBound;
-    private PairingGuardService guard;
     private boolean receiverRegistered;
-    private boolean registrationRequested;
-    private boolean cleanupRequested;
     private TextView status;
     private Button start;
     private Button visible;
     private Button confirm;
+    private Button connect;
     private LinearLayout layout;
-    private final Runnable registrationDeadline = () -> {
-        if (session.active(generation)) stop("Registration timed out. Close and reopen for another test.");
-    };
-    private final Runnable connectionDeadline = () -> {
-        if (session.active(generation) && connected == null) stop("Connection timed out. No input enabled.");
-    };
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        // Keep a storage-failure latch across configuration recreation; the store holds no Context.
+        if (enrollment == null) enrollment = new EnrollmentStore(new AtomicEnrollmentFile(getNoBackupFilesDir()));
+        session = new ProbeSession(enrollment);
         ScrollView scroll = new ScrollView(this);
         layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
@@ -81,22 +75,39 @@ public final class ProbeActivity extends Activity {
             return insets;
         });
         text("Open TV HID Probe", 24);
-        text("Five-minute diagnostic. Pairing prompts may cover this screen during setup. Use the physical TV remote to pair. "
-            + "Compare the same digits on BOTH screens. A generic Pair prompt is not enough.", 16);
-        status = text("Ready. Bluetooth must already be on.", 18);
-        start = button("1. Start HID registration", this::requestStart);
-        visible = button("2. Make visible for 120 seconds", this::makeVisible);
-        confirm = button("3. I compared matching codes on BOTH screens — connect", this::confirmAndConnect);
-        text("Only confirm after checking the intended XGIMI and Nord display the same code. "
-            + "No code is entered here. Existing bonds alone cannot enable input.", 16);
+        text("Five-minute diagnostic. First enrollment requires matching numbers on BOTH intended devices. "
+            + "A saved projector uses the current OS-managed bond; its original key cannot be pinned by this app.", 16);
+        status = text(enrollment.failed() ? storageFailure() : savedStatus(), 18);
+        start = button("Start five-minute HID run", this::requestStart);
+        connect = button("Connect saved projector", this::connectSaved);
+        visible = button("First enrollment: make visible for 120 seconds", this::makeVisible);
+        confirm = button("I compared matching codes on BOTH screens — save and connect", this::confirmAndConnect);
+        text("Use the physical TV remote to pair. No code is entered here. Keep this screen open after Connect.", 16);
         inputs.add(button("Move left", () -> move(-16, 0)));
         inputs.add(button("Move right", () -> move(16, 0)));
         inputs.add(button("Move up", () -> move(0, -16)));
         inputs.add(button("Move down", () -> move(0, 16)));
         inputs.add(button("Click once", this::click));
-        button("STOP / Disconnect", () -> stop("Stopped. Close and reopen for another test."));
-        button("Close probe", () -> { stop("Stopped."); finish(); });
+        button("Stop / Disconnect (keep saved projector)", () -> stop("Stopped. Enrollment retained."));
+        button("Forget projector", this::forget);
+        button("Close probe", () -> { stop("Closed."); finish(); });
+        IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_PAIRING_REQUEST);
+        filter.addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
+        filter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
+        if (Build.VERSION.SDK_INT >= 33) registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED);
+        else registerReceiver(receiver, filter);
+        receiverRegistered = true;
         updateControls();
+    }
+
+    private String savedStatus() {
+        return session.savedPeer() == null ? "No saved projector. Start for fresh comparison."
+            : "Saved projector — disconnected. Start, then Connect.";
+    }
+
+    private String storageFailure() {
+        return "Enrollment storage failed. Input disabled; disk may still contain the old selector. "
+            + "Retry Forget successfully or clear app storage in Android settings before re-enrolling.";
     }
 
     private TextView text(String value, int size) {
@@ -121,9 +132,21 @@ public final class ProbeActivity extends Activity {
         return button;
     }
 
+    private boolean permissions() {
+        return checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+            && checkSelfPermission(Manifest.permission.BLUETOOTH_ADVERTISE) == PackageManager.PERMISSION_GRANTED;
+    }
+
     private void requestStart() {
-        if (started) return;
-        if (!permissions()) {
+        if (!resumed || enrollment.failed()) return;
+        if (!NATIVE_RUNS.available()) {
+            status.setText("Previous native teardown is pending. Tap Start again to recheck. "
+                + "If it remains blocked, force stop the probe in Android settings, then reopen.");
+            updateControls();
+            return;
+        }
+        if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED
+                || checkSelfPermission(Manifest.permission.BLUETOOTH_ADVERTISE) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[] {Manifest.permission.BLUETOOTH_CONNECT,
                 Manifest.permission.BLUETOOTH_ADVERTISE}, 1);
             return;
@@ -134,55 +157,19 @@ public final class ProbeActivity extends Activity {
             status.setText("Turn Bluetooth on first, then Start.");
             return;
         }
-        started = true;
-        generation = session.start();
-        session.foreground(generation, resumed);
-        cleanupRequested = false;
-        IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_PAIRING_REQUEST);
-        filter.addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
-        filter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
-        if (Build.VERSION.SDK_INT >= 33) registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED);
-        else registerReceiver(receiver, filter);
-        receiverRegistered = true;
+        if (session.savedPeer() != null && adapter.getRemoteDevice(session.savedPeer()).getBondState()
+                != BluetoothDevice.BOND_BONDED) {
+            forget();
+            status.setText(enrollment.failed() ? storageFailure() : "Saved bond missing. Fresh comparison required.");
+            return;
+        }
+        NativeRunGate.Run ownership = NATIVE_RUNS.start();
+        if (ownership == null) return;
+        run = new Run(ownership, session.start());
+        session.foreground(run.generation, true);
         status.setText("Starting timed pairing service…");
+        run.begin();
         updateControls();
-        Intent intent = new Intent(this, PairingGuardService.class);
-        startForegroundService(intent);
-        guardBound = bindService(intent, guardConnection, Context.BIND_AUTO_CREATE);
-        if (!guardBound) { stop("Pairing service unavailable."); return; }
-        handler.postDelayed(registrationDeadline, 5000);
-    }
-
-    private final ServiceConnection guardConnection = new ServiceConnection() {
-        @Override public void onServiceConnected(ComponentName name, IBinder binder) {
-            PairingGuardService incoming = ((PairingGuardService.LocalBinder) binder).service();
-            if (cleanupRequested || !session.active(generation)) {
-                incoming.finish("Probe already stopped."); return;
-            }
-            guard = incoming;
-            incoming.attach(ProbeActivity.this::stop);
-            if (!active()) return;
-            try {
-                status.setText("Requesting HID service…");
-                if (!adapter.getProfileProxy(ProbeActivity.this, service, BluetoothProfile.HID_DEVICE))
-                    stop("HID profile unavailable.");
-            } catch (SecurityException | IllegalStateException error) { stop("HID service request failed."); }
-        }
-        @Override public void onServiceDisconnected(ComponentName name) {
-            guard = null;
-            stop("Pairing service lost. No input enabled.");
-        }
-        @Override public void onBindingDied(ComponentName name) { onServiceDisconnected(name); }
-        @Override public void onNullBinding(ComponentName name) { onServiceDisconnected(name); }
-    };
-
-    private boolean active() {
-        return session.active(generation) && guard != null && guard.isAlive();
-    }
-
-    private boolean permissions() {
-        return checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
-            && checkSelfPermission(Manifest.permission.BLUETOOTH_ADVERTISE) == PackageManager.PERMISSION_GRANTED;
     }
 
     @Override public void onRequestPermissionsResult(int request, String[] names, int[] results) {
@@ -190,78 +177,294 @@ public final class ProbeActivity extends Activity {
         if (request == 1) status.setText(permissions() ? "Permission granted. Tap Start." : "Nearby devices permission is required.");
     }
 
-    private final BluetoothProfile.ServiceListener service = new BluetoothProfile.ServiceListener() {
-        @Override public void onServiceConnected(int profile, BluetoothProfile proxy) {
-            if (!active()) { adapter.closeProfileProxy(profile, proxy); return; }
-            hid = (BluetoothHidDevice) proxy;
-            try {
-                registrationRequested = hid.registerApp(new BluetoothHidDeviceAppSdpSettings(
-                    "Open TV HID Probe", "Disposable manual mouse test", "Open TV Touchpad",
-                    BluetoothHidDevice.SUBCLASS1_MOUSE, DESCRIPTOR), null, null,
-                    getMainExecutor(), callback);
-                if (!registrationRequested) stop("HID registration request rejected. Another HID app may be active.");
-            } catch (SecurityException | IllegalStateException error) { stop("HID registration failed."); }
-        }
-        @Override public void onServiceDisconnected(int profile) {
-            hid = null;
-            stop("HID service lost. No input enabled.");
-        }
-    };
+    /** All native callbacks capture this immutable owner, never the Activity's next run. */
+    private final class Run {
+        final NativeRunGate.Run ownership;
+        final long generation;
+        BluetoothHidDevice hid;
+        BluetoothDevice candidate;
+        BluetoothDevice target;
+        BluetoothDevice connected;
+        PairingGuardService guard;
+        boolean guardBound;
+        boolean registrationRequested;
+        boolean unregistered;
+        boolean stopping;
+        String terminalReason;
+        final Runnable registrationDeadline = () -> stop("Registration timed out.");
+        final Runnable connectionDeadline = () -> stop("Connection timed out. No input enabled.");
+        final Runnable teardownDeadline = this::teardownTimedOut;
 
-    private final BluetoothHidDevice.Callback callback = new BluetoothHidDevice.Callback() {
-        @Override public void onAppStatusChanged(BluetoothDevice plugged, boolean registered) {
-            if (!active()) {
-                // Registration can finish after Stop; unregister that late registration too.
-                if (registered && hid != null) {
-                    try { hid.unregisterApp(); } catch (SecurityException | IllegalStateException ignored) { }
-                }
-                return;
+        void teardownTimedOut() {
+            if (ownership.owns() && stopping) {
+                status.setText(terminalReason + " Native teardown is unconfirmed. Input disabled. "
+                    + "Force stop the probe in Android settings, then reopen before another Start.");
+                updateControls();
             }
-            session.registered(generation, registered);
-            handler.removeCallbacks(registrationDeadline);
-            if (!registered) { stop("HID registration ended. No input enabled."); return; }
-            status.setText("HID registered. Make visible, then pair from the XGIMI.");
-            updateControls();
         }
-        @Override public void onConnectionStateChanged(BluetoothDevice peer, int state) {
+
+        Run(NativeRunGate.Run ownership, long generation) {
+            this.ownership = ownership;
+            this.generation = generation;
+        }
+
+        boolean active() {
+            return ownership.active() && session.active(generation) && guard != null && guard.isAlive();
+        }
+
+        void begin() {
+            ownership.await(SERVICE);
+            Intent intent = new Intent(ProbeActivity.this, PairingGuardService.class);
             try {
-                if (state == BluetoothProfile.STATE_CONNECTED) {
-                    if (!active() || !session.connected(generation, peer.getAddress(), true)) {
-                        if (hid != null) hid.disconnect(peer);
+                startForegroundService(intent);
+                guardBound = bindService(intent, guardConnection, Context.BIND_AUTO_CREATE);
+                if (!guardBound) { ownership.fail(); stop("Pairing service unavailable."); return; }
+                handler.postDelayed(registrationDeadline, 5000);
+            } catch (SecurityException | IllegalStateException error) {
+                ownership.fail();
+                stop("Pairing service start failed.");
+            }
+        }
+
+        final ServiceConnection guardConnection = new ServiceConnection() {
+            @Override public void onServiceConnected(ComponentName name, IBinder binder) {
+                if (!ownership.owns()) return;
+                guard = ((PairingGuardService.LocalBinder) binder).service();
+                guard.onDestroyed(() -> {
+                    if (!ownership.owns()) return;
+                    ownership.completed(SERVICE);
+                    cleanupProgress();
+                });
+                if (stopping) { finishGuard(); return; }
+                guard.attach(Run.this::stop);
+                if (!active()) return;
+                try {
+                    ownership.await(PROFILE);
+                    status.setText("Requesting HID service…");
+                    if (!adapter.getProfileProxy(ProbeActivity.this, service, BluetoothProfile.HID_DEVICE)) {
+                        ownership.completed(PROFILE);
+                        stop("HID profile unavailable.");
+                    }
+                } catch (SecurityException | IllegalStateException error) {
+                    ownership.fail();
+                    stop("HID service request failed.");
+                }
+            }
+            @Override public void onServiceDisconnected(ComponentName name) {
+                if (!ownership.owns()) return;
+                ownership.fail();
+                stop("Pairing service lost. Native teardown unconfirmed.");
+            }
+            @Override public void onBindingDied(ComponentName name) { onServiceDisconnected(name); }
+            @Override public void onNullBinding(ComponentName name) { onServiceDisconnected(name); }
+        };
+
+        final BluetoothProfile.ServiceListener service = new BluetoothProfile.ServiceListener() {
+            @Override public void onServiceConnected(int profile, BluetoothProfile proxy) {
+                if (!ownership.owns()) return;
+                hid = (BluetoothHidDevice) proxy;
+                if (stopping) { finishProfile(); return; }
+                if (!active()) { stop("Pairing service ended."); return; }
+                try {
+                    ownership.await(REGISTRATION);
+                    registrationRequested = hid.registerApp(new BluetoothHidDeviceAppSdpSettings(
+                        "Open TV HID Probe", "Disposable manual mouse test", "Open TV Touchpad",
+                        BluetoothHidDevice.SUBCLASS1_MOUSE, DESCRIPTOR), null, null,
+                        getMainExecutor(), callback);
+                    if (!registrationRequested) {
+                        ownership.completed(REGISTRATION);
+                        stop("HID registration request rejected. Another HID app may be active.");
+                    }
+                } catch (SecurityException | IllegalStateException error) {
+                    ownership.fail();
+                    stop("HID registration failed; native state unconfirmed.");
+                }
+            }
+            @Override public void onServiceDisconnected(int profile) {
+                if (!ownership.owns()) return;
+                ownership.fail();
+                stop("HID service lost. Native teardown unconfirmed.");
+            }
+        };
+
+        final BluetoothHidDevice.Callback callback = new BluetoothHidDevice.Callback() {
+            @Override public void onAppStatusChanged(BluetoothDevice plugged, boolean registered) {
+                if (!ownership.owns()) return;
+                if (stopping) {
+                    try {
+                        if (registered) {
+                            unregistered = false;
+                            if (hid == null || !hid.unregisterApp()) ownership.fail();
+                        } else {
+                            unregistered = true;
+                            finishProfile();
+                        }
+                    } catch (SecurityException | IllegalStateException error) { ownership.fail(); }
+                    cleanupProgress();
+                    return;
+                }
+                if (!active()) { stop("Pairing service ended."); return; }
+                session.registered(generation, registered);
+                handler.removeCallbacks(registrationDeadline);
+                if (!registered) {
+                    unregistered = true;
+                    stop("HID registration ended. No input enabled.");
+                    return;
+                }
+                status.setText(session.savedPeer() == null ? "HID registered. Make visible, then pair from the XGIMI."
+                    : "Saved projector — disconnected. Tap Connect saved projector.");
+                updateControls();
+            }
+
+            @Override public void onConnectionStateChanged(BluetoothDevice peer, int state) {
+                if (!ownership.owns()) return;
+                try {
+                    if (stopping) {
+                        if (state == BluetoothProfile.STATE_CONNECTED && hid != null && !hid.disconnect(peer)) ownership.fail();
+                        finishProfile();
                         return;
                     }
-                    connected = peer;
-                    handler.removeCallbacks(connectionDeadline);
-                    if (!hid.sendReport(peer, 1, new byte[3])) { stop("Neutral report failed."); return; }
-                    status.setText("Mouse connected. Try one movement. Report delivery does not prove TV action.");
-                } else if (state == BluetoothProfile.STATE_DISCONNECTED) {
-                    // Includes failure before the first accepted CONNECTED callback.
-                    if (session.connected(generation, peer.getAddress(), false))
-                        stop("Projector disconnected. No input enabled.");
-                }
-                updateControls();
-            } catch (SecurityException | IllegalStateException error) { stop("Bluetooth connection callback failed."); }
+                    if (!active()) { stop("Pairing service ended."); return; }
+                    if (state == BluetoothProfile.STATE_CONNECTED) {
+                        if (peer.getBondState() != BluetoothDevice.BOND_BONDED) {
+                            session.revoke(peer.getAddress());
+                            stop("Connected peer is not bonded. No input enabled.");
+                            return;
+                        }
+                        if (!session.connected(generation, peer.getAddress(), true)) {
+                            // No neutral or other report is sent to unsolicited connections.
+                            if (!session.active(generation)) { stop("Ambiguous connection callback. No input enabled."); return; }
+                            if (!hid.disconnect(peer)) stop("Unsolicited connection could not be disconnected.");
+                            updateControls();
+                            return;
+                        }
+                        connected = peer;
+                        handler.removeCallbacks(connectionDeadline);
+                        boolean neutral = hid.sendReport(peer, 1, new byte[3]);
+                        if (!session.neutralSubmitted(generation, peer.getAddress(), neutral)) {
+                            stop("Neutral report failed. No input enabled.");
+                            return;
+                        }
+                        status.setText("Mouse connected. Try one movement. Native acceptance does not prove delivery or encryption.");
+                    } else if (state == BluetoothProfile.STATE_DISCONNECTED) {
+                        if (session.connected(generation, peer.getAddress(), false)) stop("Projector disconnected. No input enabled.");
+                    }
+                    updateControls();
+                } catch (SecurityException | IllegalStateException error) { stop("Bluetooth connection callback failed."); }
+            }
+
+            @Override public void onGetReport(BluetoothDevice peer, byte type, byte id, int bufferSize) {
+                if (!ownership.active()) return;
+                try {
+                    if (!ready() || !connected.equals(peer)) return;
+                    if (type == BluetoothHidDevice.REPORT_TYPE_INPUT && id == 1 && (bufferSize == 0 || bufferSize >= 3)) {
+                        if (!hid.replyReport(peer, type, id, new byte[3])) stop("Report reply failed.");
+                    } else if (!hid.reportError(peer, BluetoothHidDevice.ERROR_RSP_UNSUPPORTED_REQ)) stop("Report error reply failed.");
+                } catch (SecurityException | IllegalStateException error) { stop("Report request failed."); }
+            }
+            @Override public void onSetProtocol(BluetoothDevice peer, byte protocol) {
+                if (ownership.active() && target != null && target.equals(peer)
+                        && protocol != BluetoothHidDevice.PROTOCOL_REPORT_MODE) stop("Host requested unsupported boot protocol.");
+            }
+            @Override public void onVirtualCableUnplug(BluetoothDevice peer) {
+                if (ownership.active() && target != null && target.equals(peer)) stop("Host unplugged mouse.");
+            }
+        };
+
+        boolean ready() {
+            if (!active() || !resumed || hid == null || connected == null) return false;
+            if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED
+                    || !adapter.isEnabled()) { stop("Bluetooth permission or adapter lost."); return false; }
+            if (connected.getBondState() != BluetoothDevice.BOND_BONDED) {
+                session.revoke(connected.getAddress());
+                stop(enrollment.failed() ? storageFailure() : "Selected bond lost. Fresh comparison required.");
+                return false;
+            }
+            return session.canSend(generation, connected.getAddress());
         }
-        @Override public void onGetReport(BluetoothDevice peer, byte type, byte id, int bufferSize) {
+
+        void connect(BluetoothDevice peer) {
+            if (!active() || !resumed) { stop("Run ended before connect."); return; }
+            target = peer;
+            updateControls();
+            status.setText("Connecting to the selected projector…");
             try {
-                if (!ready() || !connected.equals(peer)) return;
-                if (type == BluetoothHidDevice.REPORT_TYPE_INPUT && id == 1 && (bufferSize == 0 || bufferSize >= 3)) {
-                    if (!hid.replyReport(peer, type, id, new byte[3])) stop("Report reply failed.");
-                } else hid.reportError(peer, BluetoothHidDevice.ERROR_RSP_UNSUPPORTED_REQ);
-            } catch (SecurityException | IllegalStateException error) { stop("Report request failed."); }
+                if (hid.getConnectionState(peer) != BluetoothProfile.STATE_DISCONNECTED) {
+                    stop("A native connection is still pending. No overlapping attempt allowed.");
+                    return;
+                }
+                if (!hid.connect(peer)) { stop("Mouse connection request rejected."); return; }
+                handler.postDelayed(connectionDeadline, 10000);
+            } catch (SecurityException | IllegalStateException error) { stop("Mouse connection request failed."); }
         }
-        @Override public void onSetProtocol(BluetoothDevice peer, byte protocol) {
-            if (connected != null && connected.equals(peer) && protocol != BluetoothHidDevice.PROTOCOL_REPORT_MODE)
-                stop("Host requested unsupported boot protocol. No input enabled.");
+
+        void stop(String message) {
+            if (!ownership.owns() || stopping) return;
+            stopping = true;
+            terminalReason = enrollment.failed() ? storageFailure() : message;
+            session.stop();
+            ownership.stop();
+            handler.removeCallbacks(registrationDeadline);
+            handler.removeCallbacks(connectionDeadline);
+            status.setText(terminalReason + " Waiting for native teardown…");
+            updateControls();
+            handler.postDelayed(teardownDeadline, 5000);
+            if (hid != null) {
+                if (connected != null) {
+                    try { hid.sendReport(connected, 1, new byte[3]); }
+                    catch (SecurityException | IllegalStateException ignored) { /* Best-effort release, never delivery proof. */ }
+                }
+                try {
+                    if (target != null && hid.getConnectionState(target) != BluetoothProfile.STATE_DISCONNECTED
+                            && !hid.disconnect(target)) ownership.fail();
+                    for (BluetoothDevice peer : hid.getConnectedDevices()) {
+                        if (!peer.equals(target) && !hid.disconnect(peer)) ownership.fail();
+                    }
+                    if (registrationRequested && !unregistered && !hid.unregisterApp()) ownership.fail();
+                    finishProfile();
+                } catch (SecurityException | IllegalStateException error) { ownership.fail(); }
+            }
+            finishGuard();
+            cleanupProgress();
         }
-        @Override public void onVirtualCableUnplug(BluetoothDevice peer) {
-            if (connected != null && connected.equals(peer)) stop("Host unplugged mouse. No input enabled.");
+
+        void finishGuard() {
+            if (guard != null) {
+                guard.detach();
+                guard.finish("Probe stopped.");
+            }
+            if (guardBound && guard != null) {
+                guardBound = false;
+                unbindService(guardConnection);
+            }
+            stopService(new Intent(ProbeActivity.this, PairingGuardService.class));
         }
-    };
+
+        void finishProfile() {
+            if (!ownership.owns() || !stopping || hid == null || (registrationRequested && !unregistered)) return;
+            try {
+                if (!hid.getConnectedDevices().isEmpty()) return;
+                if (target != null && hid.getConnectionState(target) != BluetoothProfile.STATE_DISCONNECTED) return;
+                // Complete only after native unregister acknowledgement AND no remaining link.
+                ownership.completed(REGISTRATION);
+                adapter.closeProfileProxy(BluetoothProfile.HID_DEVICE, hid);
+                hid = null;
+                ownership.completed(PROFILE);
+            } catch (SecurityException | IllegalStateException error) { ownership.fail(); }
+            cleanupProgress();
+        }
+
+        void cleanupProgress() {
+            if (!ownership.owns()) {
+                handler.removeCallbacks(teardownDeadline);
+                status.setText(terminalReason + " Native teardown completed. Tap Start for a new run.");
+            }
+            updateControls();
+        }
+    }
 
     private final BroadcastReceiver receiver = new BroadcastReceiver() {
         @Override public void onReceive(Context context, Intent intent) {
-            if (!active()) return;
             try {
                 if (BluetoothAdapter.ACTION_STATE_CHANGED.equals(intent.getAction())) {
                     if (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR) != BluetoothAdapter.STATE_ON)
@@ -270,34 +473,50 @@ public final class ProbeActivity extends Activity {
                 }
                 BluetoothDevice peer = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                 if (peer == null) return;
-                if (BluetoothDevice.ACTION_PAIRING_REQUEST.equals(intent.getAction())) {
-                    int variant = intent.getIntExtra(BluetoothDevice.EXTRA_PAIRING_VARIANT, -1);
-                    if (!session.observePairing(generation, peer.getAddress(), variant)) {
-                        if (!session.active(generation)) { stop("Pairing method changed. No input enabled."); return; }
-                        status.setText("Pairing method/peer not eligible. Cancel if both screens do not show matching numbers.");
-                    } else {
-                        candidate = peer;
-                        status.setText("Numeric Comparison requested. Compare digits on BOTH screens before accepting. "
-                            + "Then confirm below. Peer label: " + peer.getName());
-                    }
-                } else if (BluetoothDevice.ACTION_BOND_STATE_CHANGED.equals(intent.getAction())
-                        && candidate != null && candidate.equals(peer)) {
-                    int bond = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, BluetoothDevice.ERROR);
-                    if (bond == BluetoothDevice.BOND_BONDED) {
-                        session.bonded(generation, peer.getAddress());
-                        status.setText("Bond created. Confirm below ONLY if you compared matching codes on both screens.");
-                        updateControls();
-                    } else if (bond == BluetoothDevice.BOND_NONE) stop("Pairing cancelled or bond removed. No input enabled.");
+                String address = peer.getAddress();
+                boolean pairing = BluetoothDevice.ACTION_PAIRING_REQUEST.equals(intent.getAction());
+                int bond = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, BluetoothDevice.ERROR);
+                boolean bondChange = BluetoothDevice.ACTION_BOND_STATE_CHANGED.equals(intent.getAction());
+                // Observe selected-peer revocation throughout this Activity's lifetime, even after Stop.
+                if ((pairing || (bondChange && bond != BluetoothDevice.BOND_BONDED)) && session.revoke(address)) {
+                    stop(enrollment.failed() ? storageFailure() : "Saved projector revoked. Fresh comparison required.");
+                    updateControls();
+                    return;
                 }
+                if (run == null || !run.active()) return;
+                if (pairing) {
+                    int variant = intent.getIntExtra(BluetoothDevice.EXTRA_PAIRING_VARIANT, -1);
+                    if (!session.observePairing(run.generation, address, variant)) {
+                        if (!session.active(run.generation)) { stop("Pairing changed. No input enabled."); return; }
+                        status.setText("Pairing method/peer not eligible. Cancel unless both screens show matching numbers.");
+                    } else {
+                        run.candidate = peer;
+                        status.setText("Compare digits on BOTH intended screens before accepting. Then confirm below.");
+                    }
+                } else if (bondChange && run.candidate != null && run.candidate.equals(peer)) {
+                    if (bond == BluetoothDevice.BOND_BONDED) {
+                        session.bonded(run.generation, address);
+                        status.setText("Bond created. Confirm ONLY if you compared matching codes on both screens.");
+                    } else if (bond != BluetoothDevice.BOND_BONDING) stop("Pairing cancelled or bond removed.");
+                }
+                updateControls();
             } catch (SecurityException | IllegalStateException error) { stop("Bluetooth pairing check failed."); }
         }
     };
+
+    private boolean canAttempt() {
+        if (!permissions() || adapter == null || !adapter.isEnabled()) {
+            stop("Nearby devices permission or Bluetooth unavailable.");
+            return false;
+        }
+        return run != null && run.active() && resumed && run.hid != null;
+    }
 
     private void makeVisible() {
         if (checkSelfPermission(Manifest.permission.BLUETOOTH_ADVERTISE) != PackageManager.PERMISSION_GRANTED) {
             stop("Nearby devices permission unavailable."); return;
         }
-        if (!active() || !resumed || !session.isRegistered(generation)) return;
+        if (!canAttempt() || !session.isRegistered(run.generation) || session.savedPeer() != null) return;
         Intent intent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
         intent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 120);
         startActivity(intent);
@@ -305,95 +524,92 @@ public final class ProbeActivity extends Activity {
 
     private void confirmAndConnect() {
         if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-            stop("Nearby devices permission unavailable. No input enabled."); return;
+            stop("Nearby devices permission unavailable."); return;
         }
-        if (!active() || candidate == null || hid == null || !session.confirmComparison(generation)
-                || !candidate.getAddress().equals(session.eligiblePeer())) return;
-        confirm.setEnabled(false);
-        visible.setEnabled(false);
-        status.setText("Connecting to the compared projector…");
-        if (!hid.connect(candidate)) { stop("Mouse connection request rejected."); return; }
-        handler.postDelayed(connectionDeadline, 10000);
+        if (!canAttempt() || run.candidate == null || !session.canConfirm(run.generation)) return;
+        if (run.candidate.getBondState() != BluetoothDevice.BOND_BONDED) { stop("Fresh bond missing."); return; }
+        if (!session.confirmComparison(run.generation)) {
+            stop(enrollment.failed() ? storageFailure() : "Comparison no longer eligible.");
+            return;
+        }
+        run.connect(run.candidate);
+    }
+
+    private void connectSaved() {
+        if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+            stop("Nearby devices permission unavailable."); return;
+        }
+        if (!canAttempt() || !session.canConnect(run.generation)) return;
+        BluetoothDevice selected = adapter.getRemoteDevice(session.savedPeer());
+        if (!session.connectSaved(run.generation, selected.getBondState() == BluetoothDevice.BOND_BONDED)) {
+            stop(enrollment.failed() ? storageFailure() : "Saved bond missing. Fresh comparison required.");
+            return;
+        }
+        run.connect(selected);
+    }
+
+    private void forget() {
+        boolean cleared = session.forget();
+        stop(cleared ? "Projector forgotten. Remove its bond in OS settings before fresh comparison." : storageFailure());
+        status.setText(cleared ? "App record cleared. Remove the old bond in OS settings before fresh comparison."
+            : storageFailure());
+        updateControls();
     }
 
     private void move(int dx, int dy) {
         if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-            stop("Nearby devices permission unavailable. No input enabled."); return;
+            stop("Nearby devices permission unavailable."); return;
         }
-        if (!ready()) return;
-        if (!hid.sendReport(connected, 1, new byte[] {0, (byte) dx, (byte) dy})) stop("Mouse movement report failed.");
+        if (!canAttempt() || !run.ready()) return;
+        if (!run.hid.sendReport(run.connected, 1, new byte[] {0, (byte) dx, (byte) dy})) stop("Mouse movement report failed.");
     }
 
     private void click() {
         if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-            stop("Nearby devices permission unavailable. No input enabled."); return;
+            stop("Nearby devices permission unavailable."); return;
         }
-        if (!ready()) return;
-        // No held gesture or delayed callback: release immediately in the same UI action.
+        if (!canAttempt() || !run.ready()) return;
         boolean pressed = false;
         boolean released;
-        try {
-            pressed = hid.sendReport(connected, 1, new byte[] {1, 0, 0});
-        } finally {
-            released = hid.sendReport(connected, 1, new byte[3]);
-        }
+        try { pressed = run.hid.sendReport(run.connected, 1, new byte[] {1, 0, 0}); }
+        finally { released = run.hid.sendReport(run.connected, 1, new byte[3]); }
         if (!pressed || !released) stop("Click report failed. Disconnect requested.");
     }
 
-    private boolean ready() {
-        return active() && resumed && hid != null && connected != null
-            && session.canSend(generation, connected.getAddress());
-    }
-
     private void updateControls() {
-        start.setEnabled(!started);
-        visible.setEnabled(resumed && session.isRegistered(generation) && session.eligiblePeer() == null
-            && hid != null && connected == null);
-        confirm.setEnabled(session.canConfirm(generation));
+        // An idle/recreated screen can explicitly retry after another owner's teardown finishes.
+        start.setEnabled(resumed && !enrollment.failed() && (run == null || run.stopping));
+        boolean registered = run != null && run.ownership.active() && session.isRegistered(run.generation);
+        visible.setEnabled(resumed && registered && session.savedPeer() == null && run.hid != null);
+        confirm.setEnabled(registered && session.canConfirm(run.generation));
+        connect.setEnabled(registered && session.canConnect(run.generation));
         boolean ready = false;
-        try { ready = ready(); } catch (SecurityException ignored) { }
+        try { ready = run != null && run.ready(); } catch (SecurityException | IllegalStateException ignored) { }
         for (Button button : inputs) button.setEnabled(ready);
     }
 
     private void stop(String message) {
-        // Preserve the first terminal reason; later lifecycle callbacks must not hide it.
-        if (cleanupRequested) return;
-        cleanupRequested = true;
-        session.stop();
-        handler.removeCallbacksAndMessages(null);
-        if (status != null) { status.setText(message); updateControls(); }
-        if (hid != null) {
-            if (connected != null) {
-                try { hid.sendReport(connected, 1, new byte[3]); } catch (SecurityException | IllegalStateException ignored) { }
-                try { hid.disconnect(connected); } catch (SecurityException | IllegalStateException ignored) { }
-            }
-            try { if (registrationRequested) hid.unregisterApp(); } catch (SecurityException | IllegalStateException ignored) { }
+        if (run != null && !run.stopping && run.ownership.owns()) run.stop(message);
+        else {
+            session.stop();
+            status.setText(message);
+            updateControls();
         }
-        connected = null;
-        candidate = null;
-        if (guard != null) {
-            PairingGuardService old = guard;
-            guard = null;
-            old.detach();
-            old.finish(message);
-        }
-        if (guardBound) { guardBound = false; unbindService(guardConnection); }
-        stopService(new Intent(this, PairingGuardService.class));
     }
 
     @Override protected void onResume() {
         super.onResume();
         resumed = true;
-        session.foreground(generation, true);
-        if (guard != null) guard.isAlive();
+        if (run != null) session.foreground(run.generation, true);
         updateControls();
     }
 
     @Override protected void onPause() {
         resumed = false;
-        session.foreground(generation, false);
-        if (started && !session.active(generation))
-            stop("App left foreground after confirmation. Stopped. Close and reopen.");
+        if (run != null) {
+            session.foreground(run.generation, false);
+            if (!run.stopping && !session.active(run.generation)) stop("App left foreground after Connect. Stopped.");
+        }
         updateControls();
         super.onPause();
     }
@@ -401,7 +617,6 @@ public final class ProbeActivity extends Activity {
     @Override protected void onDestroy() {
         stop("Closed.");
         if (receiverRegistered) unregisterReceiver(receiver);
-        if (adapter != null && hid != null) adapter.closeProfileProxy(BluetoothProfile.HID_DEVICE, hid);
         super.onDestroy();
     }
 }

@@ -11,7 +11,8 @@
         android:usesCleartextTraffic="false" android:supportsRtl="true">
         <service android:name=".PairingGuardService" android:exported="false"
             android:foregroundServiceType="connectedDevice" android:stopWithTask="true" />
-        <activity android:name=".ProbeActivity" android:exported="true">
+        <!-- One owner for the in-memory enrollment view, including multi-window launches. -->
+        <activity android:name=".ProbeActivity" android:exported="true" android:launchMode="singleInstance">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

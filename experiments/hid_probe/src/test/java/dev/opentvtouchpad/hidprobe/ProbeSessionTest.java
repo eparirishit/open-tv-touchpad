@@ -8,7 +8,7 @@ public class ProbeSessionTest {
     private static final String PEER = "02:00:00:00:00:01";
     private static final String OTHER = "02:00:00:00:00:02";
 
-    private final ProbeSession session = new ProbeSession();
+    private final ProbeSession session = new ProbeSession(new EnrollmentStore(new MemoryEnrollmentDisk()));
 
     @Test public void inactiveSessionRejectsAllCallbacks() {
         assertFenced(0);
@@ -22,6 +22,7 @@ public class ProbeSessionTest {
         assertFalse(session.confirmComparison(generation));
         assertNull(session.eligiblePeer());
         assertFalse(session.connected(generation, PEER, true));
+        assertFalse(session.connected(generation, PEER, false));
         assertFalse(session.canSend(generation, PEER));
     }
 
@@ -60,12 +61,14 @@ public class ProbeSessionTest {
         session.bonded(generation, PEER);
         assertNull(session.eligiblePeer());
         assertFalse(session.connected(generation, PEER, true));
+        assertFalse(session.connected(generation, PEER, false));
         assertFalse(session.canSend(generation, PEER));
 
         assertTrue(session.confirmComparison(generation));
         assertEquals(PEER, session.eligiblePeer());
         assertFalse(session.canSend(generation, PEER));
         assertTrue(session.connected(generation, PEER, true));
+        assertTrue(session.neutralSubmitted(generation, PEER, true));
         assertTrue(session.canSend(generation, PEER));
     }
 
@@ -76,14 +79,17 @@ public class ProbeSessionTest {
         assertFalse(session.confirmComparison(generation));
         assertNull(session.eligiblePeer());
         assertFalse(session.connected(generation, PEER, true));
+        assertFalse(session.connected(generation, PEER, false));
         assertFalse(session.canSend(generation, PEER));
         session.registered(generation, true);
         assertNull(session.eligiblePeer());
         assertFalse(session.connected(generation, PEER, true));
+        assertFalse(session.connected(generation, PEER, false));
         assertTrue(session.confirmComparison(generation));
         assertEquals(PEER, session.eligiblePeer());
         assertFalse(session.canSend(generation, PEER));
         assertTrue(session.connected(generation, PEER, true));
+        assertTrue(session.neutralSubmitted(generation, PEER, true));
         assertTrue(session.canSend(generation, PEER));
     }
 
@@ -96,14 +102,17 @@ public class ProbeSessionTest {
         assertFalse(session.confirmComparison(generation));
         assertNull(session.eligiblePeer());
         assertFalse(session.connected(generation, PEER, true));
+        assertFalse(session.connected(generation, PEER, false));
         assertFalse(session.canSend(generation, PEER));
         session.bonded(generation, PEER);
         assertNull(session.eligiblePeer());
         assertFalse(session.connected(generation, PEER, true));
+        assertFalse(session.connected(generation, PEER, false));
         assertFalse(session.canSend(generation, PEER));
         assertTrue(session.confirmComparison(generation));
         assertEquals(PEER, session.eligiblePeer());
         assertTrue(session.connected(generation, PEER, true));
+        assertTrue(session.neutralSubmitted(generation, PEER, true));
         assertTrue(session.canSend(generation, PEER));
     }
 
@@ -118,11 +127,13 @@ public class ProbeSessionTest {
         assertNull(session.eligiblePeer());
         assertFalse(session.connected(generation, OTHER, true));
         assertFalse(session.connected(generation, OTHER, false));
+        assertFalse(session.connected(generation, OTHER, false));
         assertTrue(session.active(generation));
         session.bonded(generation, PEER);
         assertNull(session.eligiblePeer());
         assertTrue(session.confirmComparison(generation));
         assertTrue(session.connected(generation, PEER, true));
+        assertTrue(session.neutralSubmitted(generation, PEER, true));
         assertFalse(session.canSend(generation, OTHER));
         assertTrue(session.canSend(generation, PEER));
     }
@@ -137,6 +148,7 @@ public class ProbeSessionTest {
             assertNull(session.candidate());
             assertNull(session.eligiblePeer());
             assertFalse(session.connected(generation, PEER, true));
+        assertFalse(session.connected(generation, PEER, false));
             assertFalse(session.canSend(generation, PEER));
         }
         assertTrue(session.observePairing(generation, PEER, 2));
@@ -152,6 +164,7 @@ public class ProbeSessionTest {
             session.bonded(generation, peer);
             assertFalse(session.confirmComparison(generation));
             assertFalse(session.connected(generation, peer, true));
+        assertFalse(session.connected(generation, peer, false));
             assertFalse(session.connected(generation, peer, false));
             assertFalse(session.canSend(generation, peer));
             assertNull(session.candidate());
@@ -189,15 +202,13 @@ public class ProbeSessionTest {
     @Test public void duplicateConfirmationIsRejectedWithoutRevokingAuthorizedCandidate() {
         long generation = ready();
         session.registered(generation, true);
-        assertTrue(session.observePairing(generation, PEER, 2));
-        session.bonded(generation, PEER);
         assertFalse(session.canConfirm(generation));
         assertFalse(session.confirmComparison(generation));
-        assertTrue(session.connected(generation, PEER, true));
         assertEquals(PEER, session.candidate());
         assertTrue(session.canSend(generation, PEER));
         assertFalse(session.connected(generation, null, false));
         assertFalse(session.connected(generation, OTHER, true));
+        assertFalse(session.connected(generation, OTHER, false));
         assertTrue(session.canSend(generation, PEER));
     }
 
@@ -234,12 +245,14 @@ public class ProbeSessionTest {
         session.bonded(generation, PEER);
         assertFalse(session.connected(generation, PEER, true));
         assertFalse(session.connected(generation, PEER, false));
+        assertFalse(session.connected(generation, PEER, false));
         assertTrue(session.active(generation));
         assertNull(session.eligiblePeer());
         assertFalse(session.canSend(generation, PEER));
         assertTrue(session.confirmComparison(generation));
         assertFalse(session.canSend(generation, PEER));
         assertTrue(session.connected(generation, PEER, true));
+        assertTrue(session.neutralSubmitted(generation, PEER, true));
         assertTrue(session.canSend(generation, PEER));
     }
 
@@ -267,6 +280,7 @@ public class ProbeSessionTest {
         session.bonded(old, OTHER);
         assertFalse(session.confirmComparison(old));
         assertFalse(session.connected(old, PEER, true));
+        assertFalse(session.connected(old, PEER, false));
         assertNull(session.candidate());
         assertTrue(session.observePairing(current, OTHER, 2));
         session.bonded(old, OTHER);
@@ -278,6 +292,7 @@ public class ProbeSessionTest {
         assertTrue(session.confirmComparison(current));
         assertEquals(OTHER, session.eligiblePeer());
         assertTrue(session.connected(current, OTHER, true));
+        assertTrue(session.neutralSubmitted(current, OTHER, true));
         session.registered(old, false);
         assertFalse(session.connected(old, OTHER, false));
         assertFalse(session.canSend(old, OTHER));
@@ -294,10 +309,13 @@ public class ProbeSessionTest {
         assertFalse(session.confirmComparison(old));
         assertNull(session.eligiblePeer());
         assertFalse(session.connected(current, PEER, true));
+        assertFalse(session.connected(current, PEER, false));
         assertTrue(session.confirmComparison(current));
         assertFalse(session.connected(old, PEER, true));
+        assertFalse(session.connected(old, PEER, false));
         assertFalse(session.canSend(current, PEER));
         assertTrue(session.connected(current, PEER, true));
+        assertTrue(session.neutralSubmitted(current, PEER, true));
         assertTrue(session.canSend(current, PEER));
     }
 
@@ -308,6 +326,7 @@ public class ProbeSessionTest {
         assertTrue(session.observePairing(generation, PEER, 2));
         session.bonded(generation, PEER);
         assertFalse(session.connected(generation, PEER, true));
+        assertFalse(session.connected(generation, PEER, false));
         assertFalse(session.connected(generation, PEER, false));
         session.foreground(generation, false);
         assertTrue(session.active(generation));
@@ -325,6 +344,7 @@ public class ProbeSessionTest {
         assertFalse(session.confirmComparison(generation));
         assertFalse(session.canSend(generation, PEER));
         assertTrue(session.connected(generation, PEER, true));
+        assertTrue(session.neutralSubmitted(generation, PEER, true));
         assertTrue(session.canSend(generation, PEER));
     }
 
@@ -381,6 +401,7 @@ public class ProbeSessionTest {
 
     @Test public void restartResetsForegroundAndIgnoresStaleLifecycleCallbacks() {
         long old = ready();
+        assertTrue(session.forget());
         long current = session.start();
         session.registered(current, true);
         assertTrue(session.observePairing(current, PEER, 2));
@@ -395,10 +416,29 @@ public class ProbeSessionTest {
         session.foreground(current + 1, false);
         assertTrue(session.active(current));
         assertTrue(session.connected(current, PEER, true));
+        assertTrue(session.neutralSubmitted(current, PEER, true));
         assertTrue(session.canSend(current, PEER));
     }
 
+    @Test public void connectedCallbackAloneMustNotEnableInputBeforeNeutralSuccess() {
+        long generation = startForeground();
+        session.registered(generation, true);
+        assertTrue(session.observePairing(generation, PEER, 2));
+        session.bonded(generation, PEER);
+        assertTrue(session.confirmComparison(generation));
+        assertTrue(session.connected(generation, PEER, true));
+        assertFalse("CONNECTED is not neutral submission success", session.canSend(generation, PEER));
+    }
+
+    @Test public void repeatedNumericPairingMustRevokeAnAuthorizedPeer() {
+        long generation = ready();
+        assertFalse("re-pairing must revoke even with Numeric Comparison",
+            session.observePairing(generation, PEER, 2));
+        assertFenced(generation);
+    }
+
     private long startForeground() {
+        assertTrue(session.forget());
         long generation = session.start();
         session.foreground(generation, true);
         return generation;
@@ -411,6 +451,7 @@ public class ProbeSessionTest {
         session.bonded(generation, PEER);
         assertTrue(session.confirmComparison(generation));
         assertTrue(session.connected(generation, PEER, true));
+        assertTrue(session.neutralSubmitted(generation, PEER, true));
         assertTrue(session.canSend(generation, PEER));
         return generation;
     }
@@ -427,6 +468,7 @@ public class ProbeSessionTest {
         session.bonded(generation, PEER);
         assertFalse(session.confirmComparison(generation));
         assertFalse(session.connected(generation, PEER, true));
+        assertFalse(session.connected(generation, PEER, false));
         assertFalse(session.connected(generation, PEER, false));
         assertFalse(session.canSend(generation, PEER));
         assertFalse(session.active(generation));

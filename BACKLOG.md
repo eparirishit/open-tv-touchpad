@@ -42,6 +42,23 @@ M1 remains blocked until a complete M0 report verifies as `PASS`.
   successful reconnect, peer-only link loss or held-input crash cleanup.
 - [ ] Verify Bluetooth encryption/enrolled-peer authentication and reconnect,
   link-loss/crash cleanup; current probe does not certify these properties.
+- [x] Resolve the [Nord reconnect trust decision](docs/superpowers/specs/2026-10-24-nord-hid-reconnect-decision.md):
+  owner accepted retained OS-managed bond with explicit Connect, including the
+  API31 original-key continuity limitation after missed bond changes.
+- [x] Implement/review/install the isolated remembered-projector diagnostic:
+  0.3 (`7643aa8`), 48 unit tests, debug build, lint with no errors; no actionable
+  independent review findings. Installation is not a reconnect PASS.
+- [x] Verify 0.3 explicit saved-projector reconnect without another pairing
+  ceremony: user confirmed reconnect and physical-remote operation.
+- [x] Verify 0.3 saved enrollment and working input after process restart on retry:
+  user confirmed connected state then actual left/up pointer movement.
+- [ ] Diagnose 0.3 first-attempt restart disconnect; retry success does not erase
+  the unexplained initial failure. No speculative reconnect bypass is approved.
+- [x] Verify 0.3 explicit Forget and bond-only input rejection: after Stop →
+  Forget → Start with OS bond retained, the user confirmed no saved projector
+  and disabled Connect/movement.
+- [ ] Verify 0.3 OS bond-removal/re-pair revocation and durable Forget after process
+  death; the explicit Forget check does not certify these separate paths.
 - [ ] Separately design/review the authenticated Mac-to-Nord transport and native
   companion lifecycle before any production bridge implementation. No legacy
   plaintext ADB fallback or background-input authorization follows from the probe.

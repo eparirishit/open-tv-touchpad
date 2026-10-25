@@ -296,3 +296,105 @@ successful reconnect, peer-only link loss, process-crash or held-button cleanup.
 The earlier source-review follow-up performed no device probes. The later Nord
 configuration check above adds live diagnostics, not a protected-link PASS.
 No phone-browser HTTPS result can satisfy this separate gate.
+
+## Accepted remembered-projector diagnostic (2026-10-24)
+
+After reviewing the retained-bond proposal, the owner selected “remembering the
+verified projector approach.” The app may retain one peer selector following a
+fresh verified Numeric Comparison ceremony, then require explicit Start/Connect
+on later runs. Android and the projector's native Bluetooth stack are the
+authentication/encryption authority. API31 cannot independently establish that
+the current OS-managed bond still uses the originally compared key after a
+replacement while the app was absent. This limitation was explicitly disclosed
+and accepted; a saved address/name/bond state is not cryptographic proof.
+
+The [accepted design](../superpowers/specs/2026-10-24-nord-hid-reconnect-decision.md)
+and [implementation plan](../superpowers/plans/2026-10-24-nord-hid-reconnect.md)
+govern the isolated extension. No network permission or production bridge is
+authorized. Previous 0.2 stop/negative results remain valid for that artifact;
+they are not successful reconnect evidence for a new APK. H1A remains NOT PASSED.
+
+### Remembered-projector artifact prepared and installed
+
+- Source commit: `7643aa80b0fb5f59d96c0890c28c752e74141b3a`.
+- Version: `0.3-diagnostic` (3).
+- APK SHA-256: `87b7b6c7e9aa4c278b37d0a4284bbf9a0288c191c796ebbf455f3a192b39209e`.
+- Verification: 48 unit tests, no failures/errors/skips; debug build passes;
+  lint has 0 errors and 20 diagnostic-localization/pinned-SDK warnings.
+- Independent review included the complete module change, all new files and
+  connected callers; no actionable findings. Main reran the exact-source Gradle
+  checks and verified packaged version, debug flag and the four allowed Bluetooth/
+  service permissions. No INTERNET permission; backup rules are packaged and the
+  enrollment record uses native app-private no-backup storage.
+- Installation: selected the unique online AC2001 and verified OnePlus/API31;
+  stopped only the probe, updated its APK without clearing data, verified installed
+  version3, launched it and confirmed the Activity resumed. No Bluetooth setting,
+  bond, or input command was changed/issued by this installation.
+
+The new implementation persists a selector after verified first enrollment but
+never persists control authorization. Explicit Start/Connect, a current bonded
+peer, successful registration/connection and neutral submission are required.
+Stop retains the selector but fences input; old native ownership must finish
+teardown before another run begins. Forget and observed selected-peer re-pairing/
+bond departure revoke enrollment. Failed storage operations explicitly warn
+that disk may retain an old selector; they do not claim durable erasure.
+
+The owner was asked to establish one fresh compared enrollment, then Stop, wait
+for native teardown, and Start → Connect saved projector without removing the
+bond. The user answered **“Reconnect works; physical remote works”.**
+**Explicit saved-projector reconnect: PASS by user observation**, scoped to the
+0.3 artifact and Nord/XGIMI setup above. Pointer operation resumed without another
+pairing ceremony, and the physical remote remained usable. This is a reported
+end-to-end result, not a captured trace of native callback ordering.
+
+### Process-restart trial: first attempt failed, retry connected (2026-10-25)
+
+The requested procedure was Stop and completed teardown, Android Force stop,
+reopen, verify saved selection with input disabled, then explicit Start/Connect
+and movement. The owner reported that Connect saved projector did not work after
+force restart/reopen and displayed:
+
+> Projector disconnected. No input enabled. Native teardown completed. Tap start for a new run
+
+Source tracing identifies this message with a selected-peer DISCONNECTED callback
+after an explicit connection attempt; it can occur before a first CONNECTED
+callback. The message does not establish whether the failure was stale callback
+ordering, a native link failure, peer readiness or another cause. It must not be
+fixed by ignoring disconnects or automatically retrying without evidence.
+
+The owner subsequently reported **“tried again, and this time it connected”.**
+The owner initially said connected status appeared but movement did not work.
+Without restarting or pairing again, a direction check then produced the user
+report **“Buttons enabled; left/up moves the pointer”.** Thus actual pointer input
+works in the restarted session on retry. A pointer at the right screen edge is a
+possible explanation for the earlier right-only observation, not a proven cause.
+
+**Saved enrollment after process restart, reconnection and movement on retry:
+PASS by user observation, with the first-attempt failure retained.** This is not
+a first-attempt reliability PASS or an independent negative-input-admission test.
+No repeat pairing/restart was requested between the connected-state and direction
+checks; no code change was made. Additional diagnostics confirmed the probe was
+resumed, its foreground service was running and Bluetooth was ON. The UI hierarchy
+was unavailable, so enabled controls and pointer movement are user observations.
+A bounded read-only inspection on the manufacturer-verified Nord found no matching
+retained HID callback/failure markers in the selected log tags. This supplies no
+cause or event-order proof. No raw logs/identifiers were saved or displayed, and
+no app, bond, radio, or input was changed by that check.
+
+Force-stop/reopen after Stop tests persistent enrollment; it is not an abrupt
+crash or held-button cleanup test. First-attempt reconnect reliability, observed
+OS bond-removal/re-pair revocation, fault cleanup and exact-vendor encryption
+remain unresolved. H1A remains **NOT PASSED**; H1B/product integration remain gated.
+
+### Explicit Forget with retained OS bond (2026-10-25)
+
+The requested procedure was Stop/completed teardown → Forget projector → Start,
+leaving the OS Bluetooth bond intact. The user confirmed **“No saved projector;
+Connect and movement disabled”.** **Explicit app-enrollment revocation and
+old-bond-only input rejection: PASS by user observation**, on the same 0.3 artifact
+and Nord/XGIMI setup above. The bond alone did not authorize a new control session.
+
+This does not certify Forget persistence after process death, automatic revocation
+on OS bond removal/re-pairing, storage-failure handling on hardware, or a new
+incoming connection attempt. No code/device changes or repeat tests were needed
+to record this result. The check is complete; broader H1A/H1B gates remain unchanged.

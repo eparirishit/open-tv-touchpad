@@ -21,8 +21,9 @@ public final class PairingGuardService extends Service {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean alive;
     private long deadline;
-    private String terminalReason = "Pairing service ended. Close and reopen for another test.";
+    private String terminalReason = "Pairing service ended. Start a new run after teardown.";
     private Consumer<String> listener;
+    private Runnable destroyed;
 
     public final class LocalBinder extends Binder {
         PairingGuardService service() { return PairingGuardService.this; }
@@ -50,7 +51,7 @@ public final class PairingGuardService extends Service {
         try {
             startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
             alive = true;
-            handler.postDelayed(() -> finish("Five-minute diagnostic window expired. Close and reopen."), WINDOW_MS);
+            handler.postDelayed(() -> finish("Five-minute diagnostic window expired. Start a new run after teardown."), WINDOW_MS);
         } catch (SecurityException | IllegalStateException error) {
             terminalReason = "Pairing service could not start. No input enabled.";
             stopSelf();
@@ -72,9 +73,11 @@ public final class PairingGuardService extends Service {
     boolean isAlive() {
         // Handler timers pause in deep sleep; check elapsed time again before UI/input use.
         if (alive && SystemClock.elapsedRealtime() >= deadline)
-            finish("Five-minute diagnostic window expired. Close and reopen.");
+            finish("Five-minute diagnostic window expired. Start a new run after teardown.");
         return alive;
     }
+
+    void onDestroyed(Runnable callback) { destroyed = callback; }
 
     void detach() { listener = null; }
 
@@ -96,5 +99,10 @@ public final class PairingGuardService extends Service {
         finish("Pairing service ended. No input enabled.");
         handler.removeCallbacksAndMessages(null);
         super.onDestroy();
+        if (destroyed != null) {
+            Runnable callback = destroyed;
+            destroyed = null;
+            callback.run();
+        }
     }
 }

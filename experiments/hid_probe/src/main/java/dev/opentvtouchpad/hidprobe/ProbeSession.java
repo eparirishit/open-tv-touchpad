@@ -7,6 +7,7 @@ package dev.opentvtouchpad.hidprobe;
  * Callbacks must carry the generation captured when their session was started.
  */
 public final class ProbeSession {
+    private final EnrollmentStore enrollment;
     private long generation;
     private boolean running;
     private boolean foreground;
@@ -15,6 +16,45 @@ public final class ProbeSession {
     private boolean bonded;
     private boolean confirmed;
     private boolean connected;
+    private boolean neutral;
+    private String rejectedPeer;
+
+    ProbeSession(EnrollmentStore enrollment) { this.enrollment = enrollment; }
+
+    public String savedPeer() { return enrollment.peer(); }
+
+    public boolean forget() {
+        stop();
+        return enrollment.forget();
+    }
+
+    /** Current OS observations, including while stopped; never a stale run callback. */
+    public boolean revoke(String peer) {
+        if (peer == null || !peer.equals(savedPeer())) return false;
+        forget();
+        return true;
+    }
+
+    public boolean canConnect(long generation) {
+        return isRegistered(generation) && foreground && savedPeer() != null && !confirmed && rejectedPeer == null;
+    }
+
+    public boolean connectSaved(long generation, boolean currentlyBonded) {
+        if (!canConnect(generation)) return false;
+        if (!currentlyBonded) { forget(); return false; }
+        candidate = savedPeer();
+        bonded = true;
+        confirmed = true;
+        return true;
+    }
+
+    public boolean neutralSubmitted(long generation, String peer, boolean success) {
+        if (!active(generation) || !foreground || !connected || peer == null
+                || !peer.equals(eligiblePeer()) || neutral) return false;
+        if (!success) { stop(); return false; }
+        neutral = true;
+        return true;
+    }
 
     public long start() {
         stop();
@@ -32,6 +72,8 @@ public final class ProbeSession {
         bonded = false;
         confirmed = false;
         connected = false;
+        neutral = false;
+        rejectedPeer = null;
     }
 
     public boolean active(long generation) {
@@ -54,7 +96,8 @@ public final class ProbeSession {
 
     /** Whether a first explicit comparison can be accepted in the visible UI. */
     public boolean canConfirm(long generation) {
-        return isRegistered(generation) && foreground && bonded && candidate != null && !confirmed;
+        return isRegistered(generation) && foreground && bonded && candidate != null && !confirmed
+            && savedPeer() == null && !enrollment.failed() && rejectedPeer == null;
     }
 
     public void registered(long generation, boolean registered) {
@@ -68,13 +111,14 @@ public final class ProbeSession {
 
     public boolean observePairing(long generation, String peer, int variant) {
         if (!active(generation)) return false;
+        if (revoke(peer)) return false;
+        if (savedPeer() != null || enrollment.failed()) return false;
         if (variant != 2) {
             // A changed pairing method invalidates the candidate's earlier comparison.
             if (candidate != null && candidate.equals(peer)) stop();
             return false;
         }
-        if (peer == null || peer.length() != 17
-                || !peer.matches("[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}")) return false;
+        if (!EnrollmentStore.validPeer(peer)) return false;
         if (candidate == null) candidate = peer;
         return candidate.equals(peer);
     }
@@ -86,6 +130,7 @@ public final class ProbeSession {
     /** Call only after the user explicitly confirms matching codes on BOTH screens. */
     public boolean confirmComparison(long generation) {
         if (!canConfirm(generation)) return false;
+        if (!enrollment.save(candidate)) { stop(); return false; }
         confirmed = true;
         return true;
     }
@@ -105,17 +150,26 @@ public final class ProbeSession {
      * disconnection grants no input and does not discard the pairing observation.
      */
     public boolean connected(long generation, String peer, boolean connected) {
-        if (!active(generation) || candidate == null || !candidate.equals(peer)) return false;
-        boolean accepted = eligiblePeer() != null;
+        if (!active(generation)) return false;
+        if (!connected && peer != null && peer.equals(rejectedPeer)) {
+            rejectedPeer = null;
+            return false;
+        }
+        boolean accepted = peer != null && peer.equals(eligiblePeer());
+        if (connected && !accepted && EnrollmentStore.validPeer(peer)) {
+            if (rejectedPeer != null && !rejectedPeer.equals(peer)) stop();
+            else rejectedPeer = peer;
+        }
         if (!connected && accepted) {
             stop();
         } else if (connected && accepted) {
+            if (this.connected) { stop(); return false; }
             this.connected = true;
         }
         return accepted;
     }
 
     public boolean canSend(long generation, String peer) {
-        return active(generation) && foreground && connected && peer != null && peer.equals(eligiblePeer());
+        return active(generation) && foreground && connected && neutral && peer != null && peer.equals(eligiblePeer());
     }
 }
