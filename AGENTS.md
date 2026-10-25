@@ -12,6 +12,24 @@ M0 FAIL and M0.1 STOP remain historical facts; this is a separate H0 gate, not
 an M0 workaround or permission to start M1/product delivery. No LAN/browser
 control endpoint is authorized by this proof. Preserve all other boundaries.
 
+## Accepted local PWA hub contract (2026-10-24)
+
+The user approved local-only certificate trust and explicitly selected:
+"Require a protected projector link: proceed with browser-only work while
+verifying a suitable link; TV integration waits."
+`docs/superpowers/specs/2026-10-24-local-pwa-hub-design.md` and its implementation
+plan govern `hub/`, `web/` and their tests. H1B browser-only work is authorized;
+no real device backend is permitted before H1A protected-link PASS and H1B PASS.
+There is no trusted-LAN plaintext ADB product exception. H0 remains an isolated
+historical proof; do not migrate its adapters yet.
+
+For this hub only, the accepted constrained-intermediate/native-Mac Keychain
+identity, opaque HTTPS sessions, plain JavaScript PWA and native owner approval
+supersede the old Android Keystore/ECDH/TypeScript/projector-only requirements.
+The trusted native Mac fingerprint display replaces the TV fingerprint display.
+M0/M1 restrictions and Android boundaries below continue to govern the historical
+Android app. All shared validation, review, secrecy and documentation rules apply.
+
 ## Project Contract
 
 - Build the smallest complete implementation of the approved Open TV Touchpad V1 specification and plans.

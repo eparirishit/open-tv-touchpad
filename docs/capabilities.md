@@ -1,5 +1,14 @@
 # Capabilities
 
+## Browser-only hub implementation (2026-10-24)
+
+The accepted local-only design now has certificate identity, native approval,
+HTTPS/WSS sessions, socket-bound control leases and a bundled PWA implemented
+for H1B testing. Real TV control is deliberately unavailable. Native ownership
+and browser trust checks are documented in [setup](setup-hub.md) and
+[H1B evidence](gates/h1b-report.md). Local verification passes103Python and36Node tests; scoped code reviews and
+their fixes are complete. Neither H1A nor H1B has passed. The earlier H0 proof remains separate.
+
 This file records observed behavior, not planned functionality.
 
 ## Separate H0 local Mac proof

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#10191e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Open TV Touchpad · Local hub</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/remote.js"></script>
+</head>
+<body>
+<main>
+  <header><p class="eyebrow">Your local Mac hub</p><h1>Open TV Touchpad</h1><p>One remote. Your own network.</p></header>
+  <p class="gate">TV integration locked pending protected-link verification</p>
+  <noscript><p class="gate">JavaScript is required. Controls stay disabled.</p></noscript>
+  <section class="card" aria-labelledby="setup-title">
+    <h2 id="setup-title">Set up this controller</h2>
+    <details open id="trust"><summary>1. Verify local certificate trust</summary>
+      <p>On the Mac, use the native hub window to export the root certificate. Transfer it directly to this device. Before trusting it, compare the operating system’s full SHA-256 fingerprint with the fingerprint in that native Mac window.</p>
+      <p>This web page cannot attest certificate trust. Never bypass a browser certificate warning. The enrollment code below is only a comparison aid.</p>
+      <p>On iPhone, install the certificate profile in Settings, then enable its trust under General → About → Certificate Trust Settings. On Android, use Settings → Security → Encryption &amp; credentials → Install a CA certificate (names vary). On a Mac, use Keychain Access. Follow the owner’s verified setup instructions for your exact OS.</p>
+      <p>Trust applies beyond this app and port; the same private IP can exist on another network. Remove the old root when retiring this hub. An address change, issuer expiry, or lost signing key requires new trust and enrollment.</p>
+    </details>
+    <details open id="installation"><summary>2. Install, then open the app</summary>
+      <p>After certificate verification, open the exact HTTPS address shown on the Mac. Keep the Mac awake on the same network.</p>
+      <p>iPhone/iPad: Safari → Share → Add to Home Screen → Open as Web App. Android: Chrome menu → Install app or Add to Home screen. Laptop: use Chrome’s Install action or Safari’s File → Add to Dock where supported.</p>
+      <p>Open the installed app before enrollment. A normal browser tab may use different storage; enroll each required context separately during the browser gate.</p>
+      <button id="install" type="button" hidden>Install app</button><p id="install-state">Open the installed app to enroll.</p>
+    </details>
+    <section id="enrollment" aria-labelledby="enroll-title"><h3 id="enroll-title">3. Ask the Mac owner to approve</h3>
+      <p>Ask the owner to open the 120-second enrollment window in the native Mac hub.</p>
+      <form id="enroll-form"><label for="label">Controller name</label><div class="row"><input id="label" name="label" maxlength="32" required autocomplete="off" placeholder="e.g. My phone"><button id="enroll" type="submit" disabled>Request enrollment</button></div></form>
+      <p id="enroll-status" role="status" aria-live="polite">Install the app before enrollment.</p>
+      <p id="comparison" hidden>Compare with the Mac: <output id="code" aria-label="Owner comparison code"></output></p>
+      <button id="cancel-enrollment" type="button" hidden>Discard request</button>
+      <p class="hint">Reload discards a pending request; the owner can cancel it locally. If approval succeeds but the response is lost, ask the owner to revoke that enrollment and approve a fresh request.</p>
+    </section>
+  </section>
+  <section class="card" aria-labelledby="connection-title">
+    <h2 id="connection-title">Connection</h2><p id="session-label">No enrolled session loaded</p>
+    <p id="backend-status">TV backend unavailable</p><p id="status" role="status" aria-live="polite">Refresh session to begin.</p>
+    <div class="row"><button id="refresh" type="button">Refresh session</button><button id="reconnect" type="button" disabled>Reconnect session</button><button id="logout" type="button" disabled>Sign out</button></div>
+    <div class="row ownership"><button id="take-control" type="button" disabled>Take control</button><button id="release-control" type="button" disabled>Release control</button><button id="connect" type="button" disabled>Connect TV</button><button id="stop" class="stop" type="button" disabled>Stop</button></div>
+    <button id="reload" type="button" hidden>Reload to update</button>
+    <p id="update-status" class="hint"></p><button id="update" type="button" hidden>Stop and update app</button>
+  </section>
+  <fieldset id="controls" disabled class="card"><legend>TV remote</legend>
+    <div class="remote-layout"><div>
+      <div class="row"><button type="button" data-key="HOME">Home</button><button type="button" data-key="BACK">Back</button></div>
+      <div class="dpad" aria-label="TV navigation">
+        <button type="button" class="up" data-key="UP" aria-label="Navigate up">↑</button>
+        <button type="button" class="left" data-key="LEFT" aria-label="Navigate left">←</button>
+        <button type="button" class="ok" data-key="OK">OK</button>
+        <button type="button" class="right" data-key="RIGHT" aria-label="Navigate right">→</button>
+        <button type="button" class="down" data-key="DOWN" aria-label="Navigate down">↓</button>
+      </div>
+      <div class="row"><button type="button" data-key="VOLUME_DOWN" aria-label="Volume down">Vol −</button><button type="button" data-key="VOLUME_UP" aria-label="Volume up">Vol +</button><button type="button" data-key="PLAY_PAUSE">Play / Pause</button></div>
+      <button id="netflix" type="button">Open Netflix</button>
+    </div><div>
+      <div id="touchpad" aria-label="Relative touchpad" aria-describedby="pad-help" aria-disabled="true" role="group" tabindex="-1"><span>Touchpad</span><span>Move · tap · hold to drag</span></div>
+      <p id="pad-help" class="hint">One finger moves; tap to click. Hold still for 300 ms to drag. Two fingers scroll. Mouse hover moves; hold the left button to drag. Keyboard: focus the pad and use arrow keys to move, Enter or Space to click, Escape to Stop.</p>
+      <div class="row" aria-label="Scroll controls"><button type="button" data-scroll="0,-1" aria-label="Scroll up">Scroll ↑</button><button type="button" data-scroll="0,1" aria-label="Scroll down">Scroll ↓</button><button type="button" data-scroll="-1,0" aria-label="Scroll left">Scroll ←</button><button type="button" data-scroll="1,0" aria-label="Scroll right">Scroll →</button></div>
+      <label for="sensitivity">Pointer sensitivity <output id="sensitivity-value">1×</output></label><input id="sensitivity" type="range" min="0.25" max="4" step="0.25" value="1">
+    </div></div>
+  </fieldset>
+  <footer>Local resources only. Offline controls are disabled. Reconnection never replays input.<br>Browser suspension relies on the hub’s deadline; device crash cleanup has not been verified.</footer>
+</main>
+</body>
+</html>

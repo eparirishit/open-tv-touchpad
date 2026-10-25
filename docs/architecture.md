@@ -1,5 +1,19 @@
 # Architecture Status
 
+## Browser-only hub implementation (2026-10-24)
+
+The accepted local-only design now has certificate identity, native approval,
+HTTPS/WSS sessions, socket-bound control leases and a bundled PWA implemented
+for H1B testing. Real TV control is deliberately unavailable. Native ownership
+and browser trust checks are documented in [setup](setup-hub.md) and
+[H1B evidence](gates/h1b-report.md). Local verification passes103Python and36Node tests; scoped code reviews and
+their fixes are complete. Neither H1A nor H1B has passed. The earlier H0 proof remains separate.
+
+As of 2026-10-24, D1 is resolved: the owner requires protected projector transport
+and authorized browser-only H1B implementation. H1A remains NOT PASSED; no
+plaintext product exception is authorized. The accepted design supersedes the
+earlier proposed-status descriptions below for this hub work only.
+
 ## Approved H0 experiment (2026-10-24)
 
 The user approved a unified remote proposal with a local Mac/Windows hub:

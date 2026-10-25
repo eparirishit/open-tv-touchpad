@@ -1,5 +1,14 @@
 # Open TV Touchpad
 
+## Browser-only hub development
+
+The local-only PWA hub is being implemented with native owner approval and
+certificate trust. **The product has no projector backend until a protected link
+passes verification.** See [setup and recovery](docs/setup-hub.md), the
+[accepted hub design](docs/superpowers/specs/2026-10-24-local-pwa-hub-design.md),
+and [H1A transport status](docs/gates/h1a-report.md). The native H0 experiment
+remains a separate functional proof.
+
 ## Unified remote proof (H0)
 
 The user approved a separate local-hub experiment on 2026-10-24: one Mac

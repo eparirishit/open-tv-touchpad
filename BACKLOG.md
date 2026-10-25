@@ -1,5 +1,10 @@
 # Backlog
 
+As of 2026-10-24, D1 is resolved: the owner requires protected projector transport
+and authorized browser-only H1B implementation. H1A remains NOT PASSED; no
+plaintext product exception is authorized. The accepted design supersedes the
+earlier proposed-status descriptions below for this hub work only.
+
 Backlog items are not approved V1 implementation work. Security and platform
 design must be approved before an item moves into an active milestone.
 
@@ -23,15 +28,19 @@ M1 remains blocked until a complete M0 report verifies as `PASS`.
 - [x] Confirm two-axis scrolling, release, Stop, reconnect and normal playback.
 - [x] Draft/review local-only hub design and seven-stage implementation plan.
 - [x] Select controller onboarding: per-device certificate trust, no VPN/account.
-- [ ] Resolve D1: protected projector transport or explicit trusted-LAN beta exception.
-- [ ] Accept the new hub contract and record H1A transport evidence/policy.
-- [ ] H1B: verify browser trust, native enrollment/revocation and bounded sessions
-  without a projector backend.
+- [x] Resolve D1: protected projector transport or explicit trusted-LAN beta exception.
+- [x] Accept the new hub contract and record H1A policy: protected link required.
+- [ ] Prove H1A protected wireless transport; USB is currently unavailable to owner.
+- [x] Implement/review browser-only H1B code: native identity, enrollment,
+  sessions, bounded HTTPS/WSS, control lease and installed PWA;103Python/36Node tests.
+- [ ] H1B: verify actual Keychain and phone/laptop certificate trust, installed-PWA
+  persistence and browser lifecycle matrix; no gate PASS yet.
 - [ ] H2: integrate verified adapters after H1B and accepted H1A policy; certify
   browser lifecycle and device cleanup.
 - [ ] H3: verify macOS distribution, setup/recovery and release boundaries.
-- [ ] Build the phone/laptop PWA only after the applicable new gates pass.
-- [ ] Add two-finger scrolling and measured sensitivity tuning in the PWA.
+- [x] Build the browser-only phone/laptop PWA; real device integration remains gated.
+- [x] Add two-finger scrolling and a bounded client sensitivity control.
+- [ ] Measure/tune touchpad sensitivity on the protected hardware path.
 - [ ] Later milestone: package a Windows hub and move hosting to the spare laptop.
 - [ ] Evaluate reliable app detection before automatic TV/touchpad mode switching.
 - [ ] Certify additional Android TVs per capability; investigate XGIMI-specific
