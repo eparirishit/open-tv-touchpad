@@ -1,5 +1,24 @@
 # Project Progress
 
+## N3 pairing diagnosis (2026-10-25)
+
+The0.10 UI now confirms PAIRING_TLS. A reviewed TLS-only native diagnostic and
+independent Mac OpenSSL check establish the immediate blocker: the server's
+certificate fails the explicit self-signature check. No pairing/control frames
+were sent by these checks; enrollments are unchanged and instrumentation was
+removed. A [narrow trust-anchor compatibility decision](superpowers/specs/2026-10-25-tv-trust-anchor-compatibility.md)
+is proposed, awaiting owner approval. **Runtime trust policy remains unchanged.**
+
+The owner reproduced the0.9 pairing failure with the confirmed projector address.
+Both Remote v2 ports are reachable from the Nord and Mac; the app's failed phase
+is not yet known. Reviewed0.10 now displays a fixed stage label while preserving
+trust, protocol, deadlines and Stop behavior. All166 unit tests pass; debug
+assembly passes and lint remains0 errors/37 warnings. A same-signature update on
+the stopped Nord preserved both enrollment stores; no automatic run started.
+The retry and TLS-only evidence above identify the blocker. This is diagnostic
+instrumentation, **not a pairing fix or N3 acceptance PASS**.
+See [N3 report](gates/n3-report.md) for artifact identity and installation evidence.
+
 ## N3 combined remote installed (2026-10-25)
 
 Reviewed implementation `8763f5a` adds TV controls to the existing Nord Bluetooth
@@ -8,9 +27,13 @@ identity and both enrollment stores are preserved, foreground confirmed, no run
 started automatically. All164 unit tests and17 emulator native tests pass; lint
 has0 errors/37 warnings. Independent review and focused re-reviews close the
 handshake-write race, deferred-Forget recovery and cleanup-order findings.
-The owner has been asked to enter the projector locator and TV code in-app for
-first pairing. **N3 owner acceptance remains pending**; no live TV control by0.9
-has been observed. See [N3 report](gates/n3-report.md) for artifact identity,
+The owner's first Pair TV attempt failed with the generic connection/pairing
+error and reported native teardown completion. **N3 owner acceptance is blocked
+at pairing**; the failure stage and entered target remain unconfirmed. Refreshed
+Nord debugging is connected: version9 is stopped, Bluetooth enrollment is present,
+and TV enrollment is absent. Both projector TV Remote ports are reachable from
+the Mac and Nord; native app TLS/pairing failure still needs stage evidence.
+No live TV control by0.9 has been observed. See [N3 report](gates/n3-report.md) for artifact identity,
 review disposition, remaining compatibility limits and hardware checklist.
 
 ## N3 native foundation history (2026-10-25)

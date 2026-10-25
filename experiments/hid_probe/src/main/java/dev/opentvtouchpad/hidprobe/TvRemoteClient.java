@@ -18,11 +18,16 @@ import javax.net.ssl.SSLSocket;
 
 /** A single foreground run's attempt. Callbacks must only post bounded owner-tagged work. */
 final class TvRemoteClient {
+    // Closed diagnostic vocabulary: no peer data or exception text crosses the callback.
+    enum Stage {
+        IDENTITY, PAIRING_CONNECT, PAIRING_TLS, SESSION_VALIDATION,
+        PAIRING_EXCHANGE, CODE, CONTROL_CONNECT, CONTROL_TLS, CONTROL_EXCHANGE
+    }
     interface Listener {
         void needCode();
         void connected();
         void enrolled(TvEnrollment.Record record);
-        void failed();
+        void failed(Stage stage);
         void closed();
     }
 
@@ -40,6 +45,7 @@ final class TvRemoteClient {
     private final ArrayDeque<Frame> replies = new ArrayDeque<>();
     private final Thread operation, writer, coordinator;
     private boolean launched, attempted, stopped, failed, cleanupFailed, pairing, ready, needsCode;
+    private Stage stage = Stage.IDENTITY, failureStage;
     private String address;
     private TvEnrollment.Record enrollment;
     private SSLSocket socket;
@@ -143,6 +149,10 @@ final class TvRemoteClient {
         synchronized (gate) { requireLive(); phaseUntil = Math.min(deadline, clock.getAsLong() + milliseconds); gate.notifyAll(); }
     }
 
+    private void stage(Stage next) {
+        synchronized (gate) { if (!stopped) stage = next; }
+    }
+
     private void operate() {
         try {
             synchronized (gate) {
@@ -172,6 +182,7 @@ final class TvRemoteClient {
 
     private X509Certificate pair(KeyStore.PrivateKeyEntry identity) throws Exception {
         SSLSocket pair = open(identity, null);
+        stage(Stage.SESSION_VALIDATION);
         SSLSession session = pair.getSession();
         Certificate[] local = session.getLocalCertificates();
         Certificate[] remote = session.getPeerCertificates();
@@ -182,6 +193,7 @@ final class TvRemoteClient {
                 || !MessageDigest.isEqual(local[0].getEncoded(), identity.getCertificate().getEncoded()))
             throw new IOException("Invalid TV pairing session");
         X509Certificate peer = (X509Certificate) remote[0];
+        stage(Stage.PAIRING_EXCHANGE);
         TvPairing protocol = new TvPairing();
         phase(10000);
         sendAndWait(pair, protocol.begin());
@@ -189,6 +201,7 @@ final class TvRemoteClient {
             byte[] reply = protocol.receive(read(pair));
             if (reply != null) { phase(10000); sendAndWait(pair, reply); }
         }
+        stage(Stage.CODE);
         phase(120000);
         char[] entered;
         synchronized (gate) {
@@ -200,6 +213,7 @@ final class TvRemoteClient {
         byte[] secret;
         try { secret = protocol.code(new String(entered), (RSAPublicKey)local[0].getPublicKey(), (RSAPublicKey)peer.getPublicKey()); }
         finally { Arrays.fill(entered, '\0'); }
+        stage(Stage.PAIRING_EXCHANGE);
         phase(10000);
         sendAndWait(pair, secret);
         protocol.receive(read(pair));
@@ -214,6 +228,7 @@ final class TvRemoteClient {
     }
 
     private SSLSocket open(KeyStore.PrivateKeyEntry identity, X509Certificate peer) throws Exception {
+        stage(peer == null ? Stage.PAIRING_CONNECT : Stage.CONTROL_CONNECT);
         synchronized (gate) { requireLive(); }
         SSLSocket created = peer == null ? nativeIo.pairingSocket(identity) : nativeIo.clientSocket(identity, peer);
         if (created == null) throw new IOException("TV socket unavailable");
@@ -230,6 +245,7 @@ final class TvRemoteClient {
         synchronized (gate) { requireLive(); remaining = (int)Math.max(1, phaseUntil-clock.getAsLong()); }
         created.connect(new InetSocketAddress(InetAddress.getByAddress(bytes), peer == null ? 6467 : 6466), remaining);
         synchronized (gate) { requireLive(); remaining = (int)Math.max(1, phaseUntil-clock.getAsLong()); }
+        stage(peer == null ? Stage.PAIRING_TLS : Stage.CONTROL_TLS);
         created.setSoTimeout(remaining);
         created.startHandshake();
         synchronized (gate) { requireLive(); }
@@ -253,6 +269,7 @@ final class TvRemoteClient {
     }
 
     private void control(SSLSocket current, TvEnrollment.Record candidate) throws Exception {
+        stage(Stage.CONTROL_EXCHANGE);
         TvControlProtocol protocol = new TvControlProtocol();
         boolean announced = false;
         while (true) {
@@ -339,6 +356,7 @@ final class TvRemoteClient {
         SSLSocket owned;
         synchronized (gate) {
             if (!stopped) {
+                if (error) failureStage = stage;
                 stopped = true; failed = error; ready = false; needsCode = false; pending = null;
                 if (code != null) Arrays.fill(code, '\0'); code = null;
                 while (!replies.isEmpty()) { Arrays.fill(replies.removeFirst().bytes, (byte)0); outstandingReplies--; }
@@ -368,9 +386,9 @@ final class TvRemoteClient {
                 }
                 if (expired) terminate(true);
             }
-            boolean reportFailure;
-            synchronized (gate) { reportFailure = failed; }
-            if (reportFailure) listener.failed();
+            Stage reportFailure;
+            synchronized (gate) { reportFailure = failed ? failureStage : null; }
+            if (reportFailure != null) listener.failed(reportFailure);
         } catch (InterruptedException interrupted) {
             terminate(true);
         } finally {

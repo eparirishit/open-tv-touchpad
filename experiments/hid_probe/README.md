@@ -203,6 +203,36 @@ and report any unsupported downgrade for an owner decision.
 
 Successful installation or unit tests do not establish actual-device acceptance.
 
+## Diagnosing TV pairing
+
+Use the projector's own Wi-Fi IPv4 address, not the phone's debugging endpoint
+or the network gateway. Save TV address validates the entry; it does not test
+connectivity. Pair TV is a separate no-input run. Keep its six-character code
+in the app's masked field, never in issue reports or logs.
+
+When pairing fails, report the app's status and whether the projector displayed
+a code (not the code itself). Native teardown completion reports cleanup, not
+successful pairing. Keep the existing Bluetooth bond; do not clear storage or
+re-pair Bluetooth to investigate a TV connection failure.
+
+Version0.10 adds a fixed failure-stage label: identity, pairing/control connection,
+TLS, session validation, pairing exchange, code, or control exchange. It records
+the first failure stage before cleanup; this locates the phase but does not prove
+its root cause. No raw exceptions, addresses or protocol values enter this label.
+The connection, trust checks, deadlines and combined Stop behavior are unchanged.
+
+`TvHandshakeDiagnosticTest` is a separate explicit live diagnostic, skipped by
+default. It requires instrumentation arguments `liveTvDiagnostic=TLS_ONLY` and a
+canonical private `projectorAddress`. Run only against the owner's confirmed TV,
+with the probe stopped and its existing native identity present. It opens only
+pairing-port TLS with that identity, sends no pairing/control frames, creates no
+identity and writes no enrollment. Results contain only fixed stage, signature
+family and cause/reason categories. A completed diagnostic can report a failed
+handshake; it is not hardware acceptance. Use a bounded host runner that verifies
+the reviewed test artifact/signature, preserves enrollment, terminates a timed-out
+test process and removes the temporary test package. Keep target addresses out of
+saved command output and reports.
+
 ## Bounded observational trace
 
 Version 0.4 (versionCode 4) adds observations only; it does not fix reconnect,

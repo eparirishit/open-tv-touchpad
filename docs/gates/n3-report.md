@@ -1,10 +1,14 @@
-# N3 unified Nord remote — installed, owner acceptance pending
+# N3 unified Nord remote — pairing blocked, diagnostic update installed
 
 Contract: [approved N3 design](../superpowers/specs/2026-10-25-nord-tv-controls-design.md).
+Current blocker: the service at the owner-confirmed projector address presents a
+certificate that fails explicit trust-anchor self-signature verification. See the
+[proposed compatibility decision](../superpowers/specs/2026-10-25-tv-trust-anchor-compatibility.md).
+No trust-policy change has been applied.
 Source branch `nord-tv-controls`, implementation `8763f5a` (transport `6dfd599`).
-N3 owner acceptance is **NOT RUN**. Reviewed version0.9 is installed and confirmed
-in the Nord foreground. Both enrollment stores are unchanged and no remote run
-started automatically. The owner has been asked to perform TV pairing in-app.
+N3 owner acceptance is **BLOCKED at first TV pairing**. Reviewed version0.9 was
+installed with both enrollment stores unchanged and no automatic remote run.
+The owner's first Pair TV attempt failed; no successful TV enrollment is verified.
 
 ## Implemented flow
 
@@ -54,9 +58,85 @@ Bluetooth-system-UI pause exception survives only before any TV operation.
   INTERNET, BLUETOOTH_CONNECT, BLUETOOTH_ADVERTISE, FOREGROUND_SERVICE and
   FOREGROUND_SERVICE_CONNECTED_DEVICE. Release variant stays disabled.
 
-## Owner acceptance — all NOT RUN for version0.9
+## First owner pairing attempt — failed, cause not established
 
-- TV-code pairing in the masked field, then explicit combined Start/Connect.
+On version0.9 the owner entered a Wi-Fi address, tapped Save TV address, Start,
+then Pair TV. The app reported "TV connection or pairing failed. Both channels
+stopped; check the address or pair again. Native teardown completed. Tap start
+for a new run." The entered target and whether a code appeared are unconfirmed.
+This is owner-reported cleanup status, not an independently observed teardown.
+
+Source inspection confirms this message merges identity, network, TLS and
+pairing-protocol failures. The outgoing pairing sequence matches the working
+upstream reference; no specific incompatibility is established. The control
+feature mask is reached only after code submission and secret acknowledgment.
+Do not attribute this failure to that mask without stage evidence.
+
+Two Nord debugging endpoints were unavailable; a refreshed owner-supplied endpoint
+then connected successfully. Permitted diagnostics verified the authorized Nord
+AC2001/API31, installed version9, no running probe service, the Bluetooth
+enrollment file present and no TV enrollment file. With the owner's confirmed
+projector address, both TV Remote TCP ports are reachable from the Mac and Nord.
+Public-certificate inspection on the pairing port shows RSA2048/SHA256 with
+validity covering the test date. This does not establish the native app's TLS
+handshake or server identity. No pairing/control messages or trust-policy
+changes were used in these checks.
+
+The owner retried version0.9 with the confirmed projector address and reported
+the same error. Version0.10 is installed with closed failure-stage labels only;
+the first stage is captured under the existing Stop lock and delivered through
+the existing guarded callback. It does not change trust, pairing, input, timers
+or cleanup. The actual failed phase and root cause remain unknown until retry.
+
+Version0.10 verification:166 unit tests pass with no failures/errors/skips;
+debug assembly passes; lint has0 errors/37 warnings. Tests inject failures at
+identity, connection, TLS, session validation, exchange and code phases, retain
+the original failure through cleanup, suppress failure reporting on explicit
+Stop, and exercise the actual Activity callback text. No native TLS changes or
+new native hardware acceptance are claimed. APK SHA256:
+`f0c6d6d3c78b69ef1833730dc68e0b23865b78ff5d14c7dd072e1d038f2b3f2d`.
+
+Independent scoped review found no actionable issues in diagnostics, connected
+callers/tests or controlled installer. The first install attempt stopped before
+mutation because ADB exposed duplicate transports. A reviewed selector requires
+all authorized Nord aliases to have the same nonempty in-memory device serial;
+it logs/persists none. The retry verified one physical AC2001/API31, stopped
+version9, matching signing identity and reviewed source/APK hashes. Version10
+installed with both enrollment stores byte-identical. No automatic run started.
+Activity launch did not confirm foreground, so the owner was asked to unlock and
+open it manually. The0.9 rollback APK remains preserved.
+
+The owner retried0.10 and reported failure. A filtered UI hierarchy read confirmed
+PAIRING_TLS and native teardown completed; the temporary hierarchy was deleted.
+A separately reviewed, explicitly opted-in native instrumentation diagnostic then
+loaded the existing app identity and opened only pairing-port TLS. It reported
+HANDSHAKE -> CERTIFICATE -> CERTIFICATE with fixed reason INVALID PEER SIGNATURE;
+the client certificate is PSS-signed. This identifies the peer self-signature
+verification in TvTls, not a proven client-signing incompatibility. The native
+check was executed once, without pairing/control frames; both enrollment stores
+were byte-identical afterward, the test package was removed and the probe stayed
+stopped. Its successful test execution is not a successful TLS handshake.
+
+Independent Mac OpenSSL `verify -check_ss_sig` also returned certificate signature
+failure; the temporary public certificate was deleted. Neither diagnostic
+authenticates the server. The default test suite skips this live diagnostic unless
+given its explicit mode and a canonical private target address. The reviewed host
+runner verifies stopped state, source/artifact/signature identity, unchanged
+enrollments and test-package cleanup, and bounds execution with process teardown
+on timeout. Three review findings in package-presence/error cleanup were corrected
+before any live diagnostic execution. The immediate blocker is established;
+the proposed trust-anchor compatibility decision is pending owner approval.
+The TLS-only diagnostic test APK SHA256 was
+`9b25190b4b869bd892f77f31ce6fc414b8a3e1b8fc1f549ecaaf1977a1cba1cc`;
+the main app remained the recorded0.10 artifact. Independent design review found
+no added impersonation counterexample in the accepted threat model if every
+retained check holds, but identified deliberate loss of certificate
+self-consistency validation. Native validator rejection is not bypassable under
+the proposed amendment; positive/negative platform fixtures remain required.
+
+## Owner acceptance — pairing failed, remaining checks NOT RUN for version0.9
+
+- TV-code pairing: first attempt failed as above; combined Start/Connect NOT RUN.
 - Saved reconnect and full app/process restart without re-pairing.
 - Home/D-pad/OK, Back, volume-/+, play/pause on owner-selected content.
 - Netflix launch, both channels still usable after20 seconds.

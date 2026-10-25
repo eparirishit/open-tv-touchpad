@@ -483,9 +483,9 @@ public final class ProbeActivity extends Activity {
                     }
                     stop("TV controls paired. Start a new run, then Connect both channels.");
                 }); }
-                public void failed() { handler.post(() -> {
+                public void failed(TvRemoteClient.Stage stage) { handler.post(() -> {
                     if (ownership.owns() && !stopping)
-                        stop("TV connection or pairing failed. Both channels stopped; check the address or pair again.");
+                        stop("TV connection or pairing failed at " + stage.name() + ". Both channels stopped.");
                 }); }
                 public void closed() { handler.post(() -> {
                     if (!ownership.owns()) return;

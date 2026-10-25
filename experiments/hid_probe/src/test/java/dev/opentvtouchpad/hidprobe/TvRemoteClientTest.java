@@ -58,7 +58,7 @@ public class TvRemoteClientTest {
         assertEquals(1, io.identities.get());
         client.stop(); await(() -> events.closed.get() == 1);
         assertFalse(client.ready()); assertFalse(client.submit(TvCommand.NETFLIX));
-        assertEquals(0, events.failed.get());
+        assertEquals(0, events.failed.get()); assertNull(events.failureStage);
     }
 
     @Test public void invalidLocatorAndMismatchedIdentityNeverOpenSocket() throws Exception {
@@ -89,7 +89,7 @@ public class TvRemoteClientTest {
         delayed.identityGate.countDown();
         await(() -> later.closed.get() == 1);
         assertEquals(0, delayed.created.get()); assertNull(later.record);
-        assertEquals(0, later.needCode.get());
+        assertEquals(0, later.needCode.get()); assertNull(later.failureStage);
     }
 
     @Test public void stopDuringSocketCreationClosesLateSocketWithoutConnecting() throws Exception {
@@ -109,6 +109,7 @@ public class TvRemoteClientTest {
         await(() -> socket.handshakes.get() == 1);
         now.addAndGet(12000); await(() -> events.closed.get() == 1);
         assertTrue(socket.isClosed()); assertEquals(1, events.failed.get()); assertFalse(client.ready());
+        assertEquals(TvRemoteClient.Stage.CONTROL_TLS, events.failureStage);
     }
 
     @Test public void stopUnblocksReaderAndWriterIndependently() throws Exception {
@@ -118,7 +119,7 @@ public class TvRemoteClientTest {
         assertTrue(client.submit(TvCommand.HOME)); await(() -> socket.writeBlocked.get());
         client.stop(); await(() -> events.closed.get() == 1);
         assertTrue(socket.isClosed()); assertEquals(2, socket.messages().size());
-        assertEquals(0, events.failed.get());
+        assertEquals(0, events.failed.get()); assertNull(events.failureStage);
     }
 
     @Test public void writeWatchdogClosesWithoutWriterProgressAndCannotAffectAnotherOwner() throws Exception {
@@ -302,6 +303,7 @@ public class TvRemoteClientTest {
         TvRemoteClient client = client(io, events); client.beginPair("10.0.0.2");
         await(() -> events.closed.get() == 1);
         assertEquals(0, io.pairing.messages().size()); assertEquals(0, events.needCode.get());
+        assertEquals(TvRemoteClient.Stage.SESSION_VALIDATION, events.failureStage);
         assertEquals(1, events.failed.get()); assertNull(events.record);
     }
 
@@ -351,11 +353,53 @@ public class TvRemoteClientTest {
             await(() -> events.closed.get() == 1);
             assertTrue("Injected output failure occurred while input was open", control.outputFailed.get());
             assertEquals(1, events.failed.get());
+            assertEquals(TvRemoteClient.Stage.CONTROL_EXCHANGE, events.failureStage);
             assertEquals("Failed control exchange must not connect", 0, events.connected.get());
             assertEquals("Failed control exchange must not enroll", 0, events.enrolled.get());
             assertNull(events.record); assertFalse(client.ready());
             assertFalse(client.submit(TvCommand.HOME));
         }
+    }
+
+    @Test public void nativeFailuresIdentifyOnlyTheirClosedStage() throws Exception {
+        TvRemoteClient.Stage[] expected = {
+            TvRemoteClient.Stage.IDENTITY, TvRemoteClient.Stage.PAIRING_CONNECT,
+            TvRemoteClient.Stage.PAIRING_CONNECT, TvRemoteClient.Stage.PAIRING_TLS,
+            TvRemoteClient.Stage.CONTROL_CONNECT, TvRemoteClient.Stage.CONTROL_TLS
+        };
+        for (int mode = 0; mode < expected.length; mode++) {
+            Native io = new Native(); Events events = new Events();
+            FakeSocket socket = mode < 4 ? io.pair() : io.control();
+            io.identityFailure = mode == 0; io.pairingSocketFailure = mode == 1;
+            socket.failConnect = mode == 2 || mode == 4;
+            socket.failHandshake = mode == 3 || mode == 5;
+            TvRemoteClient client = client(io, events);
+            if (mode < 4) client.beginPair("10.0.0.2"); else client.connect(record());
+            await(() -> events.closed.get() == 1);
+            assertEquals(expected[mode], events.failureStage);
+            assertEquals(1, events.failed.get()); assertNull(events.record);
+            assertFalse(client.ready()); assertFalse(client.submit(TvCommand.HOME));
+            client.stop(); // Cleanup cannot turn a recorded failure into an explicit Stop.
+            assertEquals(expected[mode], events.failureStage);
+        }
+    }
+
+    @Test public void exchangeAndCodeFailuresRetainTheirFirstStage() throws Exception {
+        for (boolean invalidCode : new boolean[]{false, true}) {
+            Native io = new Native(); Events events = new Events(); FakeSocket pair = io.pair();
+            TvRemoteClient client = client(io, events); client.beginPair("10.0.0.2");
+            if (invalidCode) {
+                pair.pairingMessages(); await(client::needsCode); client.finishPair("invalid");
+            } else pair.feed(polo().setConfigurationAck(ConfigurationAck.getDefaultInstance()).build().toByteArray());
+            await(() -> events.closed.get() == 1);
+            assertEquals(invalidCode ? TvRemoteClient.Stage.CODE : TvRemoteClient.Stage.PAIRING_EXCHANGE, events.failureStage);
+            assertEquals(1, events.failed.get()); assertNull(events.record);
+        }
+        Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
+        TvRemoteClient client = client(io, events); client.connect(record()); socket.feed(new byte[]{1});
+        await(() -> events.closed.get() == 1);
+        assertEquals(TvRemoteClient.Stage.CONTROL_EXCHANGE, events.failureStage);
+        assertEquals(1, events.failed.get()); assertEquals(0, events.connected.get());
     }
 
     private static void drain(FakeSocket socket) throws Exception {
@@ -403,10 +447,11 @@ public class TvRemoteClientTest {
     private static final class Events implements TvRemoteClient.Listener {
         final AtomicInteger needCode=new AtomicInteger(), connected=new AtomicInteger(), enrolled=new AtomicInteger(), failed=new AtomicInteger(), closed=new AtomicInteger();
         volatile TvEnrollment.Record record;
+        volatile TvRemoteClient.Stage failureStage;
         public void needCode() { needCode.incrementAndGet(); }
         public void connected() { connected.incrementAndGet(); }
         public void enrolled(TvEnrollment.Record value) { enrolled.incrementAndGet(); record=value; }
-        public void failed() { failed.incrementAndGet(); }
+        public void failed(TvRemoteClient.Stage stage) { failureStage = stage; failed.incrementAndGet(); }
         public void closed() { closed.incrementAndGet(); }
     }
     private final class Native implements TvRemoteClient.NativeIo {
@@ -416,17 +461,21 @@ public class TvRemoteClientTest {
         FakeSocket pairing, control;
         volatile X509Certificate pin;
         volatile boolean pairClosedBeforeControl, controlFailure;
+        volatile boolean identityFailure, pairingSocketFailure;
         FakeSocket pair() { pairing=new FakeSocket(certificate,other); sockets.add(pairing); return pairing; }
         FakeSocket control() { control=new FakeSocket(certificate,pairing==null?certificate:pairing.peer); sockets.add(control); return control; }
         public KeyStore.PrivateKeyEntry identity(boolean fresh) throws Exception {
             identities.incrementAndGet(); if(identityGate!=null)identityGate.await();
+            if(identityFailure)throw new GeneralSecurityException("SENSITIVE_TEST_DETAIL");
             PrivateKey key=new PrivateKey() {
                 public String getAlgorithm(){return "RSA";} public String getFormat(){return null;} public byte[] getEncoded(){return null;}
             };
             return new KeyStore.PrivateKeyEntry(key,new Certificate[]{certificate});
         }
         public SSLSocket pairingSocket(KeyStore.PrivateKeyEntry identity) throws Exception {
-            created.incrementAndGet(); if(socketGate!=null)socketGate.await(); return pairing;
+            created.incrementAndGet(); if(socketGate!=null)socketGate.await();
+            if(pairingSocketFailure)throw new IOException("SENSITIVE_TEST_DETAIL");
+            return pairing;
         }
         public SSLSocket clientSocket(KeyStore.PrivateKeyEntry identity,X509Certificate peer) throws Exception {
             created.incrementAndGet(); pin=peer; pairClosedBeforeControl=pairing==null||pairing.isClosed();
@@ -442,7 +491,7 @@ public class TvRemoteClientTest {
         final AtomicInteger connects=new AtomicInteger(),handshakes=new AtomicInteger();
         final AtomicBoolean writeBlocked=new AtomicBoolean(), outputFailed=new AtomicBoolean();
         final AtomicInteger flushes=new AtomicInteger();
-        volatile boolean failWrite, failFlush;
+        volatile boolean failWrite, failFlush, failConnect, failHandshake;
         final ArrayDeque<Integer> input=new ArrayDeque<>();
         final ByteArrayOutputStream output=new ByteArrayOutputStream();
         volatile boolean closed,blockConnect,blockHandshake,blockWrites,eof;
@@ -452,9 +501,11 @@ public class TvRemoteClientTest {
         public synchronized void connect(SocketAddress address,int timeout)throws IOException{
             connects.incrementAndGet();port=((InetSocketAddress)address).getPort();
             while(blockConnect&&!closed)pause();if(closed)throw new SocketException();
+            if(failConnect)throw new ConnectException("SENSITIVE_TEST_DETAIL");
         }
         public synchronized void startHandshake()throws IOException{
             handshakes.incrementAndGet();while(blockHandshake&&!closed)pause();if(closed)throw new SocketException();
+            if(failHandshake)throw new SSLHandshakeException("SENSITIVE_TEST_DETAIL");
         }
         synchronized void pause()throws IOException{try{wait();}catch(InterruptedException e){throw new IOException(e);}}
         public synchronized void close(){closed=true;notifyAll();}

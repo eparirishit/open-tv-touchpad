@@ -3,7 +3,8 @@ import static dev.opentvtouchpad.hidprobe.NativeRunGate.Resource.TV;
 public class TvCallbacksHarness {
     static class SystemClock { static long elapsedRealtime() { return 0; } }
     static class TvRemoteClient {
-        interface Listener { void needCode(); void connected(); void enrolled(TvEnrollment.Record r); void failed(); void closed(); }
+        enum Stage { IDENTITY, PAIRING_CONNECT, PAIRING_TLS, SESSION_VALIDATION, PAIRING_EXCHANGE, CODE, CONTROL_CONNECT, CONTROL_TLS, CONTROL_EXCHANGE }
+        interface Listener { void needCode(); void connected(); void enrolled(TvEnrollment.Record r); void failed(Stage stage); void closed(); }
         final Listener listener;
         boolean ready = true;
         TvRemoteClient(java.util.function.LongSupplier time, long deadline, Listener listener) { this.listener = listener; }
@@ -23,7 +24,7 @@ public class TvCallbacksHarness {
     }
     static class Guard { long deadlineMillis() { return 300000; } }
     static class Session { boolean tvConnected(long generation) { return true; } }
-    static class Status { void setText(String text) {} }
+    static class Status { String text; void setText(String text) { this.text = text; } }
     final NativeRunGate gates = new NativeRunGate();
     final NativeRunGate.Run ownership = gates.start();
     final Handler handler = new Handler();
@@ -40,7 +41,7 @@ public class TvCallbacksHarness {
     void updateControls() {}
     void cleanupProgress() {}
     void connect(Object peer) { connects++; }
-    void stop(String message) { stopping = true; stops++; ownership.stop(); }
+    void stop(String message) { status.setText(message); stopping = true; stops++; ownership.stop(); }
 __CALLBACK_METHOD__
     static class Recreated {
         final NativeRunGate NATIVE_RUNS;
@@ -80,7 +81,7 @@ __FORGET_METHODS__
         int oldStops = success.stops;
         success.tv.listener.enrolled(new TvEnrollment.Record());
         success.tv.listener.connected();
-        success.tv.listener.failed();
+        success.tv.listener.failed(TvRemoteClient.Stage.PAIRING_TLS);
         success.tv.listener.closed();
         success.handler.drain();
         check(success.tvEnrollment.saves == 1 && success.stops == oldStops && next.active());
@@ -89,6 +90,20 @@ __FORGET_METHODS__
         failure.tv.listener.enrolled(new TvEnrollment.Record());
         failure.handler.drain();
         check(failure.stopping && failure.connects == 0);
+        for (TvRemoteClient.Stage stage : TvRemoteClient.Stage.values()) {
+            TvCallbacksHarness diagnostic = new TvCallbacksHarness();
+            diagnostic.tv.listener.failed(stage);
+            check(!diagnostic.stopping); // Failure reaches UI through the actual queued callback.
+            diagnostic.handler.drain();
+            check(diagnostic.stopping && diagnostic.stops == 1 && diagnostic.tvEnrollment.saves == 0);
+            check(diagnostic.status.text.equals("TV connection or pairing failed at " + stage.name()
+                + ". Both channels stopped."));
+            diagnostic.tv.listener.failed(TvRemoteClient.Stage.IDENTITY);
+            diagnostic.handler.drain();
+            check(diagnostic.stops == 1);
+            check(diagnostic.status.text.equals("TV connection or pairing failed at " + stage.name()
+                + ". Both channels stopped."));
+        }
         NativeRunGate retained = new NativeRunGate();
         NativeRunGate.Run oldActivity = retained.start();
         oldActivity.await(TV);

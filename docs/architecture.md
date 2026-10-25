@@ -11,8 +11,17 @@ identity preserve the Bluetooth record. Initial TV-code pairing is a separate
 no-input run; combined Connect enables input only after both channels are ready.
 No router reservation, Mac bridge or CA installation is needed for this direction.
 Native platform validation passes on the Nord; reviewed version0.9 integrates
-the two channels and is installed. Owner-observed combined TV behavior is pending;
+the two channels and is installed. First owner TV pairing failed at an unknown
+stage; combined TV behavior remains unverified. No trust-policy change is justified;
 no N3 acceptance PASS yet. See [N3 evidence](gates/n3-report.md).
+Installed0.10 retains this flow and adds only a closed failure-stage enum captured
+atomically with the first terminal failure, then shown by the existing guarded
+UI callback. Later cleanup cannot replace that stage or expose exception data.
+Native and independent Mac evidence now identify the explicit peer self-signature
+check as the TLS blocker. The [proposed leaf trust-anchor decision](superpowers/specs/2026-10-25-tv-trust-anchor-compatibility.md)
+awaits owner approval; neither certificate policy nor pairing authentication has
+been changed. TLS-only diagnostic instrumentation is explicit opt-in, sends no
+pairing/control frames and does not mutate runtime identity or enrollment.
 The older hub/projector architectures and gate evidence below remain historical
 or deferred, and do not authorize an insecure runtime fallback.
 

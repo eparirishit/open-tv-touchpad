@@ -38,8 +38,11 @@ design must be approved before an item moves into an active milestone.
   transport foundation. Nord12 native TLS checks pass; final combined suite164unit/17emulator passes.
 - [x] N3b: bounded transport, combined lifecycle/admission and TV controls UI;
   reviewed version0.9 installed with enrollment preserved.
-- [ ] N3c: combined owner hardware acceptance. First TV pairing requested;
-  [all hardware checks remain pending](docs/gates/n3-report.md).
+- [ ] N3c: diagnose first owner TV pairing failure, then combined hardware
+  acceptance; [remaining checks are not run](docs/gates/n3-report.md).
+  Reviewed0.10 diagnostics identify peer self-signature rejection; the
+  [trust-anchor decision](docs/superpowers/specs/2026-10-25-tv-trust-anchor-compatibility.md)
+  is pending. No trust-policy fix has been applied.
   Existing Mac Python implementation is reference, not Android runtime code.
 - [ ] N4: review daily-use lifecycle and packaging after combined functionality.
 - [ ] Before broader distribution, verify screen-reader/font-scale/layout behavior;
