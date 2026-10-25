@@ -15,10 +15,27 @@ same required features and ordered RemoteStart readiness. It exposes no power
 input and does not treat a negotiation timeout as success.
 No router reservation, Mac bridge or CA installation is needed for this direction.
 Installed0.12 passes owner pairing and the combined-control smoke, including
-Stop and continued physical-remote use. Saved reconnect after app Force stop/reopen
+Stop and continued physical-remote use. Owner checks also confirm at least20
+seconds of post-Netflix-launch connectivity with both channels usable, and
+Play/Pause changing playback through pause/resume/pause. Profile selection by
+Nord pointer/tap and all four scroll directions pass on0.12 without unintended
+title opening or pointer movement. Owner layout checks confirm Remote/Setup
+controls and status are readable/reachable in both orientations at normal and
+largest configured font size. The live Nord keyboard layout passes in both
+orientations at the usual font size with the address field focused while stopped;
+fields, Confirm, status, Stop and Close remain readable/reachable. No enrollment
+change or fresh pairing followed from this layout-only check.
+Saved reconnect after app Force stop/reopen
 also passes, with explicit Start/Connect still required. Foreground loss/return
 and explicit five-minute expiry disable all app input by owner observation; the
-physical remote remains usable. Deliberate link-failure acceptance is pending; no overall N3 PASS is claimed.
+physical remote remains usable. Owner-observed projector Wi-Fi loss stops both
+channels and restoration does not resume input while the Nord app stays visible.
+The Bluetooth-loss trial reached the reported stopped state with cleanup
+unconfirmed; the documented process latch requires Force stop/reopen. Owner
+checks confirm input rejection, physical-remote use and recovery without
+re-pairing, with explicit Start/Connect required. The exact cleanup failure
+is not established. Controlled Bluetooth-loss acceptance remains partial;
+no overall N3 PASS is claimed.
 See [N3 evidence](gates/n3-report.md). Version0.10 added a closed failure-stage enum captured
 atomically with the first terminal failure, then shown by the existing guarded
 UI callback. Later cleanup cannot replace that stage or expose exception data.

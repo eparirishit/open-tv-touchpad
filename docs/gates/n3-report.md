@@ -15,8 +15,22 @@ behavior on the same recorded artifact, not an automated input test.
 The owner also confirmed foreground loss/return keeps all app input disabled,
 and explicit five-minute expiry stops all app controls; the physical remote
 remains usable in both checks on the same0.12 artifact.
-Play/pause, timed post-launch stability and link-failure
-acceptance remain pending; no overall N3 PASS is claimed.
+Projector Wi-Fi loss also passes the owner check on0.12: with the Nord app
+visible, both channels stopped within the requested45-second window and remained
+stopped for the20-second observation after Wi-Fi restoration. The physical
+remote remained usable. Exact stop latency and status text were not recorded.
+The owner then verified Home → Netflix followed by at least20 seconds with
+both channels usable: pointer opening of title details and the app Back button
+worked. Play/Pause visibly paused, resumed and paused owner-chosen playback,
+followed by Stop. The owner also verified pointer/tap selection of their usual
+Netflix profile and Scroll down/up/right/left with no unintended title opening
+or pointer movement, then Stop. Remote/Setup layout also passes owner checks
+in portrait/landscape at normal and largest configured font size: status and
+all controls, including Stop/Close, remain readable and reachable by scrolling.
+Live Nord keyboard layout also passes at the usual font size in both
+orientations, with Setup fields/status and Stop/Close reachable by scrolling.
+Remaining Bluetooth-loss acceptance is open.
+No overall N3 PASS is claimed.
 
 The preceding owner retry on0.11 failed at CONTROL_EXCHANGE, after the code/secret
 acknowledgment and pinned control TLS. The owner reports10–15 seconds between
@@ -224,17 +238,45 @@ the proposed amendment; positive/negative platform fixtures remain required.
 - Saved reconnect after full app Force stop/reopen without re-pairing: owner PASS.
   Input stayed disabled until explicit Start/Connect; Home, pointer and scroll
   worked, then Stop. No projector reboot or held-input crash test was performed.
-- Home/D-pad/OK, Back and volume: owner smoke PASS. Play/pause remains NOT RUN.
-- Netflix launch: owner smoke PASS. Explicit20-second stability remains NOT RUN.
-- Pointer movement, title click and scrolling: owner smoke PASS. Profile selection
-  and separate checks of both scroll axes on0.12 remain NOT RUN.
+- Home/D-pad/OK, Back and volume: owner smoke PASS. Play/Pause: owner PASS
+  for pause → resume → pause on owner-chosen playback, followed by Stop.
+- Netflix launch and at least20-second post-launch stability: owner PASS;
+  both channels remained usable, verified with pointer title selection and Back.
+- Pointer movement and title click: owner smoke PASS. Profile selection by
+  Nord pointer/tap: owner PASS on0.12. Scroll down/up/right/left: owner PASS
+  on0.12, with no unintended title opening or pointer movement, then Stop.
 - Stop blocks app control and physical remote works: owner smoke PASS.
 - Foreground loss/return with both channels: owner PASS; all app controls remain
   disabled after return and the physical remote still works.
 - Five-minute expiry: owner PASS after the explicit expired status; all app
   controls stop and the physical remote still works.
-- Deliberate Wi-Fi loss and Bluetooth loss each stop both: NOT RUN on0.12.
-- Portrait/landscape, enlarged text and pairing keyboard: remaining layout acceptance NOT RUN on0.12.
+- Projector Wi-Fi loss/restoration with Nord foreground: owner PASS on0.12;
+  both channels stop, remain stopped after restoration, and the physical remote
+  works. This tests projector-side link loss, not Nord adapter shutdown.
+- Bluetooth-loss trial: PARTIAL on0.12. Owner reported "TV: paired, disconnected",
+  "Mouse: disconnected", "Bluetooth turned off. No input enabled" and the
+  native-teardown-unconfirmed/force-stop recovery instruction. This establishes
+  the reported adapter-loss stop state, not successful native cleanup or a
+  directly verified OFF state. The receiver uses that message for any non-ON
+  adapter state. The debugging disable/restore commands returned errors;
+  subsequent independent reads confirmed Bluetooth ON and the probe service absent.
+  The bounded trace read returned no events, so the failed/pending cleanup resource
+  is not identified. Owner follow-up confirms actual rejection of TV/pad/scroll
+  input and continued physical-remote operation. Android Force stop/reopen preserved both pairings,
+  kept input disabled until Start/Connect, and restored Home/pointer/scroll
+  without another code, followed by Stop. Input blocking and documented recovery
+  pass by owner observation; native cleanup and directly observed OFF timing
+  remain unconfirmed. No full controlled Bluetooth-loss PASS.
+- Remote/Setup portrait/landscape at normal and largest configured font size:
+  owner PASS on0.12; all controls/status readable and reachable, including
+  Stop/Close. Numeric font scale was not measured.
+- Live Nord keyboard layout: owner PASS on0.12 at the usual font size in both
+  orientations. While stopped, focusing the saved TV-address field opened the
+  keyboard; address/code fields, Confirm, status, Stop and Close remained
+  readable/reachable by scrolling. Keyboard dismissed; address and pairings
+  unchanged. This was a layout-only check with pairing controls disabled, not
+  a new pairing or enlarged-font live code-entry test. Existing native tests
+  separately simulate IME insets in both orientations at fontScale1.5.
 
 Hardware address change remains NOT RUN unless observed. No write/send callback
 proves a projector action. The five-minute foreground diagnostic limit remains;
@@ -263,3 +305,19 @@ Native TLS1.3 negotiation and live child-certificate handshakes remain unproven;
 TLS1.2 mutual authentication and native child-policy rejection are proven.
 
 Final emulator output SHA256: `d2da8a45cf4aa424a7f34a6d5f3cf4aeeda07a1b652a979c0eacd58b8adfcf23`.
+
+## Bluetooth-loss recovery observation — 2026-10-25
+
+The current diagnostic explicitly requires unregister acknowledgment, no remaining
+link, profile closure and service destruction before admitting another run. A
+failed native operation latches the process unavailable even if later completion
+callbacks arrive; unresolved teardown displays the recovery instruction after
+five seconds. The observed message is consistent with this documented safeguard
+(README lifecycle section and NativeRunGate), not evidence that it is safe to
+clear the latch. The exact native failure is not established by the available
+trace. Owner follow-up confirms disabled TV/pad/scroll controls, a usable physical
+remote and successful documented Force stop/reopen recovery with both pairings
+retained. Input stayed disabled until explicit Start/Connect; Home, pointer and
+one scroll step worked without a pairing code, then the owner pressed Stop.
+This does not establish automatic native cleanup. No product code or safety
+policy was changed.

@@ -51,7 +51,23 @@ design must be approved before an item moves into an active milestone.
   Full app Force stop/reopen and explicit saved reconnect now pass without
   re-pairing; input waits for Start/Connect. Foreground loss/return and explicit
   five-minute expiry now pass, with all app input disabled and the physical remote
-  usable. Deliberate link-loss and other remaining N3c checks stay open.
+  usable. Projector Wi-Fi loss/restoration now passes with the Nord foreground:
+  both channels stop and remain stopped, and the physical remote works.
+  Bluetooth-loss remains partial: the owner reports both channels disconnected
+  and input disabled, but cleanup is unconfirmed. Owner verified input rejection,
+  physical-remote use and Force stop/reopen recovery without re-pairing; input
+  still requires explicit Start/Connect. Identify missing native cleanup evidence
+  before considering a change to the safety latch. Other N3c checks stay open.
+  Owner verified at least20-second Netflix post-launch stability with both
+  channels usable (pointer title selection and Back), plus Play/Pause changing
+  playback through pause/resume/pause, followed by Stop. Profile selection by
+  Nord pointer/tap and all four scroll directions pass without unintended title
+  opening or pointer movement. Remote/Setup layout passes in both orientations
+  at normal/largest configured font size with readable/reachable controls/status.
+  Live Nord keyboard layout passes in both orientations at the usual font size
+  while stopped with the address field focused; fields, Confirm, status, Stop
+  and Close stay readable/reachable. Pairings/address are unchanged. This is
+  separate from simulated IME tests and does not repeat live pairing-code entry.
   Existing Mac Python implementation is reference, not Android runtime code.
 - [ ] N4: review daily-use lifecycle and packaging after combined functionality.
 - [ ] Before broader distribution, verify screen-reader/font-scale/layout behavior;
