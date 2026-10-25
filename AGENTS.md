@@ -32,6 +32,21 @@ Android app. All shared validation, review, secrecy and documentation rules appl
 
 ## Project Contract
 
+### Isolated Nord HID diagnostic (2026-10-24)
+
+The owner's “sure, continue” authorizes the proposed small phone diagnostic app
+for registration, authenticated-pairing feasibility and manual mouse/Stop checks.
+`experiments/hid_probe/README.md` bounds this disposable spike with foreground-only
+input. Its setup may use a non-exported, non-restarting native foreground service
+with a Stop notification and five-minute deadline to survive system pairing UI.
+It must not admit comparison confirmation or mouse input while the Activity is
+paused; after confirmation, a pause ends the test. This diagnostic lifecycle fix
+does not authorize a background-control bridge.
+It has a separate application ID, no network permission, no production adapter,
+and only an explicitly enabled debug build. It may be installed on the verified
+Nord for these checks. Normal Android builds exclude it. H1A/H1B requirements
+and the product integration block remain unchanged; no probe result alone is PASS.
+
 - Build the smallest complete implementation of the approved Open TV Touchpad V1 specification and plans.
 - Treat `docs/superpowers/specs/` as the product and security contract, `docs/superpowers/plans/` as the implementation order, and accepted files in `docs/adr/` as dependency and architecture decisions.
 - M0 and M1 are hard stop gates. Do not start M1 without a verified M0 PASS report, and do not start product work without a verified M1 PASS report and accepted dependency ADRs.

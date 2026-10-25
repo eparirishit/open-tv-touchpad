@@ -104,10 +104,188 @@ identifies the spare Android phone's Bluetooth HID Device API as the next narrow
 candidate. It requires actual profile availability, authenticated pairing and
 input/lifecycle checks; no gate PASS follows from API availability. A projector
 companion still lacks a demonstrated protected shell bootstrap/restart path.
-The owner's spare-phone model and Android version are pending. Browser-only
-implementation remains valid and continues independently.
+The owner reports a OnePlus Nord running Android12. Subsequent authorized
+read-only diagnostics connected to the phone and verified the prerequisites
+below. Browser-only implementation remains valid; no companion is installed.
+
+## Nord live configuration check (2026-10-24)
+
+Repository baseline: `5b3453c352c1a8e90b4c61af7697618d331b08bc`.
+No probe APK or input implementation was used for this configuration check.
+
+| Read-only observation | Result |
+| --- | --- |
+| Manufacturer / model | OnePlus / AC2001 |
+| Android / API | 12 / 31 |
+| Build / security patch | AC2001_11_F.24 / 2023-12-05 |
+| Bluetooth and BLE features | Present |
+| `profile_supported_hid_device` resource | `true` |
+| Bluetooth package declares `HidDeviceService` | Yes |
+| Bluetooth disabled, initial runtime HID service | Absent |
+| After owner enabled Bluetooth | Bluetooth setting `1`; `HidDeviceService` present in Bluetooth manager dump |
+
+Wireless-debugging pairing completed using a local masked prompt. Direct
+connection attempts failed; a discovered ADB transport subsequently connected.
+Queries selected the unique connected AC2001 and checked its manufacturer.
+Device endpoints, identifiers and raw Bluetooth dumps are excluded from this
+report. Discovery/model selection is diagnostic targeting, not cryptographic
+peer authentication or approval of ADB as a product transport.
+
+This establishes firmware profile enablement and runtime service availability.
+It does not establish an app's successful HID registration callback, projector
+pairing security, HID input, reconnect behavior or background lifetime. Those
+require an isolated foreground HID probe and actual pairing/input evidence.
+No app was installed, projector pairing initiated, or input injected. The owner
+enabled debugging and Bluetooth; the diagnostics did not change settings.
+H1A remains **NOT PASSED**.
+
+## Isolated HID probe prepared and installed (2026-10-24)
+
+The owner approved continuing the proposed small foreground diagnostic app.
+The bounded design and manual procedure are in
+[`experiments/hid_probe/README.md`](../../experiments/hid_probe/README.md).
+This changes the earlier research-only authorization; it does not authorize
+a production companion or change protected-transport acceptance criteria.
+
+- Source commit: `954d66654621f4b05cc7659adb9e281a9d96bd97`.
+- APK SHA-256: `5cc4d8c52d64922f0f38e6fa7472a820a9f1712a288b3e993687248459279847`.
+- Package / version: `dev.opentvtouchpad.hidprobe` / `0.1-diagnostic` (1).
+- Local verification: 21 unit tests passed, debug assembly passed, Android lint
+  passed with no errors and 12 warnings about English-only diagnostic text and
+  the existing SDK36 toolchain. Normal Gradle project enumeration excludes
+  the module; its opt-in build disables release variants.
+- Packaged manifest inspection found only Bluetooth CONNECT and ADVERTISE
+  permissions; no INTERNET permission. No runtime dependency was added.
+- Independent review found a disconnect-before-first-success lifecycle gap.
+  Fixed by forwarding every disconnect to the eligibility gate: any selected
+  disconnect after comparison confirmation stops even a pending attempt.
+  Deliberately rejected preconfirmation automatic connections never enable
+  input and do not discard pending pairing observations. Regression tests cover
+  both paths. Follow-up review found no remaining actionable issues.
+- Installation and Activity launch on the uniquely selected, manufacturer-checked
+  Nord were confirmed. No permission was granted through ADB, no pairing was
+  initiated and no input was injected. The app waits for the user to Start.
+
+The user subsequently reported **“HID registered”** after granting Nearby devices
+and starting the probe. That UI status is set only by
+`onAppStatusChanged(..., true)`: actual app registration is confirmed by user
+observation for the source/APK above. It is not merely the registerApp return value.
+The next manual check is discoverability and matching Numeric Comparison digits
+on both the Nord and intended XGIMI. No pairing digits are requested or recorded.
+
+The user then reported completing pairing and, when asked whether both screens
+showed matching numbers compared before acceptance, replied: “yes, both were
+showing the same number and the tv shows OnePlus Nord connected”. This records
+the human matching-number ceremony and TV connection indication. It does not
+establish the probe's own post-confirmation HID connection, negotiated encryption
+properties or reconnect enforcement. No pairing digits were collected.
+
+The user has been asked to confirm the comparison in the probe, wait for
+“Mouse connected,” then try three manual Move right steps without clicking.
+That attempt was blocked: the user reported the disabled/different-status option,
+then the exact message “App left foreground. Stopped. Close and reopen for another
+test”. This message identifies the probe's `onStop` cleanup path; registration and
+in-memory pairing eligibility are cleared there. The user could not identify
+whether discovery, pairing UI, or another foreground transition triggered it.
+Filtered device lifecycle-log inspection returned no matching retained records;
+it did not establish a specific triggering system Activity. A discovery-only
+reproduction is next, preserving the existing bond and sending no input.
+The discovery-only reproduction then completed: after reopening only the probe
+(bond retained), the user started HID, approved Make visible, returned without
+pairing/app switching, and reported “HID registered — still active”. Thus this
+trial does not support discoverability as the stop trigger. Fresh pairing without
+manual phone app switching is the next isolation step; the prior bond cannot
+authorize input in a new probe session. Source review also notes that a later
+`onStop` can overwrite an earlier failure message, so the original callback order
+is unresolved. No lifecycle bypass or service was added.
+In the subsequent fresh-pairing trial, the user reported that selecting Pair on
+the TV immediately produced the same stopped message while both screens showed
+matching numbers. This localizes the failure to the pairing phase rather than
+the previously successful discovery-only step. The exact callback order before
+the final status remains unknown because the original UI could overwrite an
+earlier reason on `onStop`.
+
+The scoped diagnostic fix uses a non-exported, non-restarting `connectedDevice`
+foreground service with a visible Stop notification and five-minute elapsed
+deadline. This preserves native HID foreground eligibility during setup screens;
+input and confirmation still require a resumed Activity. After confirmation,
+any pause stops the session, including a pending connection. Activity destruction,
+Stop, registration loss, service loss and expiry also terminate it. The first
+terminal status is now retained. No background input or runtime network bridge
+is added. Local build/lint and 28 unit tests pass; lint has zero errors and 13
+English-text/SDK-version warnings. Independent review of the entire revised
+probe, including service and connected callers, found no actionable findings.
+
+Revised artifact installed and launched on the manufacturer-verified Nord:
+
+- Source: `93da0d08a39ddec450a3382e997534ae820b7a4b`.
+- Version: `0.2-diagnostic` (2).
+- APK SHA-256: `c75a1e61875fc3af0de0d60087efafa4d8585ab5b8968c03931ab3a2df251d6b`.
+- Packaged permissions: CONNECT, ADVERTISE, FOREGROUND_SERVICE and
+  FOREGROUND_SERVICE_CONNECTED_DEVICE; no INTERNET permission.
+- Only the probe was stopped/updated/reopened. No bond was altered or input sent.
+
+The user has been asked to remove only the test bond on both devices, then repeat
+fresh matching-number pairing, explicit probe confirmation and three manual
+rightward steps within the five-minute window. The user reported **“Pairing stays
+active; pointer moves”** for the revised artifact above. This confirms survival
+of the pairing-screen transition and actual Bluetooth pointer movement by user
+observation. It does not establish a Netflix click, encryption properties or
+reconnect/crash cleanup. No ADB input was used for this check.
+The subsequent manual Netflix/Stop check also passed by user observation:
+**“Click opens the target; Stop disables controls; physical remote works”.**
+The requested target was a Netflix profile avatar or title tile, avoiding Play;
+the user's answer does not distinguish which target was used. Record only that
+the intended target opened. After explicit Stop, probe controls were disabled
+and the physical remote remained usable.
+
+**Basic HID compatibility probe: PASS, scoped to this Nord/XGIMI and artifact.**
+Observed: actual HID registration, matching-number ceremony, survival of pairing
+UI, pointer movement, Netflix target click, and manual Stop/control disablement
+with continued physical-remote operation. The test is now stopped per user report.
+It did not measure native disconnect completion, held-button release on process
+death, arbitrary background lifetime, scrolling/drag, or negotiated-link security.
+H1A remains **NOT PASSED**; the Mac-to-phone secure command hop is also unbuilt.
 
 ## Remaining proof
+
+Follow-up source review traced Android12 AOSP HID authentication/encryption flags
+through L2CAP into the security manager. This supports native platform enforcement
+as a candidate trust basis; it does not establish the Nord's negotiated security
+or exact firmware correspondence. Modern encryption-status APIs are unavailable
+on API31. Details and primary sources are in the
+[enforcement trace](../research/2026-10-24-protected-wireless-options.md#android-12-enforcement-trace-and-remaining-verification-2026-10-24).
+
+One further live negative test passed: after reopening the probe with the old
+bond intact and starting registration without new pairing, the user reported
+“Controls disabled; no TV Connect option”. Startup did not authorize input from
+the retained bond. A TV-initiated reconnect attempt was unavailable in that UI
+and was not exercised. This is not a successful reconnect test or full H1A PASS.
+
+Foreground-loss check on the same 0.2-diagnostic artifact: **PASS by user
+observation**. The user established a fresh confirmed connection and verified
+pointer movement, then left the probe and returned without pressing Stop. All
+controls except STOP / Disconnect and Close probe were disabled. The exact status
+was “App left foreground after confirmation. Stopped. Close and reopen.” The
+user also confirmed “Physical TV remote still works”. Returning did not restore
+input eligibility. This tests Activity foreground loss and return, not process
+death, radio loss, native disconnect completion or held-button release.
+
+Controlled adapter-loss trial, same 0.2-diagnostic artifact: the user reported
+“Mouse connected; pointer moves; ready” after fresh pairing. Read-only checks
+selected the unique Nord, verified OnePlus manufacturer, adapter ON and resumed
+probe Activity. The supported `svc bluetooth disable` command was issued on the
+Nord; `dumpsys bluetooth_manager` confirmed OFF. After one second, a `finally`
+cleanup issued `svc bluetooth enable` and confirmed ON. Commands completed
+successfully. No input injection or bond change was issued, and no phone settings
+screen was opened. This is a controlled local adapter shutdown/restoration, not
+an out-of-range peer disconnect, process crash or held-button test.
+The user confirmed **“Stopped; movement/Click disabled; physical remote works”**
+after restoration without restarting the probe. **Controlled adapter-loss and
+restoration: PASS**, combining observed OFF/ON states with that user report.
+Restoration did not silently resume input. The exact terminal status string was
+not supplied, so no specific callback ordering is inferred. This does not prove
+successful reconnect, peer-only link loss, process-crash or held-button cleanup.
 
 - Supported onboarding and enforced encryption on every reconnect.
 - Rejection of an unexpected projector and plaintext downgrade.
@@ -115,6 +293,6 @@ implementation remains valid and continues independently.
   capability are confirmed. USB is physical protection, not a TLS claim.
 - Device-side cleanup after link loss/crash before real input integration.
 
-Only this report was updated in the narrow follow-up. No settings, firmware,
-helper app, ADB daemon or user trust was changed; no device probes were performed.
+The earlier source-review follow-up performed no device probes. The later Nord
+configuration check above adds live diagnostics, not a protected-link PASS.
 No phone-browser HTTPS result can satisfy this separate gate.

@@ -31,6 +31,20 @@ M1 remains blocked until a complete M0 report verifies as `PASS`.
 - [x] Resolve D1: protected projector transport or explicit trusted-LAN beta exception.
 - [x] Accept the new hub contract and record H1A policy: protected link required.
 - [ ] Prove H1A protected wireless transport; USB is currently unavailable to owner.
+- [x] Isolated Nord Bluetooth HID compatibility probe: actual registration,
+  matching-number pairing, pointer movement, Netflix click and manual Stop with
+  physical-remote usability passed by user observation on `93da0d0`. This is not H1A PASS.
+- [x] Probe negative lifecycle checks: retained bond alone leaves controls disabled
+  on restart; leaving a confirmed session and returning does not resume input and
+  preserves physical-remote use. TV-side reconnect was unavailable, not tested.
+- [x] Controlled Nord adapter OFF/ON trial: verified radio restoration did not
+  re-enable probe input; physical remote remained usable. This does not certify
+  successful reconnect, peer-only link loss or held-input crash cleanup.
+- [ ] Verify Bluetooth encryption/enrolled-peer authentication and reconnect,
+  link-loss/crash cleanup; current probe does not certify these properties.
+- [ ] Separately design/review the authenticated Mac-to-Nord transport and native
+  companion lifecycle before any production bridge implementation. No legacy
+  plaintext ADB fallback or background-input authorization follows from the probe.
 - [x] Implement/review browser-only H1B code: native identity, enrollment,
   sessions, bounded HTTPS/WSS, control lease and installed PWA;103Python/36Node tests.
 - [ ] H1B: verify actual Keychain and phone/laptop certificate trust, installed-PWA

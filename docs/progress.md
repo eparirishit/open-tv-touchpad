@@ -1,5 +1,57 @@
 # Project Progress
 
+## Spare-phone transport investigation (2026-10-24)
+
+Live read-only diagnostics confirmed the Nord AC2001 runs Android12/API31,
+enables the Bluetooth HID Device profile, and starts `HidDeviceService` after
+the owner enables Bluetooth. This clears the firmware configuration prerequisite
+for an isolated foreground mouse probe. Crash/link-loss cleanup and negotiated-link
+security remain unverified. The subsequently approved
+foreground diagnostic APK (`954d666`) was built, independently reviewed and
+installed/launched on the Nord. Its 21 unit tests and Android build/lint pass;
+the user confirmed “HID registered,” establishing the actual registration callback.
+The user also confirmed matching numbers on both pairing screens and the TV's
+“OnePlus Nord connected” indication. The input attempt was blocked by the probe's
+“App left foreground. Stopped” state. A discovery-only retest stayed HID registered;
+fresh pairing reproduced the stop immediately after Pair on the TV. A bounded
+native foreground service now preserves eligibility through setup prompts while
+the session gate continues to reject background confirmation/input. Any pause
+after confirmation ends the test. Local build/lint and 28 tests pass, and review
+found no actionable findings. Revised APK `93da0d0` (0.2-diagnostic) is installed
+and launched on the Nord. The user confirmed “Pairing stays active; pointer moves”:
+the revised pairing lifecycle and Bluetooth pointer movement passed this live
+retest. The user then confirmed “Click opens the target; Stop disables controls;
+physical remote works”. Basic HID compatibility is PASS for this artifact/setup:
+Netflix click activation and manual Stop/control disablement are observed. No
+native disconnect-completion, held-button crash-release or transport-security
+claim follows. The probe is stopped per user report.
+This is a separate debug app
+with no network permission, not an implemented bridge.
+H1A remains NOT PASSED and real device integration remains blocked. Evidence:
+[H1A report](gates/h1a-report.md#nord-live-configuration-check-2026-10-24).
+
+Follow-up: reopening with the retained bond kept comparison/input disabled by
+user observation; TV-side Connect was unavailable, so incoming reconnect was
+not exercised. Read-only Android12 AOSP review supports HID authentication and
+encryption enforcement in the platform. Exact vendor link security and successful
+enrolled-peer reconnect remain unverified; API31 lacks the newer encryption-status
+APIs. No product code changed. Lifecycle/fault-test boundaries are recorded in
+the [research report](research/2026-10-24-protected-wireless-options.md#android-12-enforcement-trace-and-remaining-verification-2026-10-24).
+
+Foreground-loss retest also passed by user observation on 0.2-diagnostic:
+leaving a confirmed, working session and returning showed “App left foreground
+after confirmation. Stopped. Close and reopen.” Only Stop and Close remained
+enabled; the physical TV remote still worked. Input did not resume on return.
+This does not certify process-crash, radio-loss or held-button cleanup.
+
+Subsequent controlled adapter-loss/restoration check: PASS on 0.2-diagnostic.
+With the confirmed probe foreground, Nord Bluetooth was disabled and restored
+through its supported shell command; OFF then ON were verified. The user
+confirmed stopped status, movement/Click disabled and physical-remote usability
+after restoration. No input was injected or bond changed. This covers local
+adapter shutdown/restoration, not out-of-range loss, successful reconnect,
+process death or held-button release.
+
 ## Browser-only hub implementation (2026-10-24)
 
 The accepted local-only design now has certificate identity, native approval,

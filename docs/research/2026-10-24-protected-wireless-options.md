@@ -26,3 +26,113 @@ Bluetooth security is a separate hop from Mac–phone TLS. AOSP configures HID a
 **One next feasibility check:** in a separately authorized, isolated hardware probe, keep a minimal HID test app visible on the spare Android phone, establish that HID Device registration succeeds, and pair it to the projector while recording the actual pairing method. Send one mouse move/click and one keyboard press/release to the sideloaded Netflix UI, without using ADB input. Stop if the profile is unavailable, pairing is unauthenticated, or input fails. This checks the largest unknown before building a Mac command bridge. Even success would establish only basic compatibility/pairing evidence; encryption evidence, background lifetime, safe release, and the Mac–phone authenticated transport would remain necessary before H1A PASS.
 
 No hardware or security gate was tested. Accessibility gesture injection was not revisited; no new architecture was implemented.
+
+## Reported phone and bounded next check
+
+The owner reports OnePlus Nord, Android12 (2026-10-24). Android12 exceeds the
+API28 minimum for BluetoothHidDevice and uses the Nearby devices permissions
+for a modern-target companion. This establishes OS eligibility, not that the
+Nord firmware enables the profile. The original Nord's official specifications
+list Bluetooth5.1, which by itself does not establish HID Device support.
+Sources: [Android HID API](https://developer.android.com/reference/android/bluetooth/BluetoothHidDevice),
+[original Nord specifications](https://www.oneplus.com/uk/nord-specs).
+
+The proposed first test remains an isolated foreground HID probe: register the
+phone as a mouse, verify the projector pairing ceremony, then demonstrate pointer
+movement, a click and Stop/disconnect with the physical remote still usable.
+No Mac-to-phone bridge, background-service reliability claim, root, USB or
+projector accessibility injection belongs in this first test. A passing test
+would justify the next design; it would not certify the entire protected link.
+No probe APK was built or installed by this information check.
+
+## Live diagnostic follow-up (2026-10-24)
+
+Authorized ADB diagnostics subsequently confirmed OnePlus AC2001, Android12/API31,
+build AC2001_11_F.24, security patch 2023-12-05. Bluetooth/BLE features are present,
+the HID Device profile resource is enabled, and the Bluetooth package declares
+`HidDeviceService`. After the owner enabled Bluetooth, the service appeared in
+the runtime Bluetooth manager dump. The earlier statements about no device
+access describe the research phase, not this follow-up.
+
+The firmware prerequisite is now verified. App registration, authenticated
+projector pairing and actual mouse input remain untested. No probe app was
+installed, no projector pairing was initiated, and no input was sent. See the
+[H1A evidence report](../gates/h1a-report.md#nord-live-configuration-check-2026-10-24)
+for methods and limits. This does not authorize or establish a production bridge.
+
+The owner subsequently approved the isolated probe. Source `954d666` builds a
+separate debug-only native foreground app with no network permission. Build,
+21 unit tests and lint passed; an independent review and disconnect-fix review
+completed. Installation and launch on the Nord are confirmed. The user then
+reported “HID registered,” confirming the actual registration callback. Manual
+pairing/input results remain pending. See the
+[probe procedure](../../experiments/hid_probe/README.md) and
+[H1A report](../gates/h1a-report.md#isolated-hid-probe-prepared-and-installed-2026-10-24).
+This is feasibility work, not acceptance of a production companion architecture.
+
+The actual setup trial localized an Activity foreground-loss stop to fresh
+pairing; the separate discovery-only trial remained registered. The diagnostic
+now uses a bounded native connectedDevice foreground service so setup prompts
+can cover the Activity, while explicit comparison and all input still require
+the resumed screen. Any pause after comparison stops the test. This replaces
+the probe's original no-service assumption; it does not establish background
+input, negotiated encryption or production bridge feasibility. Revised hardware
+verification remains required. Source `93da0d0` passed 28 unit tests, Android
+build/lint and independent review; version 0.2-diagnostic is installed and
+launched on the Nord. No service/pairing/input hardware success is inferred from
+installation. In the subsequent live retest, the user confirmed “Pairing stays
+active; pointer moves”, establishing pairing-screen survival and actual Bluetooth
+pointer movement on this setup. The user subsequently confirmed “Click opens
+the target; Stop disables controls; physical remote works”. Basic HID
+compatibility is established for the tested artifact/setup. Native disconnect
+completion, held-button crash release, security and reconnect behavior remain
+unverified; this narrow result does not establish H1A PASS or a production bridge.
+
+## Android 12 enforcement trace and remaining verification (2026-10-24)
+
+Read-only source audit against AOSP tag `android-12.0.0_r1`; this is not an audit
+of the exact OnePlus firmware binary. Public sources were retrieved with normal
+TLS verification; no Bluetooth packet capture, bond key extraction or device
+setting change was performed.
+
+- [HID connection implementation](https://android.googlesource.com/platform/system/bt/+/refs/tags/android-12.0.0_r1/stack/hid/hidd_conn.cc):
+  both control and interrupt registration, and outbound connection requests,
+  supply `BTA_SEC_AUTHENTICATE | BTA_SEC_ENCRYPT`.
+- [Flag definitions](https://android.googlesource.com/platform/system/bt/+/refs/tags/android-12.0.0_r1/bta/include/bta_api.h)
+  cover incoming and outgoing authentication/encryption. [L2CAP wrappers](https://android.googlesource.com/platform/system/bt/+/refs/tags/android-12.0.0_r1/stack/l2cap/l2c_api.cc)
+  apply that security policy before connection processing.
+- [Security manager](https://android.googlesource.com/platform/system/bt/+/refs/tags/android-12.0.0_r1/stack/btm/btm_sec.cc)
+  adds MITM requirements in SP/SC modes and starts authentication/encryption
+  procedures when required state is absent. These flags are platform enforcement
+  evidence, not a measured cipher/key-strength result or proof of this vendor's
+  every-reconnect behavior. They do not establish Secure Connections Only mode.
+- The documented [encryption-change broadcast](https://developer.android.com/reference/android/bluetooth/BluetoothDevice#ACTION_ENCRYPTION_CHANGE)
+  was added in API36; [getEncryptionStatus](https://developer.android.com/reference/android/bluetooth/BluetoothDevice#getEncryptionStatus(int))
+  in version36.1. These APIs are unavailable to this API31 phone. Their absence
+  is not evidence that its HID link is unencrypted. No unsupported reflection
+  or separate log-derived runtime security gate is proposed.
+
+The existing probe has no retained enrollment and deliberately requires a new
+observed comparison ceremony. Reopening it with the existing bond and starting
+registration produced the user report **“Controls disabled; no TV Connect option”**.
+Startup rejection of old-bond authorization passed. An incoming reconnect attempt
+was unavailable through the tested TV UI and remains untested.
+
+Independent review identified the smallest remaining proof boundaries:
+
+| Check | Current probe / status |
+| --- | --- |
+| Reopen with old bond; input remains disabled | PASS by user report; TV-side Connect unavailable |
+| Leave fresh confirmed session and return; session stays stopped | PASS by user report: exact foreground-loss status, controls disabled except Stop/Close, physical remote works |
+| Fresh session, TV-side link loss/restoration without phone app switching | Supported if a suitable TV action exists; not yet run |
+| Confirmed foreground session, Nord adapter OFF then ON | PASS: adapter states verified; user confirmed stopped controls and physical-remote usability after restoration; does not substitute for peer-only/out-of-range loss |
+| Neutral-state process termination and relaunch | Diagnostic-only test possible; not yet run; force-stop must not be mislabeled as a crash |
+| Successfully reconnect to the enrolled peer after link loss/restart | Requires a separate retained-enrollment/reconnect contract; current probe intentionally rejects it |
+| Process/radio loss after button-down but before button-up | Requires an explicitly bounded fault-test contract; current probe exposes no held gesture |
+
+A completed click or idle termination cannot prove receiver cleanup after a lost
+release. Before a revised reconnect probe, define the OS-bond trust basis,
+enrollment/revocation and bond-replacement handling, actual-link security evidence,
+neutral-state admission and explicit reconnect behavior. Do not silently treat a
+saved name/address as authentication. No product backend or new probe behavior
+was implemented by this audit. H1A remains NOT PASSED.

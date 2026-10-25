@@ -11,6 +11,44 @@ their fixes are complete. Neither H1A nor H1B has passed. The earlier H0 proof r
 
 This file records observed behavior, not planned functionality.
 
+## Spare-phone diagnostic result (2026-10-24)
+
+The Nord AC2001 on Android12/API31 has an enabled HID Device profile and a
+running `HidDeviceService` after the owner turns Bluetooth on. This is a
+configuration observation, not an available phone remote capability. A separate
+foreground HID probe was subsequently built, reviewed and installed/launched
+on the Nord (source `954d666`). The user confirmed “HID registered”; that status
+requires the actual successful app registration callback. The user subsequently
+confirmed matching numbers on both pairing screens and the TV's connected
+indication. The next attempt hit the probe's foreground-loss Stop state before
+mouse input could be tested. Discovery-only stayed active; fresh pairing
+reproduced the stopped state on selecting Pair. A timed native foreground-service
+fix is implemented with foreground-only input, reviewed and installed on the
+Nord as 0.2-diagnostic (`93da0d0`). The user confirmed “Pairing stays active;
+pointer moves”: pairing-screen survival and Bluetooth pointer movement passed
+the live retest. The user then confirmed a Netflix target click opens it, manual
+Stop disables probe controls, and the physical remote works. Basic HID
+compatibility is PASS for this setup/artifact. Native disconnect completion,
+held-input crash release, negotiated-link security and reconnect safety remain
+unverified; the Mac-to-phone bridge is unbuilt. H1A remains NOT PASSED; see the
+[evidence report](gates/h1a-report.md#nord-live-configuration-check-2026-10-24).
+
+Restart with an existing bond: the user confirmed comparison/input controls
+remain disabled without fresh pairing. No TV Connect option was available;
+an incoming reconnect attempt was not tested. This confirms startup rejection,
+not a usable reconnect capability.
+
+Foreground loss after confirmation: PASS by user report. Leaving a working
+session and returning left controls disabled except Stop/Close, displayed the
+foreground-loss stopped status, and preserved physical-remote operation. Returning
+did not resume input. This is not a process-crash or radio-loss result.
+
+Controlled Nord adapter loss/restoration: PASS. Bluetooth OFF and restored ON
+were verified while the probe was left foreground. The user confirmed the probe
+stayed stopped with movement/Click disabled and the physical remote still worked.
+No automatic input resumption was observed. This is not successful reconnect,
+out-of-range loss or process-crash/held-button cleanup evidence.
+
 ## Separate H0 local Mac proof
 
 - Local native window combines fixed TV buttons and a scrcpy touchpad.
