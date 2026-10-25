@@ -1,5 +1,19 @@
 # Project Progress
 
+## Nord UI refresh (2026-10-25)
+
+Version0.7 implements the requested Google TV-inspired native presentation.
+RemoteScreen owns views; ProbeActivity retains admission, lifecycle and callbacks.
+101 unit tests and two emulator UI tests pass; lint has no errors/26 warnings.
+Independent code review found no actionable defects. Same signing identity, four
+permissions, report and enrollment formats are verified. Implementation source
+`b26c05c` is installed in place on the verified stopped Nord; version7 and unchanged
+enrollment bytes confirmed. Launch returned success; foreground unconfirmed.
+Owner subsequently confirmed “Layout and controls work” for the requested
+portrait/landscape, saved Start/Connect, Netflix movement/tap/scroll, Setup/Remote
+and Stop sequence. Version0.7 owner smoke passes; the UI refresh is complete.
+N1/N2 remain the historical0.5/0.6 results. See [UI report](gates/nord-ui-report.md).
+
 ## N2 scrolling implementation (2026-10-25)
 
 Source `a162384` implements the approved N2 increment. Owner approved the [N2 design](superpowers/specs/2026-10-25-nord-scroll-design.md)

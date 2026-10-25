@@ -2,6 +2,15 @@
 
 These instructions apply to the entire repository.
 
+## Requested Nord remote presentation (2026-10-25)
+
+The owner requested a minimal Google TV-inspired UI and supplied the connected
+Nord app as reference. Follow the Nord remote UI design/plan dated2026-10-25.
+This changes presentation only in the diagnostic0.7: native Remote/Setup views,
+existing touchpad/scroll/pointer controls, no new transport or TV-key commands.
+Keep0.6 descriptor/enrollment/trust/lifecycle unchanged; no fresh pairing required.
+Build and review before a same-signature update; verify the probe is stopped.
+
 ## Approved N2 Nord scrolling (2026-10-25)
 
 The owner approved `docs/superpowers/specs/2026-10-25-nord-scroll-design.md`

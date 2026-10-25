@@ -1,4 +1,4 @@
-# Disposable Nord HID probe — 0.6-diagnostic
+# Disposable Nord HID probe — 0.7-diagnostic
 
 The owner accepted remembering the verified projector for this isolated diagnostic
 on 2026-10-24, including the OS-bond continuity limitation. This is not a product
@@ -9,8 +9,17 @@ finger-operated surface to this same isolated probe; it is not the complete
 unified TV remote. Version0.6 adds four scroll buttons and a one-time fresh
 pairing migration. TV buttons and daily-use lifecycle remain separate increments in the [direct-remote design](../../docs/superpowers/specs/2026-10-25-nord-direct-remote-design.md).
 
+Version0.7 adds a Google TV-inspired charcoal Remote screen with the existing
+touchpad, four scroll buttons and native mouse alternatives. Setup/Remote switches
+pages inside the Activity and cancels pending pad input. Stop and Close remain
+fixed; smaller/landscape screens use scrolling. Start then Connect remains explicit.
+Existing0.6 enrollment and Bluetooth bond are retained: do not forget or re-pair
+for this UI update. The five-minute foreground-only limit is unchanged. See the
+[UI design](../../docs/superpowers/specs/2026-10-25-nord-remote-ui-design.md) and
+[verification report](../../docs/gates/nord-ui-report.md).
+
 Uses native `BluetoothHidDevice` on API31+, the existing Gradle/JUnit toolchain,
-and no new dependencies or custom crypto. Separate application ID; opt-in Gradle
+and no new runtime dependencies or custom crypto. Separate application ID; opt-in Gradle
 module; debug-only variant. No INTERNET, scan, location, accessibility or storage
 permission. Nothing starts the app in response to a Bluetooth broadcast.
 

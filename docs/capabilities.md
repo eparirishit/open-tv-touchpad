@@ -1,5 +1,16 @@
 # Capabilities
 
+## Nord UI refresh — owner smoke passed (2026-10-25)
+
+Version0.7 is installed with saved enrollment preserved. Owner confirmed layout
+and controls work for the requested orientation, reconnect, Netflix input, page
+switching and Stop checks.
+It provides a charcoal Remote page with touchpad, scrolling and mouse
+alternatives, plus a separate Setup page and fixed Stop/Close footer. Labels scale,
+controls wrap and content scrolls on small screens. It preserves explicit Start/
+Connect and the five-minute foreground-only diagnostic. No TV-key capabilities
+are added; N3/N4 remain pending. See [UI report](gates/nord-ui-report.md).
+
 ## Nord scrolling — diagnostic behavior accepted (2026-10-25)
 
 Version0.6 adds four labeled scroll buttons, one wheel/pan step per admitted

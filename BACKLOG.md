@@ -29,6 +29,10 @@ design must be approved before an item moves into an active milestone.
   axes and N1 movement/tap/lifecycle regressions on hardware. Owner confirmed
   all planned checks; [N2 diagnostic behavior acceptance](docs/gates/n2-report.md)
   passes for0.6. Broader reliability/product gates are unchanged.
+- [x] Minimal Google TV-inspired native UI: charcoal Remote/Setup pages, fixed
+  Stop/Close, existing controls; unit/native tests and independent review pass.
+- [x] Version0.7 owner smoke: saved connect, movement/tap/scroll, page switching
+  without stray input, Stop and portrait/landscape. [UI report](docs/gates/nord-ui-report.md).
 - [ ] N3: design and verify Android TV Remote v2 pairing/identity and fixed TV
   controls in the same interface. Existing Mac Python implementation is reference.
 - [ ] N4: review daily-use lifecycle and packaging after combined functionality.

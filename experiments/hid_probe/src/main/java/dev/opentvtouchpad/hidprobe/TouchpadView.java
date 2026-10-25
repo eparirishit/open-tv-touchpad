@@ -8,7 +8,6 @@ import android.graphics.Rect;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
-import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
@@ -27,9 +26,6 @@ public final class TouchpadView extends View {
         density = getResources().getDisplayMetrics().density;
         gesture = new TouchpadGesture(ViewConfiguration.get(context).getScaledTouchSlop() / density,
                 move, () -> { performClick(); tap.run(); });
-        paint.setTextAlign(Paint.Align.CENTER);
-        paint.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 16,
-                getResources().getDisplayMetrics()));
         setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         setEnabled(false);
     }
@@ -117,11 +113,20 @@ public final class TouchpadView extends View {
 
     @Override protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        canvas.drawColor(isEnabled() ? Color.rgb(35, 55, 70) : Color.DKGRAY);
-        paint.setColor(isEnabled() ? Color.WHITE : Color.LTGRAY);
-        String label = isEnabled() ? "Touchpad · slide to move, tap to click" : "Touchpad · disconnected";
-        canvas.drawText(label, getWidth() / 2f,
-                (getHeight() - paint.ascent() - paint.descent()) / 2f, paint);
+        float inset = density;
+        float radius = 28 * density;
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor(isEnabled() ? Color.rgb(32, 32, 32) : Color.rgb(40, 40, 40));
+        canvas.drawRoundRect(inset, inset, getWidth() - inset, getHeight() - inset,
+                radius, radius, paint);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(2 * density);
+        paint.setColor(isEnabled() ? Color.rgb(145, 145, 145) : Color.rgb(105, 105, 105));
+        canvas.drawRoundRect(inset, inset, getWidth() - inset, getHeight() - inset,
+                radius, radius, paint);
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor(isEnabled() ? Color.rgb(80, 80, 80) : Color.rgb(64, 64, 64));
+        canvas.drawCircle(getWidth() / 2f, getHeight() / 2f, 24 * density, paint);
     }
 
     @Override protected void onDetachedFromWindow() {

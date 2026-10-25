@@ -23,12 +23,9 @@ import android.os.Looper;
 import android.os.SystemClock;
 import android.util.Log;
 import android.widget.Button;
-import android.widget.LinearLayout;
-import android.widget.ScrollView;
 import android.widget.TextView;
 import android.view.MotionEvent;
 import android.view.View;
-import java.util.ArrayList;
 import java.util.List;
 
 import static dev.opentvtouchpad.hidprobe.NativeRunGate.Resource.*;
@@ -38,7 +35,7 @@ import static dev.opentvtouchpad.hidprobe.ProbeTrace.Event.*;
 public final class ProbeActivity extends Activity {
     private static final NativeRunGate NATIVE_RUNS = new NativeRunGate();
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private final List<Button> inputs = new ArrayList<>();
+    private List<Button> inputs;
     private static EnrollmentStore enrollment;
     private ProbeSession session;
     private BluetoothAdapter adapter;
@@ -51,7 +48,7 @@ public final class ProbeActivity extends Activity {
     private Button visible;
     private Button confirm;
     private Button connect;
-    private LinearLayout layout;
+    private RemoteScreen screen;
     private TouchpadView touchpad;
 
     @Override public void onCreate(Bundle state) {
@@ -59,80 +56,41 @@ public final class ProbeActivity extends Activity {
         // Keep a storage-failure latch across configuration recreation; the store holds no Context.
         if (enrollment == null) enrollment = new EnrollmentStore(new AtomicEnrollmentFile(getNoBackupFilesDir()));
         session = new ProbeSession(enrollment);
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        layout = root;
-        float density = getResources().getDisplayMetrics().density;
-        int pad = (int) (12 * density);
-        root.setPadding(pad, pad, pad, pad);
-        setContentView(root);
-        root.setOnApplyWindowInsetsListener((view, insets) -> {
-            android.graphics.Insets bars = insets.getInsets(android.view.WindowInsets.Type.systemBars());
-            root.setPadding(pad + bars.left, pad + bars.top, pad + bars.right, pad + bars.bottom);
-            return insets;
-        });
-        text("Open TV Touchpad — Nord test", 22);
-        ScrollView setup = new ScrollView(this);
-        root.addView(setup, new LinearLayout.LayoutParams(-1, 0, 1));
-        layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        setup.addView(layout);
-        migrationNotice = text("Scrolling update needs fresh Bluetooth pairing. Remove only the Nord–XGIMI bond "
-            + "on both devices, then pair again and compare the numbers on both screens.", 16);
-        migrationNotice.setVisibility(enrollment.requiresReenrollment() ? View.VISIBLE : View.GONE);
-        status = text(enrollment.failed() ? storageFailure() : savedStatus(), 18);
-        text("Five-minute diagnostic. First enrollment requires matching numbers on BOTH intended devices. "
-            + "A saved projector uses the current OS-managed bond; its original key cannot be pinned by this app.", 16);
-        start = button("Start five-minute HID run", this::requestStart);
-        connect = button("Connect saved projector", this::connectSaved);
-        visible = button("First enrollment: make visible for 120 seconds", this::makeVisible);
-        confirm = button("I compared matching codes on BOTH screens — save and connect", this::confirmAndConnect);
-        text("Use the physical TV remote to pair. No code is entered here. Keep this screen open after Connect.", 16);
-        inputs.add(button("Move left", () -> move(-16, 0)));
-        inputs.add(button("Move right", () -> move(16, 0)));
-        inputs.add(button("Move up", () -> move(0, -16)));
-        inputs.add(button("Move down", () -> move(0, 16)));
-        inputs.add(button("Click once", this::click));
-        button("Forget projector", this::forget);
-        touchpad = new TouchpadView(this, this::move, this::click);
-        boolean wide = getResources().getConfiguration().screenWidthDp >= 600;
-        int touchpadDp = wide ? 96 : Math.min(180, Math.max(96, getResources().getConfiguration().screenHeightDp / 3));
-        root.addView(touchpad, new LinearLayout.LayoutParams(-1, (int) (touchpadDp * density)));
-        MouseReport.Direction[] directions = MouseReport.Direction.values();
-        int columns = wide ? 4 : 2;
-        for (int i = 0; i < directions.length; i += columns) {
-            LinearLayout row = new LinearLayout(this);
-            row.setOrientation(LinearLayout.HORIZONTAL);
-            root.addView(row, new LinearLayout.LayoutParams(-1, -2));
-            layout = row;
-            for (int j = i; j < Math.min(i + columns, directions.length); j++) {
-                MouseReport.Direction direction = directions[j];
-                String label = switch (direction) {
-                    case UP -> "Scroll up ↑";
-                    case DOWN -> "Scroll down ↓";
-                    case LEFT -> "Scroll left ←";
-                    case RIGHT -> "Scroll right →";
-                };
-                Button control = button(label, () -> scroll(direction));
-                control.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1));
-                control.setOnTouchListener((view, event) -> {
-                    if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
-                        if (run != null) run.scrolling.touchDown();
-                        else touchpad.cancelGesture();
-                    }
-                    return false;
-                });
-                inputs.add(control);
-            }
+        screen = new RemoteScreen(this, this::move, this::click);
+        status = screen.status;
+        migrationNotice = screen.migrationNotice;
+        start = screen.start;
+        connect = screen.connect;
+        visible = screen.visible;
+        confirm = screen.confirm;
+        inputs = screen.inputs;
+        touchpad = screen.touchpad;
+        setContentView(screen.root);
+        status.setText(enrollment.failed() ? storageFailure() : savedStatus());
+        screen.showSetup(session.savedPeer() == null);
+        bind(start, this::requestStart);
+        bind(connect, this::connectSaved);
+        bind(visible, this::makeVisible);
+        bind(confirm, this::confirmAndConnect);
+        bind(screen.forget, this::forget);
+        bind(screen.moveLeft, () -> move(-16, 0));
+        bind(screen.moveRight, () -> move(16, 0));
+        bind(screen.moveUp, () -> move(0, -16));
+        bind(screen.moveDown, () -> move(0, 16));
+        bind(screen.click, this::click);
+        for (MouseReport.Direction direction : MouseReport.Direction.values()) {
+            Button control = screen.scrollButtons.get(direction);
+            bind(control, () -> scroll(direction));
+            control.setOnTouchListener((view, event) -> {
+                if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                    if (run != null) run.scrolling.touchDown();
+                    else touchpad.cancelGesture();
+                }
+                return false;
+            });
         }
-        LinearLayout footer = new LinearLayout(this);
-        footer.setOrientation(LinearLayout.HORIZONTAL);
-        root.addView(footer, new LinearLayout.LayoutParams(-1, -2));
-        layout = footer;
-        Button stopButton = button("Stop / Disconnect", () -> stop("Stopped. Enrollment retained."));
-        stopButton.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1));
-        Button closeButton = button("Close probe", () -> { stop("Closed."); finish(); });
-        closeButton.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1));
+        bind(screen.stop, () -> stop("Stopped. Enrollment retained."));
+        bind(screen.close, () -> { stop("Closed."); finish(); });
         IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_PAIRING_REQUEST);
         filter.addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
         filter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
@@ -152,27 +110,13 @@ public final class ProbeActivity extends Activity {
             + "Retry Forget successfully or clear app storage in Android settings before re-enrolling.";
     }
 
-    private TextView text(String value, int size) {
-        TextView view = new TextView(this);
-        view.setText(value);
-        view.setTextSize(size);
-        layout.addView(view);
-        return view;
-    }
-
-    private Button button(String title, Runnable action) {
-        Button button = new Button(this);
-        button.setText(title);
-        button.setAllCaps(false);
-        button.setMinHeight((int) (48 * getResources().getDisplayMetrics().density));
+    private void bind(Button button, Runnable action) {
         button.setOnClickListener(view -> {
             try { action.run(); }
             catch (SecurityException | IllegalStateException | IllegalArgumentException error) {
                 stop("Bluetooth operation failed. Check Nearby devices permission and Bluetooth.");
             }
         });
-        layout.addView(button);
-        return button;
     }
 
     private boolean permissions() {
@@ -707,6 +651,7 @@ public final class ProbeActivity extends Activity {
         try { ready = run != null && run.ready(); } catch (SecurityException | IllegalStateException ignored) { }
         for (Button button : inputs) button.setEnabled(ready);
         touchpad.setEnabled(ready);
+        screen.setConnected(ready);
     }
 
     private void stop(String message) {
