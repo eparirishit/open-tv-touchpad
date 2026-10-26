@@ -1,5 +1,14 @@
 # Project Progress
 
+## Bluetooth-loss follow-up: recovery still blocked (2026-10-25)
+
+Owner confirmed0.13 Home/pointer smoke. Adapter interruption reached BLE_ON and
+was restored to ON. The captured run reached the teardown deadline after
+profile loss without selected-disconnect or unregister acknowledgments. No
+barrier bypass or further code change was made. Owner confirms both channels
+disconnected and all buttons disabled. Physical-remote confirmation for this
+trial and explicit reconnect remain pending. See [N3 report](gates/n3-report.md).
+
 ## Bluetooth cleanup correction installed (2026-10-25)
 
 Owner-requested0.13 changes only shutdown recovery: profile loss during Stop

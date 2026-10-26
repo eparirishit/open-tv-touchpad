@@ -2,7 +2,34 @@
 
 Contract: [approved N3 design](../superpowers/specs/2026-10-25-nord-tv-controls-design.md).
 
-## Diagnostic0.13 cleanup correction — installed; hardware retest pending
+## Diagnostic0.13 hardware follow-up — recovery still blocked
+
+On the same version13 artifact/source below, the owner confirmed explicit
+Start/Connect, Home and pointer movement. The authorized adapter interruption
+was polled as ON → TURNING_OFF → BLE_ON, then restored through TURNING_ON → ON.
+BLE_ON is not full adapter OFF; neither shell command's exit137 proves its
+side effects. Both commands returned137; restored ON was independently verified.
+
+The sanitized current-run trace contains56 contiguous events without truncation:
+`STOP`52 at120042ms, selected `DISCONNECTING`53 at120118ms and54 at120120ms,
+`PROFILE_LOST`55 at120476ms, then `TEARDOWN_DEADLINE`56 at125055ms.
+No selected DISCONNECTED or UNREGISTERED acknowledgment appears in that capture.
+The probe service was absent afterward. Trace SHA256:
+`3d38d51fb9df7bcb67521682fb751cbda20f9ee4677bc49e775b6d51db159edc`.
+A subsequent log read yielded no matching session; it does not establish that
+callbacks never arrived later. The owner reports Mouse disconnected, TV paired
+but disconnected, “Bluetooth turned off. No input enabled,” and all buttons
+disabled. The owner has not yet confirmed the physical remote in this trial or
+quoted the final teardown suffix. No explicit reconnect was attempted.
+
+The0.13 change handles the earlier callback order, but this run lacks the
+actual acknowledgments its contract requires. Recovery remains blocked; do not
+mark N3 accepted or treat the teardown barrier as a timeout to clear. AOSP12
+HidDeviceService.stop removes the service and cleans up the native interface
+without itself emitting either acknowledgment; platform shutdown interrupting
+callback delivery is a plausible mechanism, not proven vendor internals.
+
+## Diagnostic0.13 cleanup correction — installed; hardware recovery unverified
 
 The owner requested fixing the captured shutdown blocker. The bounded
 [correction plan](../superpowers/plans/2026-10-25-nord-bluetooth-cleanup.md)

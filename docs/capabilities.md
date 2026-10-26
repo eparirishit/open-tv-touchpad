@@ -1,13 +1,15 @@
 # Capabilities
 
-## Diagnostic0.13 — cleanup fix installed, hardware retest pending
+## Diagnostic0.13 — cleanup fix installed, hardware recovery blocked
 
 After profile loss during Stop, the new build can finish cleanup only when
 actual selected-disconnect/unregister callbacks and all other cleanup complete.
 Explicit Start/Connect is still required; missing evidence and independent
 failures still block restart. The regression and167 unit tests pass. This is
 build/test evidence. Version0.13 is installed with both pairings preserved and
-no automatic run; recovery on the Nord is not yet verified.
+no automatic run. Owner Home/pointer smoke passes, but a Bluetooth interruption
+still reaches the cleanup deadline without the required native acknowledgments.
+Explicit recovery remains blocked; this is not a verified recovery fix.
 
 ## Nord unified remote0.12 — pairing and combined-control smoke verified
 

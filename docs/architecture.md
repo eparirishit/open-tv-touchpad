@@ -6,7 +6,10 @@ require this Run's selected disconnect and unregister callbacks, no observed
 foreign link, successful proxy closure and TV/service completion. Nonterminal
 callbacks, native pending-link observations and connect attempts invalidate disconnect evidence; profile
 loss before Stop and independently failed operations retain the permanent latch.
-This follows the Android12 unregister contract and requires hardware retesting.
+This follows the Android12 unregister contract. The0.13 hardware follow-up
+still reached the deadline with no disconnect/unregister acknowledgment in its
+captured trace. The existing barrier remains mandatory; shutdown state or a
+detached proxy cannot replace those callbacks under the current contract.
 See the [correction plan](superpowers/plans/2026-10-25-nord-bluetooth-cleanup.md).
 
 ## Approved Nord unified remote (2026-10-25)
