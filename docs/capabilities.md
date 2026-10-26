@@ -1,5 +1,15 @@
 # Capabilities
 
+## Diagnostic0.14 — prototype UI
+
+Remote presents the TV D-pad and playback controls; Touchpad presents pointer
+input, scroll controls and an accessible button alternative. Setup separates
+Projector, TV controls and Display. Both themes apply in place without changing
+session admission or pairing. Reviewed0.14 is installed; both pairings are
+preserved and owner UI smoke is pending. Automated and installation evidence is
+tracked in the [UI report](gates/nord-prototype-ui-report.md). This is not a
+Bluetooth recovery fix or daily-use release.
+
 ## Diagnostic0.13 — cleanup fix installed, hardware recovery blocked
 
 After profile loss during Stop, the new build can finish cleanup only when

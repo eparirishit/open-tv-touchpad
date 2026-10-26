@@ -20,6 +20,16 @@ public final class TouchpadView extends View {
     private final float density;
     private final TouchpadGesture gesture;
     private Runnable pendingFrame;
+    private int fill = Color.rgb(233,236,240), border = Color.rgb(220,224,229),
+            dot = Color.rgb(220,224,229), text = Color.rgb(91,99,109);
+
+    public void setPalette(int fill, int border, int dot, int text) {
+        this.fill = fill;
+        this.border = border;
+        this.dot = dot;
+        this.text = text;
+        invalidate();
+    }
 
     public TouchpadView(Context context, BiConsumer<Integer, Integer> move, Runnable tap) {
         super(context);
@@ -116,17 +126,25 @@ public final class TouchpadView extends View {
         float inset = density;
         float radius = 28 * density;
         paint.setStyle(Paint.Style.FILL);
-        paint.setColor(isEnabled() ? Color.rgb(32, 32, 32) : Color.rgb(40, 40, 40));
+        paint.setColor(fill);
         canvas.drawRoundRect(inset, inset, getWidth() - inset, getHeight() - inset,
                 radius, radius, paint);
         paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(2 * density);
-        paint.setColor(isEnabled() ? Color.rgb(145, 145, 145) : Color.rgb(105, 105, 105));
+        paint.setStrokeWidth(density);
+        paint.setColor(border);
         canvas.drawRoundRect(inset, inset, getWidth() - inset, getHeight() - inset,
                 radius, radius, paint);
         paint.setStyle(Paint.Style.FILL);
-        paint.setColor(isEnabled() ? Color.rgb(80, 80, 80) : Color.rgb(64, 64, 64));
-        canvas.drawCircle(getWidth() / 2f, getHeight() / 2f, 24 * density, paint);
+        paint.setColor(dot);
+        canvas.drawCircle(getWidth() / 2f, getHeight() / 2f - 20 * density, 28 * density, paint);
+        paint.setColor(text);
+        paint.setAlpha(isEnabled() ? 255 : 160);
+        paint.setTextAlign(Paint.Align.CENTER);
+        paint.setTextSize(14 * getResources().getDisplayMetrics().scaledDensity);
+        float baseline = getHeight() / 2f + 38 * density;
+        canvas.drawText("Slide to move", getWidth() / 2f, baseline, paint);
+        canvas.drawText("Tap to click", getWidth() / 2f, baseline + paint.getFontSpacing(), paint);
+        paint.setAlpha(255);
     }
 
     @Override protected void onDetachedFromWindow() {

@@ -1,5 +1,23 @@
 # Disposable Nord remote — N3 diagnostic
 
+## Prototype UI in0.14
+
+The owner-provided design separates TV buttons on **Remote** from mouse input on
+**Touchpad**. Touchpad offers a surface or **Buttons instead**, with four scroll
+buttons available in both modes. The header keeps Setup, Stop and Close reachable;
+Setup groups **Projector**, **TV controls** and **Display**. Display changes light/
+dark colors in place and saves only the appearance preference. Real connection
+status and the full diagnostic message remain visible in the scrollable content.
+
+Start/Connect, both pairings, masked TV-code entry and all control admission stay
+unchanged. Page and theme switches cancel pending gestures without starting or
+restarting a session. The five-minute limit and unresolved0.13 Bluetooth cleanup
+barrier remain. No re-pairing is required for this presentation update. See the
+[prototype UI report](../../docs/gates/nord-prototype-ui-report.md) for build,
+installation and owner-test status.
+
+## Earlier diagnostic increments
+
 The owner accepted remembering the verified projector for this isolated diagnostic
 on 2026-10-24, including the OS-bond continuity limitation. This is not a product
 companion, network bridge, or H1A PASS. The physical TV remote remains independent.

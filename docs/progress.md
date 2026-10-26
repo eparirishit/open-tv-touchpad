@@ -1,5 +1,15 @@
 # Project Progress
 
+## Prototype UI refresh (2026-10-26)
+
+Owner requested implementing the supplied HTML design in the native Nord app.
+Version0.14 separates Remote/Touchpad, groups Setup sections, adds light/dark
+appearance and keeps fixed Stop/Close. Only presentation and its tests change;
+Bluetooth recovery remains blocked. Reviewed0.14 is installed with both enrollment
+stores unchanged and no automatic run; owner smoke is pending.167unit/23native
+tests pass, with one opt-in hardware diagnostic skipped. Full evidence is in
+the [UI report](gates/nord-prototype-ui-report.md).
+
 ## Bluetooth-loss follow-up: recovery still blocked (2026-10-25)
 
 Owner confirmed0.13 Home/pointer smoke. Adapter interruption reached BLE_ON and

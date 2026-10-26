@@ -82,6 +82,14 @@ design must be approved before an item moves into an active milestone.
   explicit reconnect without Force stop. The0.13 hardware trace still reached
   the deadline without disconnect/unregister callbacks. Existing failures and
   missing acknowledgments remain blocked; do not clear the barrier on timeout.
+- [x] Implement the owner-supplied prototype UI in0.14: Remote/Touchpad tabs,
+  circular D-pad, grouped Setup, light/dark appearance and native icons.
+  167unit tests and23native tests pass; one opt-in hardware diagnostic is skipped.
+  Existing lifecycle/transport remains unchanged. [UI evidence](docs/gates/nord-prototype-ui-report.md).
+- [x] Install0.14 on stopped Nord; same signature, both enrollments unchanged,
+  no automatic run.
+- [ ] Owner0.14 smoke of Remote/Touchpad/Setup, appearance, pointer/scroll/TV
+  controls and Stop.
 - [ ] N4: review daily-use lifecycle and packaging after combined functionality.
 - [ ] Before broader distribution, verify screen-reader/font-scale/layout behavior;
   current native alternative controls have not received a complete device audit.

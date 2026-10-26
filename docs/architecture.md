@@ -1,5 +1,13 @@
 # Architecture Status
 
+Diagnostic0.14 updates only native presentation to the owner-supplied prototype.
+RemoteScreen owns view navigation and appearance; ProbeActivity still owns all
+session state, enabled controls and action binding. The same view instances survive
+theme changes, preserving field privacy and callbacks. All presentation navigation
+cancels pending pad gestures. Appearance persistence contains only a dark-mode flag;
+no new network, permission, dependency, lifecycle or enrollment path is introduced.
+See the [UI design](superpowers/specs/2026-10-26-nord-prototype-ui-design.md).
+
 Diagnostic0.13 preserves the N3 teardown barrier while classifying profile loss
 during Stop as pending cleanup. Detached/disabled proxies cannot prove cleanup:
 require this Run's selected disconnect and unregister callbacks, no observed
