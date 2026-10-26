@@ -72,6 +72,14 @@ design must be approved before an item moves into an active milestone.
   and Close stay readable/reachable. Pairings/address are unchanged. This is
   separate from simulated IME tests and does not repeat live pairing-code entry.
   Existing Mac Python implementation is reference, not Android runtime code.
+- [x] Implement the owner-requested0.13 Bluetooth shutdown cleanup correction;
+  captured-order regression RED/GREEN,167 unit tests, lint/build pass. Actual
+  callbacks and all resource completion remain required; no automatic reconnect.
+- [x] Scoped independent and full Codex review of0.13: no actionable findings
+  after fixing the reproduced stale-query evidence gap.
+- [ ] Install0.13 with pairings preserved and confirm Bluetooth-loss
+  cleanup permits explicit reconnect without Force stop. Existing failures and
+  missing acknowledgments must still remain blocked.
 - [ ] N4: review daily-use lifecycle and packaging after combined functionality.
 - [ ] Before broader distribution, verify screen-reader/font-scale/layout behavior;
   current native alternative controls have not received a complete device audit.

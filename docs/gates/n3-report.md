@@ -1,6 +1,37 @@
 # N3 unified Nord remote — pairing, combined smoke and saved restart passed on0.12
 
 Contract: [approved N3 design](../superpowers/specs/2026-10-25-nord-tv-controls-design.md).
+
+## Diagnostic0.13 cleanup correction — built; hardware retest pending
+
+The owner requested fixing the captured shutdown blocker. The bounded
+[correction plan](../superpowers/plans/2026-10-25-nord-bluetooth-cleanup.md)
+retains the teardown contract and NativeRunGate's permanent failure latch.
+Profile loss before Stop remains fatal. During Stop it is pending cleanup:
+actual selected-peer disconnect and unregister callbacks, no observed foreign
+link, successful proxy close and TV/service completion are required. Disabled
+or detached proxy query defaults are never evidence. New connection events or
+connect attempts invalidate prior disconnect evidence; independent native
+failures remain fatal. No automatic input/reconnect or enrollment change.
+
+The new test executes the Activity's actual callbacks against controlled native
+collaborators. RED fails on the captured Stop/profile-loss/disconnect/unregister
+order. GREEN covers22 scenarios, including missing evidence, both callback
+orders, query defaults, foreign links, invalidation, existing failure latches,
+proxy-close failure, TV/service completion and stale callbacks. All167 Nord unit
+tests pass with zero failures/errors/skips; lint has0errors/37warnings and debug
+assembly passes. Independent review identified stale disconnect evidence after a newer pending-link
+query. A second RED regression reproduced it; native state/enumeration observations
+now invalidate the evidence before detached cleanup. All22 scenarios pass.
+This does not replace a real Nord recovery test.
+
+Built version13/0.13-diagnostic APK SHA256:
+`b74ae6d58413669732495cdff3b774cd4f321696ccd4fc62fb1084a9730e3a32`.
+Independent scoped re-review and complete-change Codex review found no remaining
+actionable findings after the stale-evidence correction. Installation and owner
+hardware retest are pending. The0.12 observations below
+remain tied to their original artifact; no overall N3 PASS is claimed.
+
 The owner also confirmed the full app-restart check: Stop/teardown, Android
 Force stop, reopen with input disabled until explicit Start/Connect, then Home,
 pointer movement and a scroll step without another pairing code, followed by

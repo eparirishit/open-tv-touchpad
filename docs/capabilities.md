@@ -1,5 +1,13 @@
 # Capabilities
 
+## Diagnostic0.13 — cleanup fix built, hardware retest pending
+
+After profile loss during Stop, the new build can finish cleanup only when
+actual selected-disconnect/unregister callbacks and all other cleanup complete.
+Explicit Start/Connect is still required; missing evidence and independent
+failures still block restart. The regression and167 unit tests pass. This is
+build/test evidence, not yet installed or verified recovery on the Nord.
+
 ## Nord unified remote0.12 — pairing and combined-control smoke verified
 
 The app includes D-pad/OK, Home/Back, volume, play/pause and Netflix alongside the

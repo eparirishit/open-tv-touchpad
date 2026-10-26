@@ -1,0 +1,139 @@
+package dev.opentvtouchpad.hidprobe;
+import java.util.List;
+import static dev.opentvtouchpad.hidprobe.NativeRunGate.Resource.*;
+import static dev.opentvtouchpad.hidprobe.ProbeTrace.Event.*;
+
+public class BluetoothCleanupHarness {
+    static class BluetoothDevice {
+        static final int BOND_BONDED = 12;
+        final String address;
+        BluetoothDevice(String address) { this.address = address; }
+        String getAddress() { return address; }
+        int getBondState() { return BOND_BONDED; }
+    }
+    static class BluetoothProfile {
+        static final int STATE_DISCONNECTED=0, STATE_CONNECTING=1, STATE_CONNECTED=2, STATE_DISCONNECTING=3, HID_DEVICE=19;
+    }
+    static class Hid {
+        int state, closes, queries;
+        List<BluetoothDevice> peers=List.of();
+        boolean unregisterAccepted=true, disconnectAccepted=true, queryFails, closeFails;
+        int getConnectionState(BluetoothDevice peer) { queries++; if (queryFails) throw new IllegalStateException(); return state; }
+        List<BluetoothDevice> getConnectedDevices() { queries++; if (queryFails) throw new IllegalStateException(); return peers; }
+        boolean connect(BluetoothDevice peer) { return true; }
+        boolean disconnect(BluetoothDevice peer) { return disconnectAccepted; }
+        boolean unregisterApp() { return unregisterAccepted; }
+        boolean sendReport(BluetoothDevice peer, int id, byte[] bytes) { return true; }
+    }
+    static class Adapter {
+        boolean enabled=true;
+        boolean isEnabled() { return enabled; }
+        void closeProfileProxy(int profile, Hid hid) { if (hid.closeFails) throw new IllegalStateException(); hid.closes++; }
+    }
+    static class TvEnrollment { enum State { ABSENT, VALID } }
+    static class Enrollment { boolean failed() { return false; } }
+    static class Session {
+        boolean stopped;
+        String savedPeer() { return "selected"; }
+        void stop() { stopped=true; }
+        void registered(long generation, boolean value) {}
+        boolean active(long generation) { return !stopped; }
+        boolean connected(long generation, String peer, boolean value) { return true; }
+        boolean neutralSubmitted(long generation, String peer, boolean accepted) { return accepted; }
+        void revoke(String peer) {}
+    }
+    static class Tv { boolean stopped; void stop() { stopped=true; } }
+    static class Handler { void removeCallbacks(Runnable r) {} void postDelayed(Runnable r, long delay) {} }
+    static class Status { void setText(String text) {} }
+    static class Pad { boolean cancelled; void cancelGesture() { cancelled=true; } }
+    final NativeRunGate gates = new NativeRunGate();
+    final NativeRunGate.Run ownership = gates.start();
+    final Hid nativeHid = new Hid();
+    Hid hid = nativeHid;
+    final Adapter adapter = new Adapter();
+    final Enrollment enrollment = new Enrollment();
+    final Session session = new Session();
+    final Tv tv = new Tv();
+    final Handler handler = new Handler();
+    final Status status = new Status();
+    final Pad touchpad = new Pad();
+    final BluetoothDevice selected = new BluetoothDevice("selected"), other = new BluetoothDevice("other");
+    BluetoothDevice target = selected, connected = selected;
+    final Runnable registrationDeadline=()->{}, connectionDeadline=()->{}, teardownDeadline=()->{};
+    final long generation=1;
+    final TvEnrollment.State tvMode=TvEnrollment.State.VALID;
+    boolean stopping, registrationRequested=true, unregistered, teardownTraced, resumed=true;
+    boolean profileLostWhileStopping, selectedDisconnected, foreignLinkObserved;
+    boolean guardFinished;
+    void trace(ProbeTrace.Event event) {}
+    String terminalReason;
+    boolean active() { return ownership.active(); }
+    void clearTvCode() {}
+    void updateControls() {}
+    void finishGuard() { guardFinished=true; }
+    void completePendingTvForget() {}
+    String storageFailure() { return "storage failed"; }
+__METHODS__
+    BluetoothCleanupHarness() {
+        ownership.await(SERVICE); ownership.await(PROFILE); ownership.await(REGISTRATION); ownership.await(TV);
+    }
+    void stopped() { stop("Bluetooth turned off"); check(!ownership.active() && tv.stopped && touchpad.cancelled && guardFinished,"Stop fences input and attempts both channels"); }
+    void lost() { onServiceDisconnected(BluetoothProfile.HID_DEVICE); }
+    void disconnect() { onConnectionStateChanged(selected,BluetoothProfile.STATE_DISCONNECTED); }
+    void ack() { onAppStatusChanged(null,false); }
+    void otherResources() { ownership.completed(TV); ownership.completed(SERVICE); }
+    void blocked(String why) { check(gates.start()==null && !ownership.active(),why); }
+    void released(String why) { check(gates.available() && nativeHid.closes==1,why); }
+    static void check(boolean ok,String why) { if(!ok) throw new AssertionError(why); }
+    public static void main(String[] args) {
+        BluetoothCleanupHarness h = new BluetoothCleanupHarness();
+        h.stopped(); h.lost(); h.disconnect(); h.ack();
+        h.blocked("TV and service completion still required"); h.otherResources();
+        h.released("captured Stop/profile-loss/disconnect/unregister sequence must recover");
+        NativeRunGate.Run next=h.gates.start();
+        h.lost(); h.onConnectionStateChanged(h.selected,2); h.onAppStatusChanged(null,true);
+        check(next.active(),"old callbacks cannot affect replacement owner");
+
+        h=new BluetoothCleanupHarness(); h.stopped(); h.lost(); h.otherResources(); h.disconnect();
+        h.blocked("missing unregister acknowledgment stays blocked");
+        h=new BluetoothCleanupHarness(); h.stopped(); h.lost(); h.otherResources(); h.ack();
+        h.blocked("empty proxy defaults cannot replace disconnect callback");
+        h=new BluetoothCleanupHarness(); h.stopped(); h.lost(); h.ack(); h.disconnect(); h.otherResources();
+        h.released("reverse acknowledgment order can finish");
+        h=new BluetoothCleanupHarness(); h.stopped(); h.lost(); h.disconnect(); h.onConnectionStateChanged(h.selected,1); h.ack(); h.otherResources();
+        h.blocked("new connecting event invalidates disconnect proof");
+        h=new BluetoothCleanupHarness(); h.stopped(); h.lost(); h.disconnect(); h.onConnectionStateChanged(h.other,2); h.ack(); h.otherResources();
+        h.blocked("foreign link makes lost-proxy cleanup ambiguous");
+        h=new BluetoothCleanupHarness(); h.ownership.fail(); h.stopped(); h.lost(); h.disconnect(); h.ack(); h.otherResources();
+        h.blocked("independent native failure never gets cleared");
+        h=new BluetoothCleanupHarness(); h.lost(); h.disconnect(); h.ack(); h.otherResources();
+        h.blocked("unexpected profile loss before Stop remains fatal");
+        h=new BluetoothCleanupHarness(); h.nativeHid.unregisterAccepted=false; h.stopped(); h.lost(); h.disconnect(); h.ack(); h.otherResources();
+        h.blocked("rejected unregister stays fatal");
+        h=new BluetoothCleanupHarness(); h.stopped(); h.lost(); h.disconnect(); h.nativeHid.closeFails=true; h.ack(); h.otherResources();
+        h.blocked("proxy close failure stays fatal");
+        h=new BluetoothCleanupHarness(); h.stopped(); h.disconnect(); h.ack(); h.lost(); h.otherResources();
+        h.released("late profile loss after successful close cannot poison remaining TV cleanup");
+        h=new BluetoothCleanupHarness(); h.stopped(); h.nativeHid.state=2; h.ack(); h.otherResources();
+        h.blocked("normal connected proxy still holds cleanup");
+        h=new BluetoothCleanupHarness(); h.nativeHid.state=0; h.stopped(); h.ack(); h.otherResources();
+        h.released("normal Stop still uses live proxy queries");
+        h=new BluetoothCleanupHarness(); h.stopped(); h.lost(); h.nativeHid.queryFails=true; h.disconnect(); h.ack(); h.otherResources();
+        h.released("lost-proxy path relies on callbacks, not untrustworthy queries");
+        h=new BluetoothCleanupHarness(); h.selectedDisconnected=true; h.connect(h.selected); h.stopped(); h.lost(); h.ack(); h.otherResources();
+        h.blocked("new native connect invalidates previous disconnect proof");
+        h=new BluetoothCleanupHarness(); h.stopped(); h.adapter.enabled=false; h.ack(); h.otherResources();
+        h.blocked("adapter-off proxy defaults before PROFILE_LOST cannot prove disconnection");
+        h=new BluetoothCleanupHarness(); h.stopped(); h.disconnect(); h.ack(); h.onConnectionStateChanged(h.selected,1); h.otherResources();
+        h.blocked("nonterminal callback after proxy closure keeps ownership blocked");
+        h=new BluetoothCleanupHarness(); h.selectedDisconnected=true; h.nativeHid.state=1; h.connect(h.selected); h.lost(); h.ack(); h.otherResources();
+        h.blocked("preflight pending link invalidates older disconnect callback");
+        h=new BluetoothCleanupHarness(); h.selectedDisconnected=true; h.nativeHid.state=1; h.stopped(); h.lost(); h.ack(); h.otherResources();
+        h.blocked("Stop query pending link invalidates older disconnect callback");
+        h=new BluetoothCleanupHarness(); h.selectedDisconnected=true; h.nativeHid.peers=List.of(h.other); h.stopped(); h.lost(); h.ack(); h.otherResources();
+        h.blocked("enumerated foreign link prevents detached recovery");
+        h=new BluetoothCleanupHarness(); h.stopped(); h.selectedDisconnected=true; h.unregistered=true; h.nativeHid.state=1; h.finishProfile(); h.lost(); h.otherResources();
+        h.blocked("finishProfile pending link invalidates older disconnect callback");
+        System.out.println("22 real-callback cleanup scenarios passed");
+    }
+}

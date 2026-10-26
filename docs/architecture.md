@@ -1,5 +1,14 @@
 # Architecture Status
 
+Diagnostic0.13 preserves the N3 teardown barrier while classifying profile loss
+during Stop as pending cleanup. Detached/disabled proxies cannot prove cleanup:
+require this Run's selected disconnect and unregister callbacks, no observed
+foreign link, successful proxy closure and TV/service completion. Nonterminal
+callbacks, native pending-link observations and connect attempts invalidate disconnect evidence; profile
+loss before Stop and independently failed operations retain the permanent latch.
+This follows the Android12 unregister contract and requires hardware retesting.
+See the [correction plan](superpowers/plans/2026-10-25-nord-bluetooth-cleanup.md).
+
 ## Approved Nord unified remote (2026-10-25)
 
 The current direction is the Nord as a handheld remote. The approved

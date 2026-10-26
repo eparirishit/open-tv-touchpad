@@ -129,7 +129,16 @@ foreground notification with Stop and a fixed five-minute elapsed deadline.
   also explicitly rechecks teardown, so a recreated screen can retry without
   polling or automatic registration. After five seconds, an unresolved
   teardown directs the owner to force stop the probe in Android settings and
-  reopen; no automatic recovery or hidden Bluetooth operations are attempted.
+  reopen; no automatic reconnect or hidden Bluetooth operations are attempted.
+- Version0.13 treats profile-service loss during an already-stopping run as
+  pending cleanup. After profile loss or adapter shutdown, disconnected-proxy
+  query defaults cannot release ownership: require this run's actual selected
+  disconnect and unregister callbacks, no observed foreign link, successful
+  proxy closure, and existing TV/service completion. A new connection event or
+  connect attempt or pending-link query invalidates disconnect evidence. Profile loss before Stop,
+  rejected native operations and independent cleanup failures remain blocking.
+  Finishing confirmed teardown only permits an explicit new Start/Connect;
+  it never resumes input automatically.
 - The Activity observes selected-peer pairing/re-pairing and any departure from
   BONDED even after Stop, revokes the record and stops input. Missing bond at Start
   or Connect also invalidates enrollment. Forget clears the app record/session;

@@ -24,6 +24,9 @@ public class NativeStopTest {
         int scrollBegin = activity.indexOf("        final ScrollInput scrolling =");
         int scrollEnd = activity.indexOf("        void trace(", scrollBegin);
         assertTrue("Native scroll dispatch field must exist", scrollBegin >= 0 && scrollEnd > scrollBegin);
+        int pendingBegin = activity.indexOf("        void pendingLink(BluetoothDevice peer) {");
+        int pendingEnd = activity.indexOf("        void finishProfile() {", pendingBegin);
+        assertTrue(pendingBegin >= 0 && pendingEnd > pendingBegin);
         String template;
         try (var input = getClass().getResourceAsStream("/StopCleanupHarness.java.template")) {
             assertNotNull(input);
@@ -33,7 +36,8 @@ public class NativeStopTest {
         try {
             Path harness = temporary.resolve("StopCleanupHarness.java");
             Files.write(harness, template.replace("__STOP_METHOD__", activity.substring(begin, end))
-                .replace("__SCROLL_FIELD__", activity.substring(scrollBegin, scrollEnd)).getBytes(StandardCharsets.UTF_8));
+                .replace("__SCROLL_FIELD__", activity.substring(scrollBegin, scrollEnd))
+                .replace("__PENDING_LINK__", activity.substring(pendingBegin, pendingEnd)).getBytes(StandardCharsets.UTF_8));
             Process compiler = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin", "javac").toString(),
                 "-d", temporary.toString(),
                 harness.toString(), source.resolve("InputSubmission.java").toString(),
