@@ -36,6 +36,7 @@ Known Bluetooth-loss cleanup remains blocked; no N3 PASS or daily-use release.
 
 ## Installation
 
+Source commit `3cf705c` produced the recorded APK.
 Version14 was installed on the verified AC2001/API31 with its probe service
 stopped and installed version13 confirmed. The new APK signature matches preserved
 0.13/0.7 artifacts; source and APK hashes matched the reviewed snapshot. Both
