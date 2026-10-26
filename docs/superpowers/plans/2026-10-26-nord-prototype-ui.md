@@ -27,3 +27,9 @@ or Bluetooth-recovery acceptance is claimed.
 - [x] Hide bottom tabs on Setup across IME transitions; remove Close and its binding.
 - [x] Add native square Stop icon, persistent blue OK and circle-free arrow states.
 - [x] Verify native layouts/styles, complete review and preserve device state on update.
+
+## Owner refinements in0.17
+
+- [x] Gate header Stop on existing connection readiness; show disabled OK accurately.
+- [x] Remove tab-state borders, add theme icons and bundled Netflix mark.
+- [x] Verify focused native acceptance, review and install while preserving current enrollment.

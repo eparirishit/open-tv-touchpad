@@ -1,5 +1,16 @@
 # Project Progress
 
+## Connection-state UI refinements (2026-10-26)
+
+Owner requested connection-dependent Stop, disabled-looking OK, borderless tab
+selection and theme/Netflix icons. Implemented in0.17 using existing admission
+and native presentation. The real-Activity Stop and missing-icon regressions
+failed on0.16 before implementation.167unit/27native tests pass (one opt-in
+projector diagnostic skipped); both reviews found no actionable issues. Reviewed
+0.17 is installed with current enrollment bytes preserved and stable launch
+confirmed. Owner visual/connection-state acceptance is pending; full evidence is
+in the UI report. Bluetooth cleanup and enrollment recovery remain separate.
+
 ## UI refinements (2026-10-26)
 
 Owner requested hiding Setup’s bottom tabs, removing Close, adding a Stop square

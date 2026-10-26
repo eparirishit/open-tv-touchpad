@@ -1,5 +1,38 @@
 # Nord prototype UI refresh — 0.15 presentation PASS; control smoke pending
 
+##0.17 connection states, tabs and icons
+
+Header Stop starts disabled and follows the existing Activity input-readiness
+result. It disables again during failure/teardown. The foreground-notification
+Stop test remains available during setup. OK is visibly disabled before TV
+admission and blue when available. All tab states use fill rather than a border;
+selected-state accessibility and fill-based keyboard focus remain. Display has
+native sun/moon icons; Netflix uses a bundled colored N mark with disabled alpha
+and the existing Open Netflix accessible label.
+
+The new real-Activity Stop/default-state and missing-icon regressions failed on
+0.16 before implementation. Final unit suite:167 pass, no failures/errors/skips.
+API31 runner:28 tests,27 pass and one expected opt-in real-projector handshake
+skip. Lint:0errors/37warnings. Both APK builds pass. Native checks cover default
+Stop state after real Activity launch/theme changes, disabled/enabled D-pad
+backgrounds, tab selection/press/focus borders, icon layout and accessibility,
+plus earlier small/large/IME reachability and unchanged admission. Synthetic
+connected screenshots prove presentation only; no live connection is claimed.
+Light/dark disconnected, connected and Display screenshots were inspected.
+Independent and complete Codex reviews found no actionable issues. Source commit
+`adf0e8b` produced the reviewed artifact. Installed17 on the authorized AC2001/API31
+with installed16 and no probe service verified first. APK signer matches0.16/0.7;
+source and artifact hashes match the reviewed snapshot. Current enrollment files
+remain byte-identical after install, launch and six-second stable-process check.
+The initial foreground snapshot preceded resume; all subsequent checks confirmed
+the app foreground with a stable PID. No automatic service/run, data clearing or
+unpairing was performed. Owner visual/connected-state acceptance is pending;
+connected screenshots are synthetic. Bluetooth cleanup and app enrollment recovery
+remain blocked.
+
+Version17/0.17-diagnostic APK SHA256:
+`40eb83ed4ef92c232edf6341ffc84a1a260de0c130056ee29395565397b87318`.
+
 ##0.16 requested refinements
 
 Settings now hides Remote/Touchpad tabs through keyboard open/close transitions;
