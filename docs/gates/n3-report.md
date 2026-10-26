@@ -260,8 +260,8 @@ the proposed amendment; positive/negative platform fixtures remain required.
   directly verified OFF state. The receiver uses that message for any non-ON
   adapter state. The debugging disable/restore commands returned errors;
   subsequent independent reads confirmed Bluetooth ON and the probe service absent.
-  The bounded trace read returned no events, so the failed/pending cleanup resource
-  is not identified. Owner follow-up confirms actual rejection of TV/pad/scroll
+  The initial bounded trace read returned no events. The later captured retry
+  below establishes a profile-loss failure latch, without proving all cleanup. Owner follow-up confirms actual rejection of TV/pad/scroll
   input and continued physical-remote operation. Android Force stop/reopen preserved both pairings,
   kept input disabled until Start/Connect, and restored Home/pointer/scroll
   without another code, followed by Stop. Input blocking and documented recovery
@@ -314,10 +314,49 @@ failed native operation latches the process unavailable even if later completion
 callbacks arrive; unresolved teardown displays the recovery instruction after
 five seconds. The observed message is consistent with this documented safeguard
 (README lifecycle section and NativeRunGate), not evidence that it is safe to
-clear the latch. The exact native failure is not established by the available
-trace. Owner follow-up confirms disabled TV/pad/scroll controls, a usable physical
+clear the latch. The initial trial did not identify the native failure; the
+subsequent capture below establishes one definite failure-latch path. Owner follow-up confirms disabled TV/pad/scroll controls, a usable physical
 remote and successful documented Force stop/reopen recovery with both pairings
 retained. Input stayed disabled until explicit Start/Connect; Home, pointer and
 one scroll step worked without a pairing code, then the owner pressed Stop.
 This does not establish automatic native cleanup. No product code or safety
 policy was changed.
+
+## Captured Bluetooth cleanup blocker — 2026-10-25
+
+Same installed0.12 diagnostic; no new APK or pairing. Read-only preflight verified
+Nord AC2001/API31, app version12, Bluetooth ON, foreground Activity and active
+probe service. A live fixed-tag capture started before owner Start/Connect. The
+owner verified Home and Move left; the trace contains registration, selected
+connection and accepted movement followed by these contiguous events:
+
+| Sequence | Elapsed ms | Event |
+| --- | --- | --- |
+| 24 | 87000 | STOP |
+| 25 | 87049 | SELECTED_DISCONNECTING |
+| 26 | 87320 | PROFILE_LOST |
+| 27 | 87340 | SELECTED_DISCONNECTED |
+| 28 | 87340 | UNREGISTERED |
+| 29 | 92006 | TEARDOWN_DEADLINE |
+
+All29 events from RUN_SAVED are contiguous, with no truncation. Sanitized event
+record SHA256: `90462ef7dc876ba669be2f2f8802f7ec37ca43974123f719320f2cfbda807cf2`.
+No PAUSE or RUN_DEADLINE precedes this Stop. The debug disable and restore
+commands both returned exit137; an independently polled OFF state was not
+confirmed. Subsequent reads confirmed ON and no running probe service. Do not
+attribute exit137 to a particular cause or promote the controlled OFF test.
+
+`Run.service.onServiceDisconnected` emits PROFILE_LOST then calls
+`ownership.fail()` even when Stop is already in progress. NativeRunGate never
+clears that flag; later disconnect/unregister callbacks cannot make the slot
+available. This is a directly evidenced, sufficient blocker to restart, not
+proof that it was the only failing cleanup operation. The trace does not expose
+completion of every TV/service/profile resource.
+
+Four focused existing cleanup tests pass (NativeRunGateTest and NativeStopTest).
+They preserve the conservative failure policy; no runtime change was made.
+A future recovery change must retain actual unregister acknowledgment, confirmed
+link retirement, profile closure and TV/service completion. Merely ignoring
+PROFILE_LOST, relying on empty results from a disconnected proxy, or clearing
+failed ownership on timeout is not justified by this trace. Force stop/reopen
+remains the verified recovery path from the earlier owner trial.

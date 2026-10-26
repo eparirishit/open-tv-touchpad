@@ -22,7 +22,9 @@ Wi-Fi does not resume control, by owner observation with the Nord app visible.
 The Bluetooth-loss trial reports both channels disconnected and input disabled,
 and the owner confirmed those controls send no input while the physical remote
 works. Cleanup is unconfirmed; Android Force stop/reopen successfully restores
-explicit Start/Connect without re-pairing. Full controlled Bluetooth-loss
+explicit Start/Connect without re-pairing. A fresh trace identifies profile-service
+loss during Stop as a permanent restart block even when disconnect/unregister
+callbacks follow; no recovery-policy change has been made. Full controlled Bluetooth-loss
 acceptance remains pending. On0.12, the owner also verified at least20 seconds
 of post-Netflix-launch connectivity with pointer title selection/Back, and
 Play/Pause visibly pausing, resuming and pausing playback, followed by Stop.

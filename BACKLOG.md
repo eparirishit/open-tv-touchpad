@@ -56,8 +56,11 @@ design must be approved before an item moves into an active milestone.
   Bluetooth-loss remains partial: the owner reports both channels disconnected
   and input disabled, but cleanup is unconfirmed. Owner verified input rejection,
   physical-remote use and Force stop/reopen recovery without re-pairing; input
-  still requires explicit Start/Connect. Identify missing native cleanup evidence
-  before considering a change to the safety latch. Other N3c checks stay open.
+  still requires explicit Start/Connect. A contiguous fresh trace identifies
+  PROFILE_LOST during Stop as a permanent failure latch before disconnect and
+  unregister callbacks. Preserve actual cleanup proof when designing recovery;
+  do not simply clear the latch or trust disconnected-proxy default results.
+  Other N3c checks stay open.
   Owner verified at least20-second Netflix post-launch stability with both
   channels usable (pointer title selection and Back), plus Play/Pause changing
   playback through pause/resume/pause, followed by Stop. Profile selection by

@@ -29,7 +29,10 @@ Bluetooth is confirmed ON afterward. The owner now confirms TV/pad/scroll input
 was blocked, the physical remote worked, and Force stop/reopen recovered
 Home/pointer/scroll without re-pairing, only after explicit Start/Connect.
 Documented recovery passes; native cleanup and the controlled OFF transition
-remain unconfirmed, so full Bluetooth-loss acceptance stays partial.
+remain unconfirmed, so full Bluetooth-loss acceptance stays partial. A fresh
+contiguous trace now identifies PROFILE_LOST during Stop as a definite permanent
+failure latch, preceding disconnect/unregister acknowledgments. All other native
+cleanup is not proven; four focused cleanup tests pass and runtime is unchanged.
 See [N3 report](gates/n3-report.md) for exact coverage and artifact identity.
 
 ## N3 TV pairing verified on0.12 (2026-10-25)

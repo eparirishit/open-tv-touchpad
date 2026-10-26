@@ -33,8 +33,10 @@ channels and restoration does not resume input while the Nord app stays visible.
 The Bluetooth-loss trial reached the reported stopped state with cleanup
 unconfirmed; the documented process latch requires Force stop/reopen. Owner
 checks confirm input rejection, physical-remote use and recovery without
-re-pairing, with explicit Start/Connect required. The exact cleanup failure
-is not established. Controlled Bluetooth-loss acceptance remains partial;
+re-pairing, with explicit Start/Connect required. A fresh trace confirms
+PROFILE_LOST during Stop sets the permanent failure latch before later disconnect
+and unregister callbacks. This establishes one blocker, not completion of all
+remaining native cleanup. Controlled Bluetooth-loss acceptance remains partial;
 no overall N3 PASS is claimed.
 See [N3 evidence](gates/n3-report.md). Version0.10 added a closed failure-stage enum captured
 atomically with the first terminal failure, then shown by the existing guarded
