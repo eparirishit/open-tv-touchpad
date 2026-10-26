@@ -1,5 +1,10 @@
 # Architecture Status
 
+Diagnostic0.16 keeps footer visibility owned by RemoteScreen from Setup and IME
+state together. Close is removed from the header and Activity bindings; Stop and
+Android lifecycle shutdown remain unchanged. Native Stop icon and D-pad palette
+states are presentation only; disabled controls remain disabled.
+
 Diagnostic0.15 defers system-bar access until view attachment because the Activity
 window decor is unavailable during RemoteScreen construction. The real launch path
 is covered by a native Activity test.

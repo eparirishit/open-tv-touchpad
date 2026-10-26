@@ -1,5 +1,33 @@
 # Nord prototype UI refresh — 0.15 presentation PASS; control smoke pending
 
+##0.16 requested refinements
+
+Settings now hides Remote/Touchpad tabs through keyboard open/close transitions;
+its header toggle returns to the previous page. Close is removed, Stop has a native
+leading square, OK remains blue in all states and directional arrows have no
+circular backgrounds. A rectangular keyboard-focus outline remains. Disabled
+admission, Stop and lifecycle shutdown are unchanged, as is the0.15 launch fix.
+
+The focused footer regression failed on0.15 before implementation. Final checks:
+167 unit tests pass; API31 native runner reports27 tests (26 pass, one expected
+opt-in real-projector diagnostic skip); lint has0errors/37warnings; both APKs build.
+Native tests cover Setup/IME restoration, rendered D-pad states, Stop icon layout,
+actual Activity launch, palettes, small/large text and input admission. Screenshots
+were inspected in light/dark; the synthetic fixture now inherits layout direction
+like the real Window so the leading Stop icon is rendered. Independent review
+found a test-only left/right assumption; corrected and rereviewed, then native
+checks rerun. Complete Codex review against850bcc3 found no actionable regressions.
+
+Version16/0.16-diagnostic APK SHA256:
+`2d7ebf2e8b132400fc16c1a6dd2113e70faa75d66a1dfbfc649e3af279896e1f`.
+Same-signature install verified the authorized AC2001/API31, installed15 and no
+probe service first. Current enrollment bytes were compared before update,
+after install and after launch; unchanged. Source/APK hashes matched the reviewed
+snapshot. The launched process stayed foreground with the same PID for six seconds,
+with no automatic service/run. No data clearing or unpairing was performed.
+Owner visual acceptance of0.16 is pending. Prior enrollment recovery and Bluetooth
+cleanup blocks remain; this is presentation evidence, not combined-control PASS.
+
 Owner supplied an HTML prototype and requested native implementation on2026-10-26.
 Reference SHA256: `6bfff5d16faaaa5a9a4ce57707944392dc304639660a1dde1e6de7bff20636db`.
 The original bundle stays local; no mock device address or prototype JavaScript

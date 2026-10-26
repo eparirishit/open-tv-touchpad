@@ -1,11 +1,14 @@
 # Disposable Nord remote — N3 diagnostic
 
-## Prototype UI in0.15
+## Prototype UI in0.16
 
 Version0.15 corrects the0.14 Activity launch crash by deferring system-bar setup
 until the view is attached. The owner-provided design separates TV buttons on **Remote** from mouse input on
 **Touchpad**. Touchpad offers a surface or **Buttons instead**, with four scroll
-buttons available in both modes. The header keeps Setup, Stop and Close reachable;
+buttons available in both modes. Version0.16 removes Close and adds a square icon
+before Stop. Setup hides the bottom tabs; use its header toggle to return.
+OK stays blue, with circle-free direction arrows and unchanged disabled admission.
+The header keeps Setup and Stop reachable;
 Setup groups **Projector**, **TV controls** and **Display**. Display changes light/
 dark colors in place and saves only the appearance preference. Real connection
 status and the full diagnostic message remain visible in the scrollable content.

@@ -1,5 +1,12 @@
 # Capabilities
 
+## Diagnostic0.16 — requested UI refinements
+
+Setup hides the bottom Remote/Touchpad tabs; the header toggle returns to the
+previous page. Close is removed, Stop has a square icon, OK remains blue while
+disabled and directional arrows lose their circles. Admission and Stop behavior
+are unchanged. Verification/install evidence is in the UI report.
+
 ## Diagnostic0.15 — prototype UI with launch correction
 
 Version0.14 failed real Activity launch despite its synthetic-view checks.

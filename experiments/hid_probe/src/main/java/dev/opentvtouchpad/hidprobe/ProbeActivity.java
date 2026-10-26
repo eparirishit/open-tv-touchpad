@@ -113,7 +113,6 @@ public final class ProbeActivity extends Activity {
             });
         }
         bind(screen.stop, () -> stop("Stopped. Enrollment retained."));
-        bind(screen.close, () -> { stop("Closed."); finish(); });
         IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_PAIRING_REQUEST);
         filter.addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
         filter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);

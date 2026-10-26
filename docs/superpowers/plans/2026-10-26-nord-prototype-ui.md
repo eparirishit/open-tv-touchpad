@@ -21,3 +21,9 @@ Owner0.15 presentation smoke passes after correcting0.14 Activity launch. The
 real-Activity regression now covers launch/theme changes; combined controls await
 pairing recovery after a system-reported app-data clear of unknown origin. No N3
 or Bluetooth-recovery acceptance is claimed.
+
+## Owner refinements in0.16
+
+- [x] Hide bottom tabs on Setup across IME transitions; remove Close and its binding.
+- [x] Add native square Stop icon, persistent blue OK and circle-free arrow states.
+- [x] Verify native layouts/styles, complete review and preserve device state on update.

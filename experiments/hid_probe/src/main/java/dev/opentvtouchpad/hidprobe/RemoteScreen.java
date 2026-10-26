@@ -39,7 +39,7 @@ public final class RemoteScreen {
 
     public final LinearLayout root;
     public final TextView status, migrationNotice;
-    public final Button start, connect, visible, confirm, forget, stop, close, setup;
+    public final Button start, connect, visible, confirm, forget, stop, setup;
     public final Button moveLeft, moveRight, moveUp, moveDown, click;
     public final Button remoteTab, padTab, projectorTab, tvTab, displayTab;
     public final Button surfaceTab, buttonsTab, lightTheme, darkTheme;
@@ -62,7 +62,7 @@ public final class RemoteScreen {
     private final List<Button> navigation = new ArrayList<>();
     private final List<View> cards = new ArrayList<>();
     private final List<View> tracks = new ArrayList<>();
-    private boolean showingSetup, showingTouchpad, padButtons, dark, connected;
+    private boolean showingSetup, showingTouchpad, padButtons, dark, connected, imeVisible;
     private int setupSection;
 
     public RemoteScreen(Context context, BiConsumer<Integer, Integer> move, Runnable tap) {
@@ -80,8 +80,11 @@ public final class RemoteScreen {
         setup = iconButton("Setup", R.drawable.ui_setup);
         stop = button("Stop");
         stop.setContentDescription("Stop and disconnect");
-        close = iconButton("Close", R.drawable.ui_close);
-        for (Button action : new Button[]{setup, stop, close}) {
+        Drawable stopIcon = context.getDrawable(R.drawable.ui_stop).mutate();
+        stopIcon.setBounds(0, 0, dp(14), dp(14));
+        stop.setCompoundDrawablesRelative(stopIcon, null, null, null);
+        stop.setCompoundDrawablePadding(dp(6));
+        for (Button action : new Button[]{setup, stop}) {
             LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(-2, -2);
             size.setMarginStart(dp(6));
             header.addView(action, size);
@@ -292,7 +295,8 @@ public final class RemoteScreen {
             android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.ime());
             root.setPadding(padding + bars.left, padding + bars.top,
                     padding + bars.right, padding + bars.bottom);
-            footer.setVisibility(insets.getInsets(WindowInsets.Type.ime()).bottom > 0 ? View.GONE : View.VISIBLE);
+            imeVisible = insets.getInsets(WindowInsets.Type.ime()).bottom > 0;
+            updateFooter();
             return insets;
         });
         root.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
@@ -365,7 +369,12 @@ public final class RemoteScreen {
         connection.setTextColor(connected ? color("#1F8A4C", "#4ADE80") : color("#5B636D", "#9AA3AD"));
     }
 
+    private void updateFooter() {
+        footer.setVisibility(showingSetup || imeVisible ? View.GONE : View.VISIBLE);
+    }
+
     private void updatePages() {
+        updateFooter();
         remotePage.setVisibility(!showingSetup && !showingTouchpad ? View.VISIBLE : View.GONE);
         padPage.setVisibility(!showingSetup && showingTouchpad ? View.VISIBLE : View.GONE);
         setupPage.setVisibility(showingSetup ? View.VISIBLE : View.GONE);
@@ -470,8 +479,10 @@ public final class RemoteScreen {
         int fill = primary ? accent : surface;
         int foreground = primary ? color("#FFFFFF", "#0E1012") : text;
         if (destructive) { fill = Color.TRANSPARENT; foreground = color("#C4352B", "#FF8A80"); border = foreground; }
-        if (button == tvButtons.get(TvCommand.UP) || button == tvButtons.get(TvCommand.DOWN)
-                || button == tvButtons.get(TvCommand.LEFT) || button == tvButtons.get(TvCommand.RIGHT)) {
+        boolean direction = button == tvButtons.get(TvCommand.UP) || button == tvButtons.get(TvCommand.DOWN)
+                || button == tvButtons.get(TvCommand.LEFT) || button == tvButtons.get(TvCommand.RIGHT);
+        boolean ok = button == tvButtons.get(TvCommand.OK);
+        if (direction) {
             fill = Color.TRANSPARENT;
             border = Color.TRANSPARENT;
         }
@@ -482,12 +493,13 @@ public final class RemoteScreen {
         }
         if ((button == lightTheme || button == darkTheme) && button.isSelected()) border = accent;
         StateListDrawable background = new StateListDrawable();
-        background.addState(BUTTON_STATES[0], shape(color("#E9ECF0", "#181B1F"), border, 100));
-        background.addState(BUTTON_STATES[1], shape(color("#DCE8FF", "#2C4160"), accent, 100));
-        background.addState(BUTTON_STATES[2], shape(fill, accent, 100));
+        background.addState(BUTTON_STATES[0], shape(direction || ok ? fill : color("#E9ECF0", "#181B1F"), border, 100));
+        background.addState(BUTTON_STATES[1], shape(direction || ok ? fill : color("#DCE8FF", "#2C4160"), direction ? Color.TRANSPARENT : accent, 100));
+        background.addState(BUTTON_STATES[2], shape(fill, accent, direction ? 8 : 100));
         background.addState(BUTTON_STATES[3], shape(fill, border, 100));
         button.setBackground(background);
-        button.setTextColor(new ColorStateList(BUTTON_STATES, new int[]{color("#6B737C", "#6F7882"), text, foreground, foreground}));
+        button.setTextColor(new ColorStateList(BUTTON_STATES, new int[]{ok ? foreground : color("#6B737C", "#6F7882"), direction ? accent : ok ? foreground : text, foreground, foreground}));
+        if (button == stop) button.setCompoundDrawableTintList(button.getTextColors());
     }
 
     private int color(String light, String night) { return Color.parseColor(dark ? night : light); }

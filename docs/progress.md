@@ -1,5 +1,15 @@
 # Project Progress
 
+## UI refinements (2026-10-26)
+
+Owner requested hiding Setup’s bottom tabs, removing Close, adding a Stop square
+and simplifying D-pad styling. Implemented in0.16 without changing transport,
+admission or the launch fix. The footer regression reproduced the old behavior
+before implementation.167unit/26native tests pass (one opt-in diagnostic skipped);
+complete review found no actionable defects. Reviewed0.16 is installed with
+current enrollment bytes preserved and stable launch confirmed. Owner visual
+acceptance is pending; see the UI report.
+
 ## Prototype launch correction (2026-10-26)
 
 Owner0.14 launch failed. The real Activity called the system-bar controller

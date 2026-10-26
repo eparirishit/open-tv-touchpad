@@ -203,3 +203,6 @@ reliability limitations; local STOP tests passed but do not certify those hardwa
 - [ ] Validate installed-PWA behavior on iPhone and Android after M1 is
   unblocked.
 - [ ] Evaluate a separately designed Windows-hosted server mode after V1.
+
+- [x] Owner0.16 UI refinements: Setup-only navigation, no Close, square Stop icon,
+  blue OK and circle-free D-pad arrows; no transport/lifecycle change.

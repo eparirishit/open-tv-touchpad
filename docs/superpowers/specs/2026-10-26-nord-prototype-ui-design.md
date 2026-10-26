@@ -7,7 +7,9 @@ Use existing RemoteScreen/TouchpadView and Activity bindings. Remote and Touchpa
 are separate bottom tabs; Setup toggles from the header, with Projector, TV controls
 and Display sections. Touchpad offers surface/buttons alternatives plus four scroll
 buttons. Remote has Back/Home/Netflix, a circular spatial D-pad and volume/playback.
-Header Stop/Close stay available. Use the prototype's light/dark palettes, rounded
+Header Setup/Stop stay available; Close is removed per owner follow-up.
+Stop has a leading square icon. OK stays blue even while disabled; directional
+arrows have no circular backgrounds, retaining a rectangular keyboard-focus outline. Use the prototype's light/dark palettes, rounded
 cards, blue accents, native vector icons and a persisted appearance-only preference.
 Theme changes update existing views in place; never recreate a live run or save
 pairing fields. Keep status truthful; do not reproduce the mock timer or address.
@@ -24,8 +26,9 @@ codes or addresses. Original HTML is local design evidence, not executable app c
 
 Implementation choice: extend native views; WebView conversion would duplicate
 state/control boundaries and change trust surface. Header fixed, status and page
-content scroll together when space is scarce; bottom mode tabs fixed except IME
-may hide them to keep setup readable. Light default, saved dark preference allowed.
+content scroll together when space is scarce; bottom mode tabs are hidden on Setup and while the IME is visible, restoring
+only when both conditions clear. The header Setup toggle returns to the previous
+Remote/Touchpad page. Light default, saved dark preference allowed.
 
 Acceptance: native screenshots of all pages/themes; real-view tests for navigation,
 large text/IME reachability, independent status and unchanged masking/admission;

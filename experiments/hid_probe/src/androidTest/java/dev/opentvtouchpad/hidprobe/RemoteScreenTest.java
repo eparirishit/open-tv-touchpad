@@ -43,6 +43,8 @@ public class RemoteScreenTest {
     }
 
     private void layout(RemoteScreen screen, Context context, int width, int height) {
+        // Unattached previews need the layout direction normally inherited from the Window.
+        screen.root.setLayoutDirection(context.getResources().getConfiguration().getLayoutDirection());
         float density = context.getResources().getDisplayMetrics().density;
         screen.root.measure(View.MeasureSpec.makeMeasureSpec((int)(width * density), View.MeasureSpec.EXACTLY),
             View.MeasureSpec.makeMeasureSpec((int)(height * density), View.MeasureSpec.EXACTLY));
@@ -129,6 +131,60 @@ public class RemoteScreenTest {
         });
     }
 
+    @Test public void setupHidesFooterAcrossKeyboardTransitions() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            RemoteScreen screen = new RemoteScreen(context(360,800,1f),(x,y)->{},()->{});
+            for (boolean touchpad : new boolean[]{false,true}) {
+                screen.showTouchpad(touchpad);
+                assertTrue(visible(screen,screen.remoteTab));
+                screen.showSetup(true);
+                for (int keyboard : new int[]{0,200,0}) {
+                    screen.root.dispatchApplyWindowInsets(new WindowInsets.Builder()
+                        .setInsets(WindowInsets.Type.ime(),Insets.of(0,0,0,keyboard)).build());
+                    assertFalse(visible(screen,screen.remoteTab));
+                    assertFalse(visible(screen,screen.padTab));
+                }
+                screen.setup.performClick();
+                assertTrue(visible(screen,screen.remoteTab));
+                assertEquals(touchpad,visible(screen,screen.touchpad));
+            }
+        });
+    }
+
+    @Test public void headerAndDpadMatchRequestedStyleWithoutEnablingInput() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            RemoteScreen screen = new RemoteScreen(context(360,800,1f),(x,y)->{},()->{});
+            assertNull(findButton(screen.root,"Close"));
+            assertEquals("Stop",screen.stop.getText().toString());
+            assertNotNull(screen.stop.getCompoundDrawablesRelative()[0]);
+            assertEquals(screen.stop.getTextColors(),screen.stop.getCompoundDrawableTintList());
+            layout(screen,screen.root.getContext(),360,800);
+            boolean rtl = screen.stop.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL;
+            assertNotNull("leading icon resolves into visible layout",screen.stop.getCompoundDrawables()[rtl ? 2 : 0]);
+            assertTrue(rtl ? screen.stop.getCompoundPaddingRight() > screen.stop.getPaddingRight()
+                : screen.stop.getCompoundPaddingLeft() > screen.stop.getPaddingLeft());
+            for (boolean dark : new boolean[]{false,true}) {
+                screen.setDark(dark);
+                for (TvCommand command : new TvCommand[]{TvCommand.UP,TvCommand.DOWN,TvCommand.LEFT,TvCommand.RIGHT,TvCommand.OK}) {
+                    Button button = screen.tvButtons.get(command);
+                    assertFalse(button.isEnabled());
+                    for (int[] state : new int[][]{{-android.R.attr.state_enabled},
+                            {android.R.attr.state_enabled},{android.R.attr.state_enabled,android.R.attr.state_pressed},
+                            {android.R.attr.state_enabled,android.R.attr.state_focused}}) {
+                        android.graphics.drawable.Drawable background = button.getBackground();
+                        background.setState(state);
+                        Bitmap image = Bitmap.createBitmap(100,100,Bitmap.Config.ARGB_8888);
+                        background.setBounds(0,0,100,100);
+                        background.draw(new Canvas(image));
+                        assertEquals(command == TvCommand.OK ? android.graphics.Color.parseColor(dark ? "#6AA8FF" : "#2F6FEB") : 0,
+                            image.getPixel(50,50));
+                        image.recycle();
+                    }
+                }
+            }
+        });
+    }
+
     @Test public void remoteAndSetupFitPortraitLandscapeAndLargeText() {
         InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
             int[][] sizes = {{320,800}, {360,800}, {800,360}};
@@ -152,7 +208,7 @@ public class RemoteScreenTest {
                     reachable(screen, control);
                 }
                 assertFalse(screen.touchpad.isEnabled());
-                reachable(screen,screen.stop); reachable(screen,screen.close); reachable(screen,screen.setup);
+                reachable(screen,screen.stop); reachable(screen,screen.setup);
                 reachable(screen,screen.start); reachable(screen,screen.connect);
                 reachable(screen,screen.remoteTab); reachable(screen,screen.padTab);
                 {
@@ -174,7 +230,7 @@ public class RemoteScreenTest {
                     assertFalse("TV setup disabled before admission", control.isEnabled());
                     reachable(screen,control);
                 }
-                reachable(screen,screen.stop); reachable(screen,screen.close);
+                reachable(screen,screen.stop);
                 screen.showSetupSection(2); layout(screen,c,size[0],size[1]);
                 reachable(screen,screen.lightTheme); reachable(screen,screen.darkTheme);
                 screen.showSetup(false); layout(screen,c,size[0],size[1]);
@@ -244,7 +300,7 @@ public class RemoteScreenTest {
         });
     }
 
-    @Test public void imeInsetsKeepStopCloseAndPairingFieldsReachable() {
+    @Test public void imeInsetsKeepStopAndPairingFieldsReachable() {
         InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
             for (int[] size : new int[][]{{360,800,280},{800,360,100}}) {
                 Context c = context(size[0],size[1],1.5f);
@@ -256,10 +312,9 @@ public class RemoteScreenTest {
                     .setInsets(WindowInsets.Type.systemBars(),Insets.of(0,Math.round(24*density),0,Math.round(24*density)))
                     .setInsets(WindowInsets.Type.ime(),Insets.of(0,0,0,keyboard)).build());
                 layout(screen,c,size[0],size[1]);
-                reachable(screen,screen.stop); reachable(screen,screen.close);
+                reachable(screen,screen.stop);
                 reachable(screen,screen.tvCode); reachable(screen,screen.tvConfirm);
                 assertTrue(bounds(screen,screen.stop).bottom <= screen.root.getHeight() - keyboard);
-                assertTrue(bounds(screen,screen.close).bottom <= screen.root.getHeight() - keyboard);
                 assertTrue(screen.root.getPaddingBottom() >= keyboard);
             }
         });
