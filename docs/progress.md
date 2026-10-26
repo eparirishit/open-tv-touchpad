@@ -1,14 +1,16 @@
 # Project Progress
 
-## Bluetooth cleanup correction built (2026-10-25)
+## Bluetooth cleanup correction installed (2026-10-25)
 
 Owner-requested0.13 changes only shutdown recovery: profile loss during Stop
 waits for actual selected disconnect/unregister callbacks and all other cleanup,
 without clearing independent failure latches or trusting proxy defaults.
 The captured-order regression fails before and passes after;167 unit tests,
 lint (0errors/37warnings) and debug assembly pass. Scoped independent and complete
-Codex reviews found no remaining actionable findings. Installation and
-hardware recovery confirmation are pending;0.12 remains the observed artifact.
+Codex reviews found no remaining actionable findings. Source `f5b7de1` is
+installed as0.13 on the verified stopped Nord, with matching signer, both
+enrollment stores unchanged and no automatic remote run. Hardware recovery
+confirmation remains pending; prior owner acceptance applies only to0.12.
 See [N3 report](gates/n3-report.md) for the bounded correction and test limits.
 
 ## N3 combined controls and saved restart passed on0.12 (2026-10-25)

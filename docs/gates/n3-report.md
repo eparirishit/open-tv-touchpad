@@ -2,7 +2,7 @@
 
 Contract: [approved N3 design](../superpowers/specs/2026-10-25-nord-tv-controls-design.md).
 
-## Diagnostic0.13 cleanup correction — built; hardware retest pending
+## Diagnostic0.13 cleanup correction — installed; hardware retest pending
 
 The owner requested fixing the captured shutdown blocker. The bounded
 [correction plan](../superpowers/plans/2026-10-25-nord-bluetooth-cleanup.md)
@@ -28,8 +28,12 @@ This does not replace a real Nord recovery test.
 Built version13/0.13-diagnostic APK SHA256:
 `b74ae6d58413669732495cdff3b774cd4f321696ccd4fc62fb1084a9730e3a32`.
 Independent scoped re-review and complete-change Codex review found no remaining
-actionable findings after the stale-evidence correction. Installation and owner
-hardware retest are pending. The0.12 observations below
+actionable findings after the stale-evidence correction. Source `f5b7de1` was
+installed on the stopped, verified AC2001/API31 as version13. The installer
+required both saved enrollment files before updating, verified the same signing
+identity as0.12/0.7, and confirmed both stores byte-identical after installation
+and launch. The Activity was foreground with no automatic remote run. Owner
+hardware recovery retest is pending. The0.12 observations below
 remain tied to their original artifact; no overall N3 PASS is claimed.
 
 The owner also confirmed the full app-restart check: Stop/teardown, Android
