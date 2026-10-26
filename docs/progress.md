@@ -1,5 +1,16 @@
 # Project Progress
 
+## Prototype launch correction (2026-10-26)
+
+Owner0.14 launch failed. The real Activity called the system-bar controller
+before its window decor existed; API31 emulator launch reproduced the failure.
+Version0.15 waits for view attachment and adds a real-Activity launch/theme test.
+167unit/24native tests pass; one opt-in projector diagnostic is skipped. Reviewed0.15 is installed and owner confirms app launch, screens and themes work.
+Both enrollment files were absent BEFORE the correction install; system logs show
+an app-data clear event of unknown origin. The owner denies clearing data. The
+installer preserved the verified-empty state. Pairing recovery/control smoke remain
+pending; see the [UI report](gates/nord-prototype-ui-report.md).
+
 ## Prototype UI refresh (2026-10-26)
 
 Owner requested implementing the supplied HTML design in the native Nord app.

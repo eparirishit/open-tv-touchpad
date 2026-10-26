@@ -17,4 +17,7 @@ Write ownership: implementation subagent RemoteScreen.java only; parent icons,
 TouchpadView, tests, version/styles and docs. Independent reviewer reads all changes.
 No change to Bluetooth recovery, session ownership, TV protocol or admission.
 
-Owner hardware smoke remains pending; implementation/install completion is not N3 acceptance.
+Owner0.15 presentation smoke passes after correcting0.14 Activity launch. The
+real-Activity regression now covers launch/theme changes; combined controls await
+pairing recovery after a system-reported app-data clear of unknown origin. No N3
+or Bluetooth-recovery acceptance is claimed.

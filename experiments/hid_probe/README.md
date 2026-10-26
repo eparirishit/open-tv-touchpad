@@ -1,8 +1,9 @@
 # Disposable Nord remote — N3 diagnostic
 
-## Prototype UI in0.14
+## Prototype UI in0.15
 
-The owner-provided design separates TV buttons on **Remote** from mouse input on
+Version0.15 corrects the0.14 Activity launch crash by deferring system-bar setup
+until the view is attached. The owner-provided design separates TV buttons on **Remote** from mouse input on
 **Touchpad**. Touchpad offers a surface or **Buttons instead**, with four scroll
 buttons available in both modes. The header keeps Setup, Stop and Close reachable;
 Setup groups **Projector**, **TV controls** and **Display**. Display changes light/

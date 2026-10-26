@@ -88,8 +88,13 @@ design must be approved before an item moves into an active milestone.
   Existing lifecycle/transport remains unchanged. [UI evidence](docs/gates/nord-prototype-ui-report.md).
 - [x] Install0.14 on stopped Nord; same signature, both enrollments unchanged,
   no automatic run.
-- [ ] Owner0.14 smoke of Remote/Touchpad/Setup, appearance, pointer/scroll/TV
-  controls and Stop.
+- [x] Diagnose0.14 launch crash and correct constructor-time Window access in0.15;
+  actual Activity launch/theme test plus167unit/24native tests pass, one diagnostic skipped.
+- [x] Owner0.15 presentation smoke: app opens, Remote/Touchpad/Setup and Light/Dark
+  work. The0.14 hardware launch failed and was superseded by0.15.
+- [ ] Recover pairing after observed app-data clear event (initiator unknown;
+  owner reports no manual clear), then owner0.15 pointer/scroll/TV/Stop smoke.
+  Correction installation preserved the verified-empty app record state.
 - [ ] N4: review daily-use lifecycle and packaging after combined functionality.
 - [ ] Before broader distribution, verify screen-reader/font-scale/layout behavior;
   current native alternative controls have not received a complete device audit.

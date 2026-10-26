@@ -1,6 +1,15 @@
 # Capabilities
 
-## Diagnostic0.14 — prototype UI
+## Diagnostic0.15 — prototype UI with launch correction
+
+Version0.14 failed real Activity launch despite its synthetic-view checks.
+Version0.15 defers theme/window setup until attachment; actual Activity launch
+and light/dark changes pass on API31 emulator. Installed0.15 owner presentation
+smoke passes. Both app enrollment records were already absent before correction
+installation; an app-data clear event is logged with initiator unknown. Pairing
+recovery and combined control smoke remain pending.
+
+## Diagnostic0.14 — prototype UI (superseded)
 
 Remote presents the TV D-pad and playback controls; Touchpad presents pointer
 input, scroll controls and an accessible button alternative. Setup separates

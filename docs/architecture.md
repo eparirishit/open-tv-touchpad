@@ -1,5 +1,9 @@
 # Architecture Status
 
+Diagnostic0.15 defers system-bar access until view attachment because the Activity
+window decor is unavailable during RemoteScreen construction. The real launch path
+is covered by a native Activity test.
+
 Diagnostic0.14 updates only native presentation to the owner-supplied prototype.
 RemoteScreen owns view navigation and appearance; ProbeActivity still owns all
 session state, enabled controls and action binding. The same view instances survive
