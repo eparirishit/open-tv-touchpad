@@ -1,5 +1,12 @@
 # Architecture Status
 
+Diagnostic0.17 has Activity updateControls apply the existing run.ready() result
+to header Stop as well as pointer input. The service notification still offers
+Stop test during setup; lifecycle and timeout teardown remain authoritative.
+RemoteScreen gives disabled OK a neutral palette, preserves enabled blue, removes
+tab strokes while retaining selected/focus fill and adds bundled theme/Netflix
+vectors. No protocol, transport, pairing or new dependency is introduced.
+
 Diagnostic0.16 keeps footer visibility owned by RemoteScreen from Setup and IME
 state together. Close is removed from the header and Activity bindings; Stop and
 Android lifecycle shutdown remain unchanged. Native Stop icon and D-pad palette

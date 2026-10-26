@@ -852,6 +852,7 @@ public final class ProbeActivity extends Activity {
         try { ready = run != null && run.ready(); } catch (SecurityException | IllegalStateException ignored) { }
         for (Button button : inputs) button.setEnabled(ready);
         touchpad.setEnabled(ready);
+        screen.stop.setEnabled(ready);
         screen.setConnected(ready);
         boolean stopped = resumed && NATIVE_RUNS.available() && !pendingTvForget;
         screen.tvAddress.setEnabled(stopped && tvEnrollment.state() != TvEnrollment.State.UNUSABLE);

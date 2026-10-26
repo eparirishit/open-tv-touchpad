@@ -1,5 +1,14 @@
 # Capabilities
 
+## Diagnostic0.17 — connection states and icons
+
+Header Stop is disabled until the connection admits input, then disables again
+on disconnection/teardown. The existing notification Stop test can cancel setup.
+OK looks disabled before TV admission and turns blue when available. Tabs use
+selection/focus fill with no border highlights. Display adds sun/moon icons;
+Netflix uses its colored N mark, dimmed while disabled. Verification/install
+status is in the UI report.
+
 ## Diagnostic0.16 — requested UI refinements
 
 Setup hides the bottom Remote/Touchpad tabs; the header toggle returns to the

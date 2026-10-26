@@ -80,10 +80,8 @@ public final class RemoteScreen {
         setup = iconButton("Setup", R.drawable.ui_setup);
         stop = button("Stop");
         stop.setContentDescription("Stop and disconnect");
-        Drawable stopIcon = context.getDrawable(R.drawable.ui_stop).mutate();
-        stopIcon.setBounds(0, 0, dp(14), dp(14));
-        stop.setCompoundDrawablesRelative(stopIcon, null, null, null);
-        stop.setCompoundDrawablePadding(dp(6));
+        leadingIcon(stop, R.drawable.ui_stop, 14);
+        stop.setEnabled(false);
         for (Button action : new Button[]{setup, stop}) {
             LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(-2, -2);
             size.setMarginStart(dp(6));
@@ -130,7 +128,7 @@ public final class RemoteScreen {
                 case VOLUME_UP -> "Volume +";
                 case VOLUME_DOWN -> "Volume −";
                 case PLAY_PAUSE -> "Play / Pause";
-                case NETFLIX -> "N";
+                case NETFLIX -> "Netflix";
             };
             int icon = switch (command) {
                 case UP -> R.drawable.ui_up;
@@ -142,6 +140,7 @@ public final class RemoteScreen {
                 case VOLUME_UP -> R.drawable.ui_volume_up;
                 case VOLUME_DOWN -> R.drawable.ui_volume_down;
                 case PLAY_PAUSE -> R.drawable.ui_play_pause;
+                case NETFLIX -> R.drawable.ui_netflix;
                 default -> 0;
             };
             Button control = icon == 0 ? button(label) : iconButton(label, icon);
@@ -283,6 +282,8 @@ public final class RemoteScreen {
         add(displayPage, text("Choose how the app looks. It applies to every screen.", 14));
         lightTheme = button("Light");
         darkTheme = button("Dark");
+        leadingIcon(lightTheme, R.drawable.ui_sun, 24);
+        leadingIcon(darkTheme, R.drawable.ui_moon, 24);
         lightTheme.setMinHeight(dp(96));
         darkTheme.setMinHeight(dp(96));
         addRow(displayPage, lightTheme, darkTheme);
@@ -475,7 +476,7 @@ public final class RemoteScreen {
         boolean primary = button == start || button == connect || button == visible || button == confirm || button == tvPair
                 || button == tvConfirm || button == click || button == tvButtons.get(TvCommand.OK)
                 || button == setup && button.isSelected();
-        boolean nav = navigation.contains(button) && button != setup && button != lightTheme && button != darkTheme;
+        boolean nav = navigation.contains(button) && button != setup;
         int fill = primary ? accent : surface;
         int foreground = primary ? color("#FFFFFF", "#0E1012") : text;
         if (destructive) { fill = Color.TRANSPARENT; foreground = color("#C4352B", "#FF8A80"); border = foreground; }
@@ -491,15 +492,14 @@ public final class RemoteScreen {
             foreground = button.isSelected() ? text : color("#5B636D", "#9AA3AD");
             border = Color.TRANSPARENT;
         }
-        if ((button == lightTheme || button == darkTheme) && button.isSelected()) border = accent;
         StateListDrawable background = new StateListDrawable();
-        background.addState(BUTTON_STATES[0], shape(direction || ok ? fill : color("#E9ECF0", "#181B1F"), border, 100));
-        background.addState(BUTTON_STATES[1], shape(direction || ok ? fill : color("#DCE8FF", "#2C4160"), direction ? Color.TRANSPARENT : accent, 100));
-        background.addState(BUTTON_STATES[2], shape(fill, accent, direction ? 8 : 100));
+        background.addState(BUTTON_STATES[0], shape(direction ? fill : color("#E9ECF0", "#181B1F"), border, 100));
+        background.addState(BUTTON_STATES[1], shape(direction || ok ? fill : color("#DCE8FF", "#2C4160"), direction || nav ? Color.TRANSPARENT : accent, 100));
+        background.addState(BUTTON_STATES[2], shape(nav ? color("#DCE8FF", "#2C4160") : fill, nav ? Color.TRANSPARENT : accent, direction ? 8 : 100));
         background.addState(BUTTON_STATES[3], shape(fill, border, 100));
         button.setBackground(background);
-        button.setTextColor(new ColorStateList(BUTTON_STATES, new int[]{ok ? foreground : color("#6B737C", "#6F7882"), direction ? accent : ok ? foreground : text, foreground, foreground}));
-        if (button == stop) button.setCompoundDrawableTintList(button.getTextColors());
+        button.setTextColor(new ColorStateList(BUTTON_STATES, new int[]{color("#6B737C", "#6F7882"), direction ? accent : ok ? foreground : text, foreground, foreground}));
+        button.setCompoundDrawableTintList(button.getTextColors());
     }
 
     private int color(String light, String night) { return Color.parseColor(dark ? night : light); }
@@ -520,6 +520,13 @@ public final class RemoteScreen {
     }
 
     private Button button(String label) { return configureButton(new Button(context), label); }
+
+    private void leadingIcon(Button button, int resource, int size) {
+        Drawable icon = context.getDrawable(resource).mutate();
+        icon.setBounds(0, 0, dp(size), dp(size));
+        button.setCompoundDrawablesRelative(icon, null, null, null);
+        button.setCompoundDrawablePadding(dp(6));
+    }
 
     private Button iconButton(String label, int resource) { return configureButton(new IconButton(resource), label); }
 
@@ -598,8 +605,10 @@ public final class RemoteScreen {
     /** Keep the accessible/test label while centering a native vector without hidden text spacing. */
     private final class IconButton extends Button {
         private final Drawable icon;
+        private final int resource;
         IconButton(int resource) {
             super(context);
+            this.resource = resource;
             icon = context.getDrawable(resource).mutate();
         }
         @Override protected void onMeasure(int widthSpec, int heightSpec) {
@@ -610,7 +619,8 @@ public final class RemoteScreen {
             int left = (getWidth() - size) / 2;
             int top = (getHeight() - size) / 2;
             icon.setBounds(left, top, left + size, top + size);
-            icon.setTint(getCurrentTextColor());
+            if (resource == R.drawable.ui_netflix) icon.setAlpha(isEnabled() ? 255 : 90);
+            else icon.setTint(getCurrentTextColor());
             icon.draw(canvas);
         }
     }

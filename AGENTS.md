@@ -9,7 +9,9 @@ from it. Follow `docs/superpowers/specs/2026-10-26-nord-prototype-ui-design.md`.
 This supersedes the diagnostic0.7 visual arrangement only: native Remote/Touchpad
 tabs, grouped Setup sections, light/dark appearance, circular D-pad and fixed
 Stop. The owner’s follow-up hides bottom tabs on Setup, removes Close, adds a
-square Stop icon, keeps OK blue in every state and removes D-pad arrow circles. Preserve all Activity admission, privacy, transport and lifecycle
+square Stop icon and removes D-pad arrow circles. The next owner follow-up enables
+header Stop only for a ready connection, makes OK visibly disabled until TV input
+is ready, removes tab border highlights and adds theme/Netflix icons. Preserve all Activity admission, privacy, transport and lifecycle
 contracts. The0.13 Bluetooth recovery block remains unresolved; UI work does not
 certify or bypass it. Review and verify a stopped device before same-signature
 installation; both enrollments must remain byte-identical.

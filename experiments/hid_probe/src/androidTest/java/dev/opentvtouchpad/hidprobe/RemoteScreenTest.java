@@ -107,7 +107,7 @@ public class RemoteScreenTest {
                 assertTrue((activity.getWindow().getInsetsController().getSystemBarsAppearance()
                     & android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS)!=0);
                 assertFalse("appearance cannot authorize Connect",findButton(decor,"Connect").isEnabled());
-                assertTrue(findButton(decor,"Stop").isEnabled());
+                assertFalse("Stop requires a connected run",findButton(decor,"Stop").isEnabled());
             });
         } finally { instrumentation.runOnMainSync(activity::finish); }
     }
@@ -155,6 +155,7 @@ public class RemoteScreenTest {
         InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
             RemoteScreen screen = new RemoteScreen(context(360,800,1f),(x,y)->{},()->{});
             assertNull(findButton(screen.root,"Close"));
+            assertFalse("Stop disabled before connection",screen.stop.isEnabled());
             assertEquals("Stop",screen.stop.getText().toString());
             assertNotNull(screen.stop.getCompoundDrawablesRelative()[0]);
             assertEquals(screen.stop.getTextColors(),screen.stop.getCompoundDrawableTintList());
@@ -176,8 +177,41 @@ public class RemoteScreenTest {
                         Bitmap image = Bitmap.createBitmap(100,100,Bitmap.Config.ARGB_8888);
                         background.setBounds(0,0,100,100);
                         background.draw(new Canvas(image));
-                        assertEquals(command == TvCommand.OK ? android.graphics.Color.parseColor(dark ? "#6AA8FF" : "#2F6FEB") : 0,
+                        boolean disabled = state[0] == -android.R.attr.state_enabled;
+                        assertEquals(command == TvCommand.OK ? android.graphics.Color.parseColor(disabled
+                                ? dark ? "#181B1F" : "#E9ECF0"
+                                : dark ? "#6AA8FF" : "#2F6FEB") : 0,
                             image.getPixel(50,50));
+                        image.recycle();
+                    }
+                }
+            }
+        });
+    }
+
+    @Test public void selectedTabsHaveNoBorderAndThemeChoicesHaveIcons() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            RemoteScreen screen = new RemoteScreen(context(360,800,1f),(x,y)->{},()->{});
+            assertNotNull(screen.lightTheme.getCompoundDrawablesRelative()[0]);
+            assertNotNull(screen.darkTheme.getCompoundDrawablesRelative()[0]);
+            assertEquals("Netflix",screen.tvButtons.get(TvCommand.NETFLIX).getText().toString());
+            for (boolean dark : new boolean[]{false,true}) {
+                screen.setDark(dark);
+                for (Button tab : new Button[]{screen.remoteTab,screen.padTab,screen.projectorTab,
+                        screen.tvTab,screen.displayTab,screen.surfaceTab,screen.buttonsTab,
+                        screen.lightTheme,screen.darkTheme}) {
+                    tab.performClick();
+                    assertTrue("selection remains accessible",tab.isSelected());
+                    for (int[] state : new int[][]{{android.R.attr.state_enabled,android.R.attr.state_selected},
+                            {android.R.attr.state_enabled,android.R.attr.state_selected,android.R.attr.state_pressed},
+                            {android.R.attr.state_enabled,android.R.attr.state_selected,android.R.attr.state_focused}}) {
+                        android.graphics.drawable.Drawable background = tab.getBackground();
+                        background.setState(state);
+                        background.setBounds(0,0,200,100);
+                        Bitmap image = Bitmap.createBitmap(200,100,Bitmap.Config.ARGB_8888);
+                        background.draw(new Canvas(image));
+                        assertEquals("tab border matches fill",image.getPixel(100,50) & 0xFFFFFF,
+                            image.getPixel(1,50) & 0xFFFFFF);
                         image.recycle();
                     }
                 }
@@ -363,7 +397,7 @@ public class RemoteScreenTest {
                 screen.setDark(dark);String suffix=dark?"-dark":"-light";
                 screen.status.setText("Five-minute diagnostic. Start, then Connect.");
                 screen.showTouchpad(false);layout(screen,c,390,844);capture(screen,c,"prototype-remote"+suffix);
-                screen.setConnected(true);screen.tvStatus.setText("TV: connected");
+                screen.setConnected(true);screen.stop.setEnabled(true);screen.tvStatus.setText("TV: connected");
                 screen.status.setText("Both controls ready. Keep this screen open.");
                 for(Button b:screen.tvButtons.values())b.setEnabled(true);
                 layout(screen,c,390,844);capture(screen,c,"prototype-connected"+suffix);
@@ -371,7 +405,7 @@ public class RemoteScreenTest {
                 for(Button b:screen.inputs)b.setEnabled(true);
                 screen.showPadButtons(false);layout(screen,c,390,844);capture(screen,c,"prototype-pad"+suffix);
                 screen.showPadButtons(true);layout(screen,c,390,844);capture(screen,c,"prototype-buttons"+suffix);
-                screen.touchpad.setEnabled(false);for(Button b:screen.inputs)b.setEnabled(false);
+                screen.stop.setEnabled(false);screen.touchpad.setEnabled(false);for(Button b:screen.inputs)b.setEnabled(false);
                 for(Button b:screen.tvButtons.values())b.setEnabled(false);
                 screen.setConnected(false);screen.tvStatus.setText("TV: not paired");
                 screen.status.setText("Start a five-minute run, then connect your projector.");

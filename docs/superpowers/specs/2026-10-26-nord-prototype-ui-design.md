@@ -8,8 +8,13 @@ are separate bottom tabs; Setup toggles from the header, with Projector, TV cont
 and Display sections. Touchpad offers surface/buttons alternatives plus four scroll
 buttons. Remote has Back/Home/Netflix, a circular spatial D-pad and volume/playback.
 Header Setup/Stop stay available; Close is removed per owner follow-up.
-Stop has a leading square icon. OK stays blue even while disabled; directional
-arrows have no circular backgrounds, retaining a rectangular keyboard-focus outline. Use the prototype's light/dark palettes, rounded
+Stop has a leading square icon and is enabled only once the input connection is
+ready. During setup the existing foreground-notification Stop test remains available.
+OK is visibly disabled before TV admission and blue when enabled; directional
+arrows have no circular backgrounds, retaining a rectangular keyboard-focus outline.
+Tabs use fill/selected semantics and fill-based keyboard focus without border
+highlights. Display choices have sun/moon icons; Netflix uses its N mark with
+a disabled treatment and the existing accessible Open Netflix label. Use the prototype's light/dark palettes, rounded
 cards, blue accents, native vector icons and a persisted appearance-only preference.
 Theme changes update existing views in place; never recreate a live run or save
 pairing fields. Keep status truthful; do not reproduce the mock timer or address.

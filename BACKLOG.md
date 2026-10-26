@@ -206,3 +206,6 @@ reliability limitations; local STOP tests passed but do not certify those hardwa
 
 - [x] Owner0.16 UI refinements: Setup-only navigation, no Close, square Stop icon,
   blue OK and circle-free D-pad arrows; no transport/lifecycle change.
+
+- [x] Owner0.17 refinements: connection-gated header Stop, visibly disabled OK,
+  borderless tab selection and native theme/Netflix icons.
