@@ -432,6 +432,8 @@ public final class RemoteScreen {
     }
 
     private void applySystemBars() {
+        // The Activity has no decor during construction; attachment reapplies the palette.
+        if (!root.isAttachedToWindow()) return;
         Context owner = context;
         java.util.Set<Context> visited = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
         while (!(owner instanceof android.app.Activity)

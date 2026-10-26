@@ -80,6 +80,44 @@ public class RemoteScreenTest {
         bitmap.recycle();
     }
 
+    @Test public void actualActivityLaunchAndThemeChangesWaitForAttachedWindow() {
+        android.app.Instrumentation instrumentation=InstrumentationRegistry.getInstrumentation();
+        Context target=instrumentation.getTargetContext();
+        android.app.Activity activity=instrumentation.startActivitySync(
+            new android.content.Intent(target,ProbeActivity.class)
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK));
+        instrumentation.waitForIdleSync();
+        try {
+            instrumentation.runOnMainSync(() -> {
+                View decor=activity.getWindow().getDecorView();
+                assertTrue(decor.isAttachedToWindow());
+                assertFalse(activity.isFinishing());
+                Button display=findButton(decor,"Display");
+                assertNotNull(display);display.performClick();
+                Button dark=findButton(decor,"Dark");
+                Button light=findButton(decor,"Light");
+                dark.performClick();
+                assertEquals(android.graphics.Color.parseColor("#0E1012"),activity.getWindow().getStatusBarColor());
+                assertEquals(0,activity.getWindow().getInsetsController().getSystemBarsAppearance()
+                    & android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS);
+                light.performClick();
+                assertEquals(android.graphics.Color.parseColor("#F4F5F7"),activity.getWindow().getStatusBarColor());
+                assertTrue((activity.getWindow().getInsetsController().getSystemBarsAppearance()
+                    & android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS)!=0);
+                assertFalse("appearance cannot authorize Connect",findButton(decor,"Connect").isEnabled());
+                assertTrue(findButton(decor,"Stop").isEnabled());
+            });
+        } finally { instrumentation.runOnMainSync(activity::finish); }
+    }
+
+    private Button findButton(View root,String label) {
+        if(root instanceof Button button && label.contentEquals(button.getText()))return button;
+        if(root instanceof ViewGroup group)for(int i=0;i<group.getChildCount();i++){
+            Button found=findButton(group.getChildAt(i),label);if(found!=null)return found;
+        }
+        return null;
+    }
+
     @Test public void prototypeSeparatesRemoteAndTouchpadWithoutAdmittingInput() {
         InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
             Context c = context(390,844,1f);
