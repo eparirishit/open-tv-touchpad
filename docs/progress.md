@@ -1,5 +1,18 @@
 # Project Progress
 
+##0.20 owner acceptance and next work (2026-10-27)
+
+The owner reports testing0.20 and “everything works fine”, accepting its requested
+UI changes and normal-use smoke. This closes the0.20 UI acceptance item; it does
+not independently certify previously unresolved failure/revocation scenarios.
+Next priority is Bluetooth-loss cleanup/reconnect, whose actual native completion
+acknowledgments are still missing in the captured trial. Keep the barrier and
+current Force stop recovery until a reviewed completion policy is proven. The
+TLS close-read fixture order issue also remains open. Then complete remaining
+N3 reliability evidence, integrate draft PRs #8/#9 in base-first order and design
+N4 daily-use lifecycle/packaging. No merge or new lifecycle contract is approved
+by the acceptance report alone.
+
 ## Touchpad simplification and setup overlap (2026-10-27)
 
 Owner requested removing redundant alternate mouse UI, moving sensitivity below
@@ -10,7 +23,8 @@ input replaces visible fallback buttons through the same Activity gates. Final
 verification:176unit/26focused native UI/OTP/accessibility tests pass, lint0errors/
 41warnings and both APK builds pass. Reviews/rereviews found no actionable defects.
 Reviewed0.20 is installed with current enrollment bytes preserved and stable launch
-verified; owner visual/live control acceptance is pending. Installation/source/
+verified; owner acceptance of the requested UI/normal-use smoke is now recorded
+above. Installation/source/
 artifact evidence is in the UI report.
 
 ## UI details and visible OTP (2026-10-26)

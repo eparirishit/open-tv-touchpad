@@ -226,3 +226,7 @@ reliability limitations; local STOP tests passed but do not certify those hardwa
 - [x] Owner0.20 simplification: one pad/scroll/sensitivity flow, native accessible
   actions replacing the alternate mouse UI, nonoverlapping steps, shorter
   confirmation, bold tabs and taller visible OTP cells.
+
+- [x] Owner0.20 acceptance: reports testing the update and everything working.
+  Requested UI changes/normal-use smoke accepted; unresolved failure/revocation
+  checks are not implicitly promoted. See the prototype UI report.

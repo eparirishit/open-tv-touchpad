@@ -7,7 +7,9 @@ instead and redundant visible mouse buttons are removed; named native accessibil
 move/click actions preserve nonvisual control. Numbered setup text fits its rows,
 including the Nord’s450dpi display and larger fonts. The confirmation label reads
 “Codes match on both screens. Save and connect”. Tabs are bold and OTP cells are
-72dp tall. Verification/install evidence is in the UI report; live acceptance pending.
+72dp tall. The owner reports testing0.20 and everything working; requested UI
+changes/normal-use smoke are accepted. Failure/revocation scenarios remain separate.
+Verification/install and owner evidence are in the UI report.
 
 ## Diagnostic0.19 — prototype details and touchpad speed
 

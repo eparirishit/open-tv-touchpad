@@ -1,5 +1,16 @@
 # Nord prototype UI refresh — diagnostic verification and hardware acceptance
 
+## Owner0.20 acceptance — 2026-10-27
+
+After installing the recorded0.20 artifact (source `ed26031`, SHA256
+`31c7bb4a0434bf1c25a251a59a90fd69f7642e7fb4d6e5dca895c262e401943c`), the owner
+reports: “I have tested and everything works fine”. This accepts the requested
+0.20 UI refinements and reported normal-use smoke. No further UI defect is reported.
+The report does not enumerate new Bluetooth-loss, crash/reboot, bond-revocation or
+address-change trials; those must not be inferred as passed. The existing cleanup
+blocker and separately tracked native TLS fixture issue remain open. Current
+source still has the five-minute foreground diagnostic lifecycle.
+
 ##0.20 touchpad simplification and setup overlap fix
 
 Source `ed26031` (including accessibility commit `ea972e6`) removes Buttons instead
