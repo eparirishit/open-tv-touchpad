@@ -33,3 +33,8 @@ or Bluetooth-recovery acceptance is claimed.
 - [x] Gate header Stop on existing connection readiness; show disabled OK accurately.
 - [x] Remove tab-state borders, add theme icons and bundled Netflix mark.
 - [x] Verify focused native acceptance, review and install while preserving current enrollment.
+
+## Owner refinements in0.18
+
+- [x] Hide Stop while disconnected, order Stop before Settings, compact theme icon/label alignment and hide the scrollbar.
+- [x] Verify focused native layouts, review and install preserving current enrollment.

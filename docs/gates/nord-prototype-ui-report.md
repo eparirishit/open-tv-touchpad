@@ -1,5 +1,40 @@
 # Nord prototype UI refresh — 0.15 presentation PASS; control smoke pending
 
+##0.18 header visibility, theme alignment and scrollbar
+
+Source `8b529fd` makes Stop visible only for the existing readiness value, places
+it before Settings at the header end, centers native sun/moon icons directly above
+their labels with a6dp drawable gap, and hides the vertical scrollbar while retaining
+page scrolling. Notification Stop, input admission and lifecycle remain unchanged.
+
+Three native regressions failed against0.17 before implementation. All12 focused
+RemoteScreen native checks pass on API31, covering hidden default Stop, connected
+visibility through Setup/theme changes, hiding on disconnect, header order,
+scrollable field reachability without a scrollbar, theme placement, actual Activity
+launch and prior admission/masking/layout checks. Independent review found an
+LTR-only assertion; it was corrected for resolved layout direction and rereviewed.
+Independent and complete incremental Codex reviews found no remaining UI defects.
+Screenshots of connected/disconnected header and both Display themes were inspected;
+connected rendering is synthetic, not a live transport acceptance claim.
+
+Unit suite:167 pass. Final lint/build:0errors/37warnings; both APKs build.
+The broader28-test native suite twice had26 passes, one expected opt-in diagnostic
+skip and one failure in unchanged TvTlsTest.closeUnblocksEstablishedTlsRead. The
+blocked read returned without the test’s expected IOException; its return value
+was not recorded. The same unchanged test passes standalone. This is retained as
+an unresolved test/order-sensitivity investigation in BACKLOG, outside UI scope;
+no TLS code or expectation was changed and no complete-suite PASS is claimed.
+The test did complete after close; there is no observed stuck read in these runs.
+
+Version18/0.18-diagnostic APK SHA256:
+`d95879798e02b29db6632dde70a84bb175ef41b57832bc4ca8c301c23788e69b`.
+Same-signature update verified authorized AC2001/API31, installed17, no probe
+service, reviewed source/APK hashes and matching0.17/0.7 signing identities.
+Current enrollment files remained byte-identical through install and launch.
+The process stayed foreground with a stable PID for six seconds, with no automatic
+service/run. No data clearing or unpairing. Owner visual/connected-state acceptance
+is pending; enrollment recovery and Bluetooth cleanup remain separate blockers.
+
 ##0.17 connection states, tabs and icons
 
 Header Stop starts disabled and follows the existing Activity input-readiness

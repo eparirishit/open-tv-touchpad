@@ -1,5 +1,17 @@
 # Project Progress
 
+## Header visibility and theme spacing (2026-10-26)
+
+Owner requested connected-only Stop visibility, Settings at the right edge and
+compact alignment of theme icons/labels. Implemented in0.18 using existing
+readiness and native compound drawable layout. Verification/install evidence
+is in the UI report. Reviewed0.18 is installed with current enrollment bytes
+preserved and stable launch verified. All12 focused UI native checks pass;
+167unit tests pass and lint/build pass. Broader native suite retains a TLS
+close-read assertion failure that passes standalone; tracked separately, with
+no full-suite PASS claim. Owner visual acceptance remains pending. Bluetooth
+cleanup and enrollment recovery remain separate.
+
 ## Connection-state UI refinements (2026-10-26)
 
 Owner requested connection-dependent Stop, disabled-looking OK, borderless tab
