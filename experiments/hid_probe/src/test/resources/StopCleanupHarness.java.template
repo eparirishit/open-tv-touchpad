@@ -42,6 +42,7 @@ public class StopCleanupHarness {
     final Hid hid = new Hid();
     final BluetoothDevice connected = new BluetoothDevice(), target = connected;
     final Runnable registrationDeadline = () -> {}, connectionDeadline = () -> {}, teardownDeadline = () -> {};
+    boolean selectedDisconnected, foreignLinkObserved;
     boolean stopping, registrationRequested = true, unregistered, guardFinished, cleaned;
     String terminalReason;
     TouchpadGesture gesture;
@@ -55,6 +56,7 @@ public class StopCleanupHarness {
     void cleanupProgress() { cleaned = true; }
     boolean canAttempt() { return ownership.active(); }
     boolean ready() { return !stopping; }
+__PENDING_LINK__
 __SCROLL_FIELD__
 __STOP_METHOD__
 

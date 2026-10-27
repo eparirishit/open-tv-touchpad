@@ -1,5 +1,27 @@
 # Project Progress
 
+## Bluetooth-loss follow-up: recovery still blocked (2026-10-25)
+
+Owner confirmed0.13 Home/pointer smoke. Adapter interruption reached BLE_ON and
+was restored to ON. The captured run reached the teardown deadline after
+profile loss without selected-disconnect or unregister acknowledgments. No
+barrier bypass or further code change was made. Owner confirms both channels
+disconnected and all buttons disabled. Physical-remote confirmation for this
+trial and explicit reconnect remain pending. See [N3 report](gates/n3-report.md).
+
+## Bluetooth cleanup correction installed (2026-10-25)
+
+Owner-requested0.13 changes only shutdown recovery: profile loss during Stop
+waits for actual selected disconnect/unregister callbacks and all other cleanup,
+without clearing independent failure latches or trusting proxy defaults.
+The captured-order regression fails before and passes after;167 unit tests,
+lint (0errors/37warnings) and debug assembly pass. Scoped independent and complete
+Codex reviews found no remaining actionable findings. Source `f5b7de1` is
+installed as0.13 on the verified stopped Nord, with matching signer, both
+enrollment stores unchanged and no automatic remote run. Hardware recovery
+confirmation remains pending; prior owner acceptance applies only to0.12.
+See [N3 report](gates/n3-report.md) for the bounded correction and test limits.
+
 ## N3 combined controls and saved restart passed on0.12 (2026-10-25)
 
 The owner confirmed the requested Start/Connect, Home/D-pad/OK, Netflix launch,
@@ -7,11 +29,32 @@ pointer/title tap/scroll, Back/volume and Stop checks work as expected; the
 physical remote remains usable. This verifies the combined smoke on the recorded
 0.12 artifact without new code or installation. The owner also confirmed Force
 stop/reopen preserves both pairings, input remains disabled until Start/Connect,
-and Home/pointer/scroll work without another code, followed by Stop. Play/pause,
-timed launch stability, deliberate link-loss and layout acceptance remain open.
+and Home/pointer/scroll work without another code, followed by Stop. The owner
+now also verifies at least20-second Netflix post-launch stability with pointer
+title selection/Back, and visible pause → resume → pause through Play/Pause,
+followed by Stop. Profile selection by Nord pointer/tap and all four scroll
+directions now pass with no unintended title opening or pointer movement.
+Remote/Setup layouts now pass owner checks in both orientations at normal and
+largest configured font size, with readable/reachable status and controls.
+Live keyboard layout now passes in both orientations at the usual font size:
+Setup fields, Confirm, status, Stop and Close remained readable/reachable with
+the address field focused and pairings/address unchanged. Remaining Bluetooth-loss
+acceptance is open; this did not repeat live pairing-code entry.
+Projector Wi-Fi loss/restoration now passes the owner check with the Nord app
+visible: both channels stop and stay stopped, and the physical remote works.
 The owner also confirmed foreground loss/return leaves all app controls disabled
 and the explicit five-minute expiry stops all controls; the physical remote
 works in both checks on0.12. Overall N3 is not yet PASS.
+The Bluetooth-loss trial reached the owner-reported disconnected/input-disabled
+state but native teardown remained unconfirmed and required Force stop/reopen.
+Bluetooth is confirmed ON afterward. The owner now confirms TV/pad/scroll input
+was blocked, the physical remote worked, and Force stop/reopen recovered
+Home/pointer/scroll without re-pairing, only after explicit Start/Connect.
+Documented recovery passes; native cleanup and the controlled OFF transition
+remain unconfirmed, so full Bluetooth-loss acceptance stays partial. A fresh
+contiguous trace now identifies PROFILE_LOST during Stop as a definite permanent
+failure latch, preceding disconnect/unregister acknowledgments. All other native
+cleanup is not proven; four focused cleanup tests pass and runtime is unchanged.
 See [N3 report](gates/n3-report.md) for exact coverage and artifact identity.
 
 ## N3 TV pairing verified on0.12 (2026-10-25)

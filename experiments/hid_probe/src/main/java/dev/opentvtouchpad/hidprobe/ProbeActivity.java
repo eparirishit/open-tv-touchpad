@@ -206,6 +206,9 @@ public final class ProbeActivity extends Activity {
         boolean guardBound;
         boolean registrationRequested;
         boolean unregistered;
+        boolean profileLostWhileStopping;
+        boolean selectedDisconnected;
+        boolean foreignLinkObserved;
         boolean stopping;
         boolean teardownTraced;
         String terminalReason;
@@ -336,6 +339,11 @@ public final class ProbeActivity extends Activity {
             @Override public void onServiceDisconnected(int profile) {
                 if (!ownership.owns()) return;
                 trace(PROFILE_LOST);
+                if (stopping) {
+                    profileLostWhileStopping = true;
+                    finishProfile();
+                    return;
+                }
                 ownership.fail();
                 stop("HID service lost. Native teardown unconfirmed.");
             }
@@ -376,6 +384,8 @@ public final class ProbeActivity extends Activity {
                 try {
                     boolean selected = peer.equals(target) || (session.savedPeer() != null
                         && session.savedPeer().equals(peer.getAddress()));
+                    if (selected) selectedDisconnected = state == BluetoothProfile.STATE_DISCONNECTED;
+                    else if (state != BluetoothProfile.STATE_DISCONNECTED) foreignLinkObserved = true;
                     switch (state) {
                         case BluetoothProfile.STATE_CONNECTING -> trace(selected ? SELECTED_CONNECTING : OTHER_CONNECTING);
                         case BluetoothProfile.STATE_CONNECTED -> trace(selected ? SELECTED_CONNECTED : OTHER_CONNECTED);
@@ -384,6 +394,7 @@ public final class ProbeActivity extends Activity {
                         default -> trace(selected ? SELECTED_STATE_OTHER : OTHER_STATE_OTHER);
                     }
                     if (stopping) {
+                        if (state != BluetoothProfile.STATE_DISCONNECTED && hid == null) ownership.fail();
                         if (state == BluetoothProfile.STATE_CONNECTED && hid != null && !hid.disconnect(peer)) ownership.fail();
                         finishProfile();
                         return;
@@ -519,6 +530,7 @@ public final class ProbeActivity extends Activity {
             updateControls();
             status.setText("Connecting to the selected projector…");
             try {
+                selectedDisconnected = false;
                 if (hid.getConnectionState(peer) != BluetoothProfile.STATE_DISCONNECTED) {
                     trace(CONNECT_NATIVE_PENDING);
                     stop("A native connection is still pending. No overlapping attempt allowed.");
@@ -559,11 +571,14 @@ public final class ProbeActivity extends Activity {
                     catch (SecurityException | IllegalStateException | IllegalArgumentException ignored) { /* Best-effort release, never delivery proof. */ }
                 }
                 try {
-                    if (target != null && hid.getConnectionState(target) != BluetoothProfile.STATE_DISCONNECTED
-                            && !hid.disconnect(target)) ownership.fail();
+                    if (target != null && hid.getConnectionState(target) != BluetoothProfile.STATE_DISCONNECTED) {
+                        pendingLink(target);
+                        if (!hid.disconnect(target)) ownership.fail();
+                    }
                 } catch (SecurityException | IllegalStateException | IllegalArgumentException error) { ownership.fail(); }
                 try {
                     for (BluetoothDevice peer : hid.getConnectedDevices()) {
+                        pendingLink(peer);
                         try {
                             if (!peer.equals(target) && !hid.disconnect(peer)) ownership.fail();
                         } catch (SecurityException | IllegalStateException | IllegalArgumentException error) { ownership.fail(); }
@@ -590,11 +605,26 @@ public final class ProbeActivity extends Activity {
             stopService(new Intent(ProbeActivity.this, PairingGuardService.class));
         }
 
+        void pendingLink(BluetoothDevice peer) {
+            if (peer.equals(target)) selectedDisconnected = false;
+            else foreignLinkObserved = true;
+        }
+
         void finishProfile() {
             if (!ownership.owns() || !stopping || hid == null || (registrationRequested && !unregistered)) return;
             try {
-                if (!hid.getConnectedDevices().isEmpty()) return;
-                if (target != null && hid.getConnectionState(target) != BluetoothProfile.STATE_DISCONNECTED) return;
+                if (profileLostWhileStopping || !adapter.isEnabled()) {
+                    // Detached proxies return empty/disconnected defaults; require this owner's callbacks.
+                    if (target == null || !selectedDisconnected || foreignLinkObserved) return;
+                } else {
+                    List<BluetoothDevice> peers = hid.getConnectedDevices();
+                    for (BluetoothDevice peer : peers) pendingLink(peer);
+                    if (!peers.isEmpty()) return;
+                    if (target != null && hid.getConnectionState(target) != BluetoothProfile.STATE_DISCONNECTED) {
+                        pendingLink(target);
+                        return;
+                    }
+                }
                 // Complete only after native unregister acknowledgement AND no remaining link.
                 ownership.completed(REGISTRATION);
                 adapter.closeProfileProxy(BluetoothProfile.HID_DEVICE, hid);

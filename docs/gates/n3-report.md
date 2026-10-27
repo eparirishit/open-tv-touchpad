@@ -1,6 +1,68 @@
 # N3 unified Nord remote — pairing, combined smoke and saved restart passed on0.12
 
 Contract: [approved N3 design](../superpowers/specs/2026-10-25-nord-tv-controls-design.md).
+
+## Diagnostic0.13 hardware follow-up — recovery still blocked
+
+On the same version13 artifact/source below, the owner confirmed explicit
+Start/Connect, Home and pointer movement. The authorized adapter interruption
+was polled as ON → TURNING_OFF → BLE_ON, then restored through TURNING_ON → ON.
+BLE_ON is not full adapter OFF; neither shell command's exit137 proves its
+side effects. Both commands returned137; restored ON was independently verified.
+
+The sanitized current-run trace contains56 contiguous events without truncation:
+`STOP`52 at120042ms, selected `DISCONNECTING`53 at120118ms and54 at120120ms,
+`PROFILE_LOST`55 at120476ms, then `TEARDOWN_DEADLINE`56 at125055ms.
+No selected DISCONNECTED or UNREGISTERED acknowledgment appears in that capture.
+The probe service was absent afterward. Trace SHA256:
+`3d38d51fb9df7bcb67521682fb751cbda20f9ee4677bc49e775b6d51db159edc`.
+A subsequent log read yielded no matching session; it does not establish that
+callbacks never arrived later. The owner reports Mouse disconnected, TV paired
+but disconnected, “Bluetooth turned off. No input enabled,” and all buttons
+disabled. The owner has not yet confirmed the physical remote in this trial or
+quoted the final teardown suffix. No explicit reconnect was attempted.
+
+The0.13 change handles the earlier callback order, but this run lacks the
+actual acknowledgments its contract requires. Recovery remains blocked; do not
+mark N3 accepted or treat the teardown barrier as a timeout to clear. AOSP12
+HidDeviceService.stop removes the service and cleans up the native interface
+without itself emitting either acknowledgment; platform shutdown interrupting
+callback delivery is a plausible mechanism, not proven vendor internals.
+
+## Diagnostic0.13 cleanup correction — installed; hardware recovery unverified
+
+The owner requested fixing the captured shutdown blocker. The bounded
+[correction plan](../superpowers/plans/2026-10-25-nord-bluetooth-cleanup.md)
+retains the teardown contract and NativeRunGate's permanent failure latch.
+Profile loss before Stop remains fatal. During Stop it is pending cleanup:
+actual selected-peer disconnect and unregister callbacks, no observed foreign
+link, successful proxy close and TV/service completion are required. Disabled
+or detached proxy query defaults are never evidence. New connection events or
+connect attempts invalidate prior disconnect evidence; independent native
+failures remain fatal. No automatic input/reconnect or enrollment change.
+
+The new test executes the Activity's actual callbacks against controlled native
+collaborators. RED fails on the captured Stop/profile-loss/disconnect/unregister
+order. GREEN covers22 scenarios, including missing evidence, both callback
+orders, query defaults, foreign links, invalidation, existing failure latches,
+proxy-close failure, TV/service completion and stale callbacks. All167 Nord unit
+tests pass with zero failures/errors/skips; lint has0errors/37warnings and debug
+assembly passes. Independent review identified stale disconnect evidence after a newer pending-link
+query. A second RED regression reproduced it; native state/enumeration observations
+now invalidate the evidence before detached cleanup. All22 scenarios pass.
+This does not replace a real Nord recovery test.
+
+Built version13/0.13-diagnostic APK SHA256:
+`b74ae6d58413669732495cdff3b774cd4f321696ccd4fc62fb1084a9730e3a32`.
+Independent scoped re-review and complete-change Codex review found no remaining
+actionable findings after the stale-evidence correction. Source `f5b7de1` was
+installed on the stopped, verified AC2001/API31 as version13. The installer
+required both saved enrollment files before updating, verified the same signing
+identity as0.12/0.7, and confirmed both stores byte-identical after installation
+and launch. The Activity was foreground with no automatic remote run. Owner
+hardware recovery retest is pending. The0.12 observations below
+remain tied to their original artifact; no overall N3 PASS is claimed.
+
 The owner also confirmed the full app-restart check: Stop/teardown, Android
 Force stop, reopen with input disabled until explicit Start/Connect, then Home,
 pointer movement and a scroll step without another pairing code, followed by
@@ -15,8 +77,22 @@ behavior on the same recorded artifact, not an automated input test.
 The owner also confirmed foreground loss/return keeps all app input disabled,
 and explicit five-minute expiry stops all app controls; the physical remote
 remains usable in both checks on the same0.12 artifact.
-Play/pause, timed post-launch stability and link-failure
-acceptance remain pending; no overall N3 PASS is claimed.
+Projector Wi-Fi loss also passes the owner check on0.12: with the Nord app
+visible, both channels stopped within the requested45-second window and remained
+stopped for the20-second observation after Wi-Fi restoration. The physical
+remote remained usable. Exact stop latency and status text were not recorded.
+The owner then verified Home → Netflix followed by at least20 seconds with
+both channels usable: pointer opening of title details and the app Back button
+worked. Play/Pause visibly paused, resumed and paused owner-chosen playback,
+followed by Stop. The owner also verified pointer/tap selection of their usual
+Netflix profile and Scroll down/up/right/left with no unintended title opening
+or pointer movement, then Stop. Remote/Setup layout also passes owner checks
+in portrait/landscape at normal and largest configured font size: status and
+all controls, including Stop/Close, remain readable and reachable by scrolling.
+Live Nord keyboard layout also passes at the usual font size in both
+orientations, with Setup fields/status and Stop/Close reachable by scrolling.
+Remaining Bluetooth-loss acceptance is open.
+No overall N3 PASS is claimed.
 
 The preceding owner retry on0.11 failed at CONTROL_EXCHANGE, after the code/secret
 acknowledgment and pinned control TLS. The owner reports10–15 seconds between
@@ -224,17 +300,45 @@ the proposed amendment; positive/negative platform fixtures remain required.
 - Saved reconnect after full app Force stop/reopen without re-pairing: owner PASS.
   Input stayed disabled until explicit Start/Connect; Home, pointer and scroll
   worked, then Stop. No projector reboot or held-input crash test was performed.
-- Home/D-pad/OK, Back and volume: owner smoke PASS. Play/pause remains NOT RUN.
-- Netflix launch: owner smoke PASS. Explicit20-second stability remains NOT RUN.
-- Pointer movement, title click and scrolling: owner smoke PASS. Profile selection
-  and separate checks of both scroll axes on0.12 remain NOT RUN.
+- Home/D-pad/OK, Back and volume: owner smoke PASS. Play/Pause: owner PASS
+  for pause → resume → pause on owner-chosen playback, followed by Stop.
+- Netflix launch and at least20-second post-launch stability: owner PASS;
+  both channels remained usable, verified with pointer title selection and Back.
+- Pointer movement and title click: owner smoke PASS. Profile selection by
+  Nord pointer/tap: owner PASS on0.12. Scroll down/up/right/left: owner PASS
+  on0.12, with no unintended title opening or pointer movement, then Stop.
 - Stop blocks app control and physical remote works: owner smoke PASS.
 - Foreground loss/return with both channels: owner PASS; all app controls remain
   disabled after return and the physical remote still works.
 - Five-minute expiry: owner PASS after the explicit expired status; all app
   controls stop and the physical remote still works.
-- Deliberate Wi-Fi loss and Bluetooth loss each stop both: NOT RUN on0.12.
-- Portrait/landscape, enlarged text and pairing keyboard: remaining layout acceptance NOT RUN on0.12.
+- Projector Wi-Fi loss/restoration with Nord foreground: owner PASS on0.12;
+  both channels stop, remain stopped after restoration, and the physical remote
+  works. This tests projector-side link loss, not Nord adapter shutdown.
+- Bluetooth-loss trial: PARTIAL on0.12. Owner reported "TV: paired, disconnected",
+  "Mouse: disconnected", "Bluetooth turned off. No input enabled" and the
+  native-teardown-unconfirmed/force-stop recovery instruction. This establishes
+  the reported adapter-loss stop state, not successful native cleanup or a
+  directly verified OFF state. The receiver uses that message for any non-ON
+  adapter state. The debugging disable/restore commands returned errors;
+  subsequent independent reads confirmed Bluetooth ON and the probe service absent.
+  The initial bounded trace read returned no events. The later captured retry
+  below establishes a profile-loss failure latch, without proving all cleanup. Owner follow-up confirms actual rejection of TV/pad/scroll
+  input and continued physical-remote operation. Android Force stop/reopen preserved both pairings,
+  kept input disabled until Start/Connect, and restored Home/pointer/scroll
+  without another code, followed by Stop. Input blocking and documented recovery
+  pass by owner observation; native cleanup and directly observed OFF timing
+  remain unconfirmed. No full controlled Bluetooth-loss PASS.
+- Remote/Setup portrait/landscape at normal and largest configured font size:
+  owner PASS on0.12; all controls/status readable and reachable, including
+  Stop/Close. Numeric font scale was not measured.
+- Live Nord keyboard layout: owner PASS on0.12 at the usual font size in both
+  orientations. While stopped, focusing the saved TV-address field opened the
+  keyboard; address/code fields, Confirm, status, Stop and Close remained
+  readable/reachable by scrolling. Keyboard dismissed; address and pairings
+  unchanged. This was a layout-only check with pairing controls disabled, not
+  a new pairing or enlarged-font live code-entry test. Existing native tests
+  separately simulate IME insets in both orientations at fontScale1.5.
 
 Hardware address change remains NOT RUN unless observed. No write/send callback
 proves a projector action. The five-minute foreground diagnostic limit remains;
@@ -263,3 +367,58 @@ Native TLS1.3 negotiation and live child-certificate handshakes remain unproven;
 TLS1.2 mutual authentication and native child-policy rejection are proven.
 
 Final emulator output SHA256: `d2da8a45cf4aa424a7f34a6d5f3cf4aeeda07a1b652a979c0eacd58b8adfcf23`.
+
+## Bluetooth-loss recovery observation — 2026-10-25
+
+The current diagnostic explicitly requires unregister acknowledgment, no remaining
+link, profile closure and service destruction before admitting another run. A
+failed native operation latches the process unavailable even if later completion
+callbacks arrive; unresolved teardown displays the recovery instruction after
+five seconds. The observed message is consistent with this documented safeguard
+(README lifecycle section and NativeRunGate), not evidence that it is safe to
+clear the latch. The initial trial did not identify the native failure; the
+subsequent capture below establishes one definite failure-latch path. Owner follow-up confirms disabled TV/pad/scroll controls, a usable physical
+remote and successful documented Force stop/reopen recovery with both pairings
+retained. Input stayed disabled until explicit Start/Connect; Home, pointer and
+one scroll step worked without a pairing code, then the owner pressed Stop.
+This does not establish automatic native cleanup. No product code or safety
+policy was changed.
+
+## Captured Bluetooth cleanup blocker — 2026-10-25
+
+Same installed0.12 diagnostic; no new APK or pairing. Read-only preflight verified
+Nord AC2001/API31, app version12, Bluetooth ON, foreground Activity and active
+probe service. A live fixed-tag capture started before owner Start/Connect. The
+owner verified Home and Move left; the trace contains registration, selected
+connection and accepted movement followed by these contiguous events:
+
+| Sequence | Elapsed ms | Event |
+| --- | --- | --- |
+| 24 | 87000 | STOP |
+| 25 | 87049 | SELECTED_DISCONNECTING |
+| 26 | 87320 | PROFILE_LOST |
+| 27 | 87340 | SELECTED_DISCONNECTED |
+| 28 | 87340 | UNREGISTERED |
+| 29 | 92006 | TEARDOWN_DEADLINE |
+
+All29 events from RUN_SAVED are contiguous, with no truncation. Sanitized event
+record SHA256: `90462ef7dc876ba669be2f2f8802f7ec37ca43974123f719320f2cfbda807cf2`.
+No PAUSE or RUN_DEADLINE precedes this Stop. The debug disable and restore
+commands both returned exit137; an independently polled OFF state was not
+confirmed. Subsequent reads confirmed ON and no running probe service. Do not
+attribute exit137 to a particular cause or promote the controlled OFF test.
+
+`Run.service.onServiceDisconnected` emits PROFILE_LOST then calls
+`ownership.fail()` even when Stop is already in progress. NativeRunGate never
+clears that flag; later disconnect/unregister callbacks cannot make the slot
+available. This is a directly evidenced, sufficient blocker to restart, not
+proof that it was the only failing cleanup operation. The trace does not expose
+completion of every TV/service/profile resource.
+
+Four focused existing cleanup tests pass (NativeRunGateTest and NativeStopTest).
+They preserve the conservative failure policy; no runtime change was made.
+A future recovery change must retain actual unregister acknowledgment, confirmed
+link retirement, profile closure and TV/service completion. Merely ignoring
+PROFILE_LOST, relying on empty results from a disconnected proxy, or clearing
+failed ownership on timeout is not justified by this trace. Force stop/reopen
+remains the verified recovery path from the earlier owner trial.

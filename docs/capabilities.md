@@ -1,5 +1,16 @@
 # Capabilities
 
+## Diagnostic0.13 — cleanup fix installed, hardware recovery blocked
+
+After profile loss during Stop, the new build can finish cleanup only when
+actual selected-disconnect/unregister callbacks and all other cleanup complete.
+Explicit Start/Connect is still required; missing evidence and independent
+failures still block restart. The regression and167 unit tests pass. This is
+build/test evidence. Version0.13 is installed with both pairings preserved and
+no automatic run. Owner Home/pointer smoke passes, but a Bluetooth interruption
+still reaches the cleanup deadline without the required native acknowledgments.
+Explicit recovery remains blocked; this is not a verified recovery fix.
+
 ## Nord unified remote0.12 — pairing and combined-control smoke verified
 
 The app includes D-pad/OK, Home/Back, volume, play/pause and Netflix alongside the
@@ -17,7 +28,24 @@ and Stop with the physical remote still usable. Saved reconnect after full app
 Force stop/reopen also passes: input waits for explicit Start/Connect and TV keys,
 pointer and scrolling work without re-pairing. Foreground loss/return and explicit
 five-minute expiry also pass owner checks: all app controls stop and the physical
-remote remains usable. Play/pause and deliberate link-loss checks remain pending.
+remote remains usable. Projector Wi-Fi loss also stops both channels; restoring
+Wi-Fi does not resume control, by owner observation with the Nord app visible.
+The Bluetooth-loss trial reports both channels disconnected and input disabled,
+and the owner confirmed those controls send no input while the physical remote
+works. Cleanup is unconfirmed; Android Force stop/reopen successfully restores
+explicit Start/Connect without re-pairing. A fresh trace identifies profile-service
+loss during Stop as a permanent restart block even when disconnect/unregister
+callbacks follow; no recovery-policy change has been made. Full controlled Bluetooth-loss
+acceptance remains pending. On0.12, the owner also verified at least20 seconds
+of post-Netflix-launch connectivity with pointer title selection/Back, and
+Play/Pause visibly pausing, resuming and pausing playback, followed by Stop.
+Profile selection by Nord pointer/tap and all four scroll directions also pass
+on0.12 without unintended title opening or pointer movement. Remote/Setup
+status and all controls remain readable/reachable in both orientations at
+normal and largest configured font size by owner observation. The live Nord
+keyboard also leaves Setup fields, Confirm, status, Stop and Close readable and
+reachable in both orientations at the usual font size; the stopped check used
+the address field and did not change enrollment or repeat code entry.
 The five-minute foreground-only diagnostic limit remains. No Mac, router
 reservation or CA setup is required. See [N3 evidence](gates/n3-report.md).
 

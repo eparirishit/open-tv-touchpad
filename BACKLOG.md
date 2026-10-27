@@ -51,8 +51,37 @@ design must be approved before an item moves into an active milestone.
   Full app Force stop/reopen and explicit saved reconnect now pass without
   re-pairing; input waits for Start/Connect. Foreground loss/return and explicit
   five-minute expiry now pass, with all app input disabled and the physical remote
-  usable. Deliberate link-loss and other remaining N3c checks stay open.
+  usable. Projector Wi-Fi loss/restoration now passes with the Nord foreground:
+  both channels stop and remain stopped, and the physical remote works.
+  Bluetooth-loss remains partial: the owner reports both channels disconnected
+  and input disabled, but cleanup is unconfirmed. Owner verified input rejection,
+  physical-remote use and Force stop/reopen recovery without re-pairing; input
+  still requires explicit Start/Connect. A contiguous fresh trace identifies
+  PROFILE_LOST during Stop as a permanent failure latch before disconnect and
+  unregister callbacks. Preserve actual cleanup proof when designing recovery;
+  do not simply clear the latch or trust disconnected-proxy default results.
+  Other N3c checks stay open.
+  Owner verified at least20-second Netflix post-launch stability with both
+  channels usable (pointer title selection and Back), plus Play/Pause changing
+  playback through pause/resume/pause, followed by Stop. Profile selection by
+  Nord pointer/tap and all four scroll directions pass without unintended title
+  opening or pointer movement. Remote/Setup layout passes in both orientations
+  at normal/largest configured font size with readable/reachable controls/status.
+  Live Nord keyboard layout passes in both orientations at the usual font size
+  while stopped with the address field focused; fields, Confirm, status, Stop
+  and Close stay readable/reachable. Pairings/address are unchanged. This is
+  separate from simulated IME tests and does not repeat live pairing-code entry.
   Existing Mac Python implementation is reference, not Android runtime code.
+- [x] Implement the owner-requested0.13 Bluetooth shutdown cleanup correction;
+  captured-order regression RED/GREEN,167 unit tests, lint/build pass. Actual
+  callbacks and all resource completion remain required; no automatic reconnect.
+- [x] Scoped independent and full Codex review of0.13: no actionable findings
+  after fixing the reproduced stale-query evidence gap.
+- [x] Install0.13 with both enrollment stores preserved and no automatic run.
+- [ ] Resolve missing native acknowledgments during adapter shutdown and verify
+  explicit reconnect without Force stop. The0.13 hardware trace still reached
+  the deadline without disconnect/unregister callbacks. Existing failures and
+  missing acknowledgments remain blocked; do not clear the barrier on timeout.
 - [ ] N4: review daily-use lifecycle and packaging after combined functionality.
 - [ ] Before broader distribution, verify screen-reader/font-scale/layout behavior;
   current native alternative controls have not received a complete device audit.
