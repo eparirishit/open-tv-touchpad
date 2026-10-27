@@ -209,3 +209,11 @@ reliability limitations; local STOP tests passed but do not certify those hardwa
 
 - [x] Owner0.17 refinements: connection-gated header Stop, visibly disabled OK,
   borderless tab selection and native theme/Netflix icons.
+
+- [x] Owner0.18 refinements: connected-only Stop visibility, rightmost Settings
+  and centered compact Display icon/label pairs.
+
+- [ ] Investigate native TLS fixture order sensitivity: closeUnblocksEstablishedTlsRead
+  twice returned without its expected IOException in the full0.18 suite, but
+  passes standalone. Close did unblock; return value was not captured. Retain
+  the failed results; no transport or test-expectation change is included in UI work.

@@ -82,7 +82,7 @@ public final class RemoteScreen {
         stop.setContentDescription("Stop and disconnect");
         leadingIcon(stop, R.drawable.ui_stop, 14);
         stop.setEnabled(false);
-        for (Button action : new Button[]{setup, stop}) {
+        for (Button action : new Button[]{stop, setup}) {
             LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(-2, -2);
             size.setMarginStart(dp(6));
             header.addView(action, size);
@@ -90,6 +90,7 @@ public final class RemoteScreen {
         root.addView(header, new LinearLayout.LayoutParams(-1, -2));
 
         scroll = new ScrollView(context);
+        scroll.setVerticalScrollBarEnabled(false);
         scroll.setFillViewport(true);
         root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
         LinearLayout content = column();
@@ -282,8 +283,10 @@ public final class RemoteScreen {
         add(displayPage, text("Choose how the app looks. It applies to every screen.", 14));
         lightTheme = button("Light");
         darkTheme = button("Dark");
-        leadingIcon(lightTheme, R.drawable.ui_sun, 24);
-        leadingIcon(darkTheme, R.drawable.ui_moon, 24);
+        lightTheme.setCompoundDrawablesRelativeWithIntrinsicBounds(0, R.drawable.ui_sun, 0, 0);
+        darkTheme.setCompoundDrawablesRelativeWithIntrinsicBounds(0, R.drawable.ui_moon, 0, 0);
+        lightTheme.setCompoundDrawablePadding(dp(6));
+        darkTheme.setCompoundDrawablePadding(dp(6));
         lightTheme.setMinHeight(dp(96));
         darkTheme.setMinHeight(dp(96));
         addRow(displayPage, lightTheme, darkTheme);
@@ -366,6 +369,7 @@ public final class RemoteScreen {
 
     public void setConnected(boolean connected) {
         this.connected = connected;
+        stop.setVisibility(connected ? View.VISIBLE : View.GONE);
         connection.setText(connected ? "Mouse: connected" : "Mouse: disconnected");
         connection.setTextColor(connected ? color("#1F8A4C", "#4ADE80") : color("#5B636D", "#9AA3AD"));
     }

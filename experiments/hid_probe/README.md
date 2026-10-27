@@ -1,6 +1,6 @@
 # Disposable Nord remote — N3 diagnostic
 
-## Prototype UI in0.17
+## Prototype UI in0.18
 
 Version0.15 corrects the0.14 Activity launch crash by deferring system-bar setup
 until the view is attached. The owner-provided design separates TV buttons on **Remote** from mouse input on
@@ -8,7 +8,10 @@ until the view is attached. The owner-provided design separates TV buttons on **
 buttons available in both modes. Version0.16 removes Close and adds a square icon
 before Stop. Setup hides the bottom tabs; use its header toggle to return.
 Version0.17 shows OK disabled until TV input is ready, then blue. Stop enables only
-for a successful input connection; use the notification’s Stop test to cancel
+for a successful input connection. Version0.18 hides Stop while disconnected
+and places it immediately before the rightmost Settings icon. Theme icons center
+directly above their labels with a small gap. The scrollbar is hidden while
+content remains scrollable. Use the notification’s Stop test to cancel
 setup. Tabs have fill-based selection/focus without border highlights. Display
 shows sun/moon icons, and Netflix uses its N mark, dimmed while unavailable.
 Direction arrows remain circle-free.

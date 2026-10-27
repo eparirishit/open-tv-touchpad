@@ -1,5 +1,13 @@
 # Capabilities
 
+## Diagnostic0.18 — header and theme alignment
+
+Stop is hidden unless connected, immediately left of the rightmost Settings icon.
+Each Display choice centers its icon directly above its label with a small gap.
+The scrollbar is hidden; page content remains scrollable.
+Notification Stop remains available during setup. Verification and installation
+status are in the UI report.
+
 ## Diagnostic0.17 — connection states and icons
 
 Header Stop is disabled until the connection admits input, then disables again

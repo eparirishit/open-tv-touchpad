@@ -108,6 +108,7 @@ public class RemoteScreenTest {
                     & android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS)!=0);
                 assertFalse("appearance cannot authorize Connect",findButton(decor,"Connect").isEnabled());
                 assertFalse("Stop requires a connected run",findButton(decor,"Stop").isEnabled());
+                assertEquals(View.GONE,findButton(decor,"Stop").getVisibility());
             });
         } finally { instrumentation.runOnMainSync(activity::finish); }
     }
@@ -156,16 +157,29 @@ public class RemoteScreenTest {
             RemoteScreen screen = new RemoteScreen(context(360,800,1f),(x,y)->{},()->{});
             assertNull(findButton(screen.root,"Close"));
             assertFalse("Stop disabled before connection",screen.stop.isEnabled());
+            assertEquals("Stop hidden before connection",View.GONE,screen.stop.getVisibility());
             assertEquals("Stop",screen.stop.getText().toString());
             assertNotNull(screen.stop.getCompoundDrawablesRelative()[0]);
             assertEquals(screen.stop.getTextColors(),screen.stop.getCompoundDrawableTintList());
+            screen.setConnected(true);
             layout(screen,screen.root.getContext(),360,800);
+            assertTrue(visible(screen,screen.stop));
+            boolean headerRtl = screen.root.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL;
+            assertTrue("Settings is at the header end",headerRtl
+                ? bounds(screen,screen.setup).right <= bounds(screen,screen.stop).left
+                : bounds(screen,screen.stop).right <= bounds(screen,screen.setup).left);
+            screen.showSetup(true);
+            screen.setDark(true);
+            assertTrue("Connected Stop remains available on Setup",visible(screen,screen.stop));
             boolean rtl = screen.stop.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL;
             assertNotNull("leading icon resolves into visible layout",screen.stop.getCompoundDrawables()[rtl ? 2 : 0]);
             assertTrue(rtl ? screen.stop.getCompoundPaddingRight() > screen.stop.getPaddingRight()
                 : screen.stop.getCompoundPaddingLeft() > screen.stop.getPaddingLeft());
+            screen.setConnected(false);
+            assertEquals("Stop hides again on disconnection",View.GONE,screen.stop.getVisibility());
             for (boolean dark : new boolean[]{false,true}) {
                 screen.setDark(dark);
+                assertEquals("Theme changes cannot reveal disconnected Stop",View.GONE,screen.stop.getVisibility());
                 for (TvCommand command : new TvCommand[]{TvCommand.UP,TvCommand.DOWN,TvCommand.LEFT,TvCommand.RIGHT,TvCommand.OK}) {
                     Button button = screen.tvButtons.get(command);
                     assertFalse(button.isEnabled());
@@ -192,8 +206,10 @@ public class RemoteScreenTest {
     @Test public void selectedTabsHaveNoBorderAndThemeChoicesHaveIcons() {
         InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
             RemoteScreen screen = new RemoteScreen(context(360,800,1f),(x,y)->{},()->{});
-            assertNotNull(screen.lightTheme.getCompoundDrawablesRelative()[0]);
-            assertNotNull(screen.darkTheme.getCompoundDrawablesRelative()[0]);
+            assertNotNull(screen.lightTheme.getCompoundDrawablesRelative()[1]);
+            assertNull(screen.lightTheme.getCompoundDrawablesRelative()[0]);
+            assertNotNull(screen.darkTheme.getCompoundDrawablesRelative()[1]);
+            assertNull(screen.darkTheme.getCompoundDrawablesRelative()[0]);
             assertEquals("Netflix",screen.tvButtons.get(TvCommand.NETFLIX).getText().toString());
             for (boolean dark : new boolean[]{false,true}) {
                 screen.setDark(dark);
@@ -226,7 +242,8 @@ public class RemoteScreenTest {
                 Context c = context(size[0],size[1],scale);
                 RemoteScreen screen = new RemoteScreen(c, (x,y) -> fail("Layout sent motion"), () -> fail("Layout clicked"));
                 screen.setDark(dark);
-                screen.status.setText("Saved projector — disconnected. Start, then Connect.");
+                screen.setConnected(true);
+                screen.status.setText("Synthetic connected header layout; no input admitted.");
                 screen.migrationNotice.setVisibility(View.GONE);
                 screen.showSetup(false);
                 layout(screen,c,size[0],size[1]);
@@ -260,6 +277,9 @@ public class RemoteScreenTest {
                 reachable(screen,screen.visible); reachable(screen,screen.confirm); reachable(screen,screen.forget);
                 screen.showSetupSection(1); layout(screen,c,size[0],size[1]);
                 reachable(screen,screen.tvAddress); reachable(screen,screen.tvCode);
+                View container = (View)screen.tvAddress.getParent();
+                while (!(container instanceof ScrollView)) container = (View)container.getParent();
+                assertFalse("Content scrolls without a visible scrollbar",container.isVerticalScrollBarEnabled());
                 for (Button control : new Button[]{screen.tvSaveAddress,screen.tvPair,screen.tvConfirm,screen.tvForget}) {
                     assertFalse("TV setup disabled before admission", control.isEnabled());
                     reachable(screen,control);
@@ -340,6 +360,7 @@ public class RemoteScreenTest {
                 Context c = context(size[0],size[1],1.5f);
                 float density = c.getResources().getDisplayMetrics().density;
                 RemoteScreen screen = new RemoteScreen(c,(x,y)->{},()->{});
+                screen.setConnected(true);
                 screen.showSetup(true); screen.showSetupSection(1);
                 int keyboard = Math.round(size[2] * density);
                 screen.root.dispatchApplyWindowInsets(new WindowInsets.Builder()

@@ -1,5 +1,11 @@
 # Architecture Status
 
+Diagnostic0.18 derives header Stop visibility in RemoteScreen.setConnected from
+the same Activity-owned readiness value already used for input and Stop enabling.
+Header ordering places Settings last. Theme choices use native top compound
+drawables so icon and label center together without custom measuring/drawing.
+The content ScrollView hides its vertical scrollbar while retaining scrolling.
+
 Diagnostic0.17 has Activity updateControls apply the existing run.ready() result
 to header Stop as well as pointer input. The service notification still offers
 Stop test during setup; lifecycle and timeout teardown remain authoritative.
