@@ -1,5 +1,18 @@
 # Project Progress
 
+## UI details and visible OTP (2026-10-26)
+
+Owner requested prototype status indicators, quieter diagnostics, touchpad speed,
+numbered Bluetooth instructions, muted-blue disabled OK and six TV-code cells.
+The explicit follow-up requests visible OTP characters, superseding masking only.
+Implementation uses existing admission and native views; transport, saved pairings,
+Stop and lifecycle remain unchanged. Hardware Wi-Fi testing is deferred by owner
+until tomorrow.176unit and19focused native UI/OTP tests pass, lint0errors/41warnings,
+and both APK builds pass. Independent/Codex rereviews found no actionable defects.
+Reviewed0.19 is installed with current enrollment state preserved and stable launch
+verified; owner hardware presentation/OTP/sensitivity acceptance is pending.
+Verification/install evidence is in the UI report.
+
 ## Header visibility and theme spacing (2026-10-26)
 
 Owner requested connected-only Stop visibility, Settings at the right edge and

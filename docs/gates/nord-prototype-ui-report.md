@@ -1,4 +1,53 @@
-# Nord prototype UI refresh — 0.15 presentation PASS; control smoke pending
+# Nord prototype UI refresh — diagnostic verification and hardware acceptance
+
+##0.19 prototype details, sensitivity and visible OTP
+
+Source `24c42a2` (including gesture commit `f55d106`) adds independent9dp Mouse/TV
+status dots, a13sp styled diagnostic panel, three numbered Bluetooth instructions,
+muted-blue disabled OK, seven-step0.5×–2× sensitivity (default1×) and six visible
+OTP cells. The owner explicitly requested visible characters, superseding masking
+only. Four scroll buttons and the secondary accessibility Buttons instead mode
+remain; movement/tap alone do not replace Netflix scrolling/accessibility.
+
+The code field is one native EditText: six-hex validation, native caret/edit/paste/
+backspace, no saved state/autofill/content capture/IME learning, and unchanged
+clear-on-pause/Stop. It retains the View save callback contract without freezing
+text and returns only empty state. Native letter spacing keeps all six glyphs
+inside the rectangular cells. The slider persists only a bounded non-secret step,
+cancels queued movement/tap, scales physical-dp movement after slop recognition,
+and preserves30Hz, signed127 reports, bounds and the cross-gesture dispatch clock.
+
+Verification:176 unit tests pass, no failures/errors/skips. All19 focused native
+checks pass on API31 (15 RemoteScreen,4 PairingCodeField). Lint/build pass:
+0errors/41warnings; app and test APKs assembled. Native proof covers real Activity
+launch,320/360dp portrait and800dp landscape,1.5font/IME/theme reachability,
+independent status dots, slider persistence/no admission and cancellation of queued
+movement/taps, native OTP paste/backspace/hex limits/visible characters/one-line
+cell geometry and direct/hierarchy state exclusion. Parent inspected synthetic
+light/dark Remote/Touchpad/setup screenshots and large-font visible OTP previews.
+No real pairing value was captured. Initial native UI regressions failed before
+implementation; unit sensitivity proof also ran red/green.
+
+Initial lint found the field’s missing native save callback; it was fixed and
+verified. Standalone field fixtures were given normal LayoutParams; the geometry
+check then exposed double-counted letter-spacing padding, which was corrected
+before final proof. Independent and complete incremental Codex reviews found no
+remaining actionable defects after rereview. Remaining new lint warnings are
+SeekBar touch-listener heuristics (the listener returns false and native handling
+continues) and existing-style hardcoded English copy; neither justifies a new
+input handler or localization project in this increment.
+
+Version19/0.19-diagnostic APK SHA256:
+`ce0cc78a37d52bfe0438dc43bab59add6d7066503ee3f735e37d07e88dab65b4`.
+Same-signature update verified authorized AC2001/API31, installed18, no probe
+service, reviewed source/APK hashes and matching0.18/0.7 signing identities.
+Current enrollment files stayed byte-identical through install, launch and a
+six-second stable-process foreground check. The first foreground snapshot preceded
+resume; subsequent checks confirmed stable foreground. No automatic service/run,
+data clearing or unpairing. Owner presentation/OTP/sensitivity hardware acceptance
+is pending. The owner defers Wi-Fi/projector tests until tomorrow; guest-network
+reachability remains unresolved. No transport or full TLS-suite PASS is claimed;
+the existing TLS fixture order issue and Bluetooth cleanup block remain separate.
 
 ##0.18 header visibility, theme alignment and scrollbar
 
