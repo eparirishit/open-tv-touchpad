@@ -22,7 +22,6 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
-import android.widget.Space;
 import android.widget.TextView;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -39,9 +38,8 @@ public final class RemoteScreen {
     public final LinearLayout root;
     public final TextView status, migrationNotice;
     public final Button start, connect, visible, confirm, forget, stop, setup;
-    public final Button moveLeft, moveRight, moveUp, moveDown, click;
     public final Button remoteTab, padTab, projectorTab, tvTab, displayTab;
-    public final Button surfaceTab, buttonsTab, lightTheme, darkTheme;
+    public final Button lightTheme, darkTheme;
     public final EnumMap<MouseReport.Direction, Button> scrollButtons =
             new EnumMap<>(MouseReport.Direction.class);
     public final EnumMap<TvCommand, Button> tvButtons = new EnumMap<>(TvCommand.class);
@@ -55,14 +53,14 @@ public final class RemoteScreen {
     private final Context context;
     private final ScrollView scroll;
     private final LinearLayout remotePage, padPage, setupPage, projectorPage, tvPage, displayPage;
-    private final LinearLayout surfacePage, mousePage, footer;
+    private final LinearLayout footer;
     private final TextView connection, brand, sensitivityLabel;
     private final List<TextView> labels = new ArrayList<>();
     private final List<Button> controls = new ArrayList<>();
     private final List<Button> navigation = new ArrayList<>();
     private final List<View> cards = new ArrayList<>();
     private final List<View> tracks = new ArrayList<>();
-    private boolean showingSetup, showingTouchpad, padButtons, dark, connected, tvConnected, imeVisible;
+    private boolean showingSetup, showingTouchpad, dark, connected, tvConnected, imeVisible;
     private int setupSection;
 
     public RemoteScreen(Context context, BiConsumer<Integer, Integer> move, Runnable tap) {
@@ -171,17 +169,32 @@ public final class RemoteScreen {
 
         padPage = column();
         add(content, padPage);
-        surfaceTab = button("Touchpad");
-        buttonsTab = button("Buttons instead");
-        add(padPage, segment(surfaceTab, buttonsTab));
-        surfacePage = column();
-        add(padPage, surfacePage);
         touchpad = new TouchpadView(context, move, tap);
         boolean landscape = context.getResources().getConfiguration().screenWidthDp
                 > context.getResources().getConfiguration().screenHeightDp;
-        surfacePage.addView(touchpad, new LinearLayout.LayoutParams(-1, dp(landscape ? 180 : 240)));
+        padPage.addView(touchpad, new LinearLayout.LayoutParams(-1, dp(landscape ? 180 : 240)));
+        for (MouseReport.Direction direction : MouseReport.Direction.values()) {
+            String label = switch (direction) {
+                case UP -> "Scroll up";
+                case DOWN -> "Scroll down";
+                case LEFT -> "Scroll left";
+                case RIGHT -> "Scroll right";
+            };
+            int icon = switch (direction) {
+                case UP -> R.drawable.ui_scroll_up;
+                case DOWN -> R.drawable.ui_scroll_down;
+                case LEFT -> R.drawable.ui_scroll_left;
+                case RIGHT -> R.drawable.ui_scroll_right;
+            };
+            Button control = iconButton(label, icon);
+            scrollButtons.put(direction, control);
+            inputs.add(control);
+        }
+        add(padPage, text("Scroll", 16));
+        addRow(padPage, scrollButtons.get(MouseReport.Direction.UP), scrollButtons.get(MouseReport.Direction.DOWN),
+                scrollButtons.get(MouseReport.Direction.LEFT), scrollButtons.get(MouseReport.Direction.RIGHT));
         sensitivityLabel = text("Touchpad sensitivity", 14);
-        add(surfacePage, sensitivityLabel);
+        add(padPage, sensitivityLabel);
         sensitivity = new SeekBar(context);
         sensitivity.setMax(6);
         sensitivity.setMinHeight(dp(48));
@@ -203,47 +216,7 @@ public final class RemoteScreen {
             @Override public void onStartTrackingTouch(SeekBar bar) { touchpad.cancelGesture(); }
             @Override public void onStopTrackingTouch(SeekBar bar) { }
         });
-        add(surfacePage, sensitivity);
-        mousePage = column();
-        add(padPage, mousePage);
-        moveLeft = iconButton("Move left", R.drawable.ui_left);
-        moveRight = iconButton("Move right", R.drawable.ui_right);
-        moveUp = iconButton("Move up", R.drawable.ui_up);
-        moveDown = iconButton("Move down", R.drawable.ui_down);
-        click = button("Click once");
-        moveLeft.setContentDescription("Move mouse left");
-        moveRight.setContentDescription("Move mouse right");
-        moveUp.setContentDescription("Move mouse up");
-        moveDown.setContentDescription("Move mouse down");
-        click.setContentDescription("Click mouse once");
-        addRow(mousePage, new Space(context), moveUp, new Space(context));
-        addRow(mousePage, moveLeft, click, moveRight);
-        addRow(mousePage, new Space(context), moveDown, new Space(context));
-        inputs.add(moveLeft);
-        inputs.add(moveRight);
-        inputs.add(moveUp);
-        inputs.add(moveDown);
-        inputs.add(click);
-        for (MouseReport.Direction direction : MouseReport.Direction.values()) {
-            String label = switch (direction) {
-                case UP -> "Scroll up";
-                case DOWN -> "Scroll down";
-                case LEFT -> "Scroll left";
-                case RIGHT -> "Scroll right";
-            };
-            int icon = switch (direction) {
-                case UP -> R.drawable.ui_scroll_up;
-                case DOWN -> R.drawable.ui_scroll_down;
-                case LEFT -> R.drawable.ui_scroll_left;
-                case RIGHT -> R.drawable.ui_scroll_right;
-            };
-            Button control = iconButton(label, icon);
-            scrollButtons.put(direction, control);
-            inputs.add(control);
-        }
-        add(padPage, text("Scroll", 16));
-        addRow(padPage, scrollButtons.get(MouseReport.Direction.UP), scrollButtons.get(MouseReport.Direction.DOWN),
-                scrollButtons.get(MouseReport.Direction.LEFT), scrollButtons.get(MouseReport.Direction.RIGHT));
+        add(padPage, sensitivity);
 
         setupPage = column();
         add(content, setupPage);
@@ -269,7 +242,7 @@ public final class RemoteScreen {
         addStep(projectorPage, 3, "Compare the numbers on BOTH intended screens before accepting, then save and connect.");
         visible = button("Make visible for 120 seconds");
         add(projectorPage, visible);
-        confirm = button("I compared matching codes on BOTH screens — save and connect");
+        confirm = button("Codes match on both screens. Save and connect");
         add(projectorPage, confirm);
         add(projectorPage, text("Keep this screen open after Connect. After confirmation, leaving the app ends the run.", 14));
         forget = button("Forget Bluetooth projector");
@@ -342,8 +315,6 @@ public final class RemoteScreen {
         bindNavigation(projectorTab, () -> showSetupSection(0));
         bindNavigation(tvTab, () -> showSetupSection(1));
         bindNavigation(displayTab, () -> showSetupSection(2));
-        bindNavigation(surfaceTab, () -> showPadButtons(false));
-        bindNavigation(buttonsTab, () -> showPadButtons(true));
         bindNavigation(lightTheme, () -> setDark(false));
         bindNavigation(darkTheme, () -> setDark(true));
         updatePages();
@@ -370,13 +341,6 @@ public final class RemoteScreen {
         touchpad.cancelGesture();
         setupSection = section;
         showingSetup = true;
-        updatePages();
-        scroll.scrollTo(0, 0);
-    }
-
-    public void showPadButtons(boolean show) {
-        touchpad.cancelGesture();
-        padButtons = show;
         updatePages();
         scroll.scrollTo(0, 0);
     }
@@ -433,8 +397,6 @@ public final class RemoteScreen {
         projectorPage.setVisibility(setupSection == 0 ? View.VISIBLE : View.GONE);
         tvPage.setVisibility(setupSection == 1 ? View.VISIBLE : View.GONE);
         displayPage.setVisibility(setupSection == 2 ? View.VISIBLE : View.GONE);
-        surfacePage.setVisibility(padButtons ? View.GONE : View.VISIBLE);
-        mousePage.setVisibility(padButtons ? View.VISIBLE : View.GONE);
         brand.setText(showingSetup ? "Setup" : "Open TV");
         setup.setContentDescription(showingSetup ? (showingTouchpad ? "Show touchpad" : "Show remote") : "Show setup");
         select(setup, showingSetup);
@@ -443,8 +405,6 @@ public final class RemoteScreen {
         select(projectorTab, setupSection == 0);
         select(tvTab, setupSection == 1);
         select(displayTab, setupSection == 2);
-        select(surfaceTab, !padButtons);
-        select(buttonsTab, padButtons);
     }
 
     private void select(Button button, boolean selected) {
@@ -533,7 +493,7 @@ public final class RemoteScreen {
         int border = color("#E1E4E8", "#2C323A");
         boolean destructive = button == stop || button == forget || button == tvForget;
         boolean primary = button == start || button == connect || button == visible || button == confirm || button == tvPair
-                || button == tvConfirm || button == click || button == tvButtons.get(TvCommand.OK)
+                || button == tvConfirm || button == tvButtons.get(TvCommand.OK)
                 || button == setup && button.isSelected();
         boolean nav = navigation.contains(button) && button != setup;
         int fill = primary ? accent : surface;
@@ -639,14 +599,19 @@ public final class RemoteScreen {
 
     private void addStep(LinearLayout parent, int number, String instruction) {
         LinearLayout row = new LinearLayout(context);
+        row.setBaselineAligned(false);
+        row.setGravity(Gravity.TOP);
         TextView badge = text(Integer.toString(number), 13);
         badge.setGravity(Gravity.CENTER);
         badge.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         tracks.add(badge);
-        LinearLayout.LayoutParams badgeSize = new LinearLayout.LayoutParams(dp(28), dp(28));
+        badge.setMinHeight(dp(32));
+        LinearLayout.LayoutParams badgeSize = new LinearLayout.LayoutParams(dp(32), -2);
         badgeSize.setMarginEnd(dp(12));
         row.addView(badge, badgeSize);
-        row.addView(text(instruction, 14), new LinearLayout.LayoutParams(0, -2, 1));
+        TextView body = text(instruction, 14);
+        body.setLineSpacing(dp(3), 1.15f);
+        row.addView(body, new LinearLayout.LayoutParams(0, -2, 1));
         add(parent, row);
     }
 
@@ -667,6 +632,7 @@ public final class RemoteScreen {
         LinearLayout segment = row(buttons);
         segment.setPadding(dp(4), dp(4), dp(4), dp(4));
         for (Button button : buttons) {
+            button.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
             button.setTextSize(14);
             button.setPadding(dp(6), dp(10), dp(6), dp(10));
         }

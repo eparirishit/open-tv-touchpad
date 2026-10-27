@@ -1,6 +1,16 @@
 # Disposable Nord remote — N3 diagnostic
 
-## Prototype UI in0.19
+## Prototype UI in0.20
+
+Version0.20 removes Buttons instead and the redundant mouse-button layout. The
+pad keeps native named accessibility actions for movement/click through the same
+admission checks. Scroll controls remain, with sensitivity immediately below them.
+Numbered setup has corrected multiline row alignment/spacing, confirmation says
+“Codes match on both screens. Save and connect”, tabs are bold and visible OTP
+cells are72dp tall. All pairing privacy/trust and Stop/lifecycle rules remain.
+See the UI report for exact build, installation and live-acceptance evidence.
+
+## Previous prototype UI in0.19
 
 Version0.19 adds colored Mouse/TV status dots, a smaller diagnostic panel,
 numbered Bluetooth setup, muted-blue disabled OK and a native touchpad sensitivity

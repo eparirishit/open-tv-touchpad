@@ -1,5 +1,12 @@
 # Architecture Status
 
+Diagnostic0.20 flattens Touchpad to pad, scroll controls and sensitivity. Alternate
+mouse-button pages and Activity bindings are removed; native accessibility actions
+on TouchpadView invoke the existing bounded move/click callbacks and cancel pending
+touch before acting. Activity admission remains authoritative. Numbered setup rows
+disable baseline alignment and use natural multiline height/spacing;72dp OTP cells
+retain the same editor/privacy behavior. Tab labels use native bold type.
+
 Diagnostic0.19 keeps new UI details in the native view layer. The Activity passes
 actual TV transport readiness separately from mouse input readiness; dots never
 grant admission. PairingCodeField is one native EditText with six rectangular

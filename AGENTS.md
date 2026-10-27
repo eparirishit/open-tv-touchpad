@@ -29,6 +29,16 @@ logging and clear-on-end/lifecycle. Preserve all transport, trust and admission
 contracts. Retain secondary accessibility buttons and four scroll controls.
 Wi-Fi/projector acceptance is deferred by the owner until tomorrow.
 
+## Requested Nord simplification (2026-10-27)
+
+Follow docs/superpowers/specs/2026-10-27-nord-ui-simplification-design.md. The owner
+wants the redundant Buttons instead mode and visible mouse buttons removed;
+this supersedes the old retain-buttons presentation rule. Preserve accessibility
+with native named move/click actions on the touchpad through existing Activity
+guards. Keep scrolling and sensitivity; place sensitivity below scroll controls.
+Use nonoverlapping numbered setup, the exact shorter comparison label, bold tab
+text and taller72dp visible OTP cells. Preserve privacy, trust and lifecycle.
+
 ## Approved TV trust-anchor compatibility (2026-10-25)
 
 The owner approved removing only the explicit peer trust-anchor self-signature

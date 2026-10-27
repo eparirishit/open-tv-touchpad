@@ -96,11 +96,6 @@ public final class ProbeActivity extends Activity {
                 return false;
             });
         }
-        bind(screen.moveLeft, () -> move(-16, 0));
-        bind(screen.moveRight, () -> move(16, 0));
-        bind(screen.moveUp, () -> move(0, -16));
-        bind(screen.moveDown, () -> move(0, 16));
-        bind(screen.click, this::click);
         for (MouseReport.Direction direction : MouseReport.Direction.values()) {
             Button control = screen.scrollButtons.get(direction);
             bind(control, () -> scroll(direction));

@@ -5,8 +5,8 @@ This authorizes a native presentation update, not recovery or transport changes.
 
 Use existing RemoteScreen/TouchpadView and Activity bindings. Remote and Touchpad
 are separate bottom tabs; Setup toggles from the header, with Projector, TV controls
-and Display sections. Touchpad offers surface/buttons alternatives plus four scroll
-buttons. Remote has Back/Home/Netflix, a circular spatial D-pad and volume/playback.
+and Display sections. Touchpad offers one pad plus four scroll buttons, followed
+by sensitivity; the owner’s2026-10-27 simplification removes the alternate mode. Remote has Back/Home/Netflix, a circular spatial D-pad and volume/playback.
 Settings stays at the right end of the header; Stop sits immediately before it
 and is hidden while disconnected. Close is removed per owner follow-up.
 Stop has a leading square icon and is enabled only once the input connection is
@@ -29,8 +29,8 @@ Maintain all Activity-owned admission and button bindings, private pairing code,
 bounded inputs, explicit Start/Connect, five-minute foreground run, Stop behavior,
 and known Bluetooth cleanup block. No permissions/dependencies/transport changes.
 All page, setup-section, touchpad-mode and theme navigation cancels pending gestures
-without sending input or granting admission. Keep existing accessibility mouse
-buttons. Every interactive target >=48dp, selected state accessible, all screens
+without sending input or granting admission. Keep accessible movement/click through native touchpad actions after the owner’s
+removal of visible mouse buttons. Every interactive target >=48dp, selected state accessible, all screens
 usable at320dp width, landscape,1.5 font scale and with IME. Use scrolling for short
 viewports with the scrollbar hidden, rather than prototype's fixed844px canvas. No screenshot may contain real
 codes or addresses. Original HTML is local design evidence, not executable app code.

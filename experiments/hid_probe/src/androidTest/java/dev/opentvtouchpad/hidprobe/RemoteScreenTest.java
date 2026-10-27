@@ -214,7 +214,7 @@ public class RemoteScreenTest {
             for (boolean dark : new boolean[]{false,true}) {
                 screen.setDark(dark);
                 for (Button tab : new Button[]{screen.remoteTab,screen.padTab,screen.projectorTab,
-                        screen.tvTab,screen.displayTab,screen.surfaceTab,screen.buttonsTab,
+                        screen.tvTab,screen.displayTab,
                         screen.lightTheme,screen.darkTheme}) {
                     tab.performClick();
                     assertTrue("selection remains accessible",tab.isSelected());
@@ -325,6 +325,59 @@ public class RemoteScreenTest {
         }
     }
 
+    private TextView findText(View root, String label) {
+        if (root instanceof TextView text && label.contentEquals(text.getText())) return text;
+        if (root instanceof ViewGroup group) for (int i=0;i<group.getChildCount();i++) {
+            TextView found=findText(group.getChildAt(i),label);
+            if (found!=null) return found;
+        }
+        return null;
+    }
+
+    @Test public void simplifiedPadPutsSensitivityAfterScrollAndUsesBoldTabs() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            Context c=context(384,800,1f);
+            RemoteScreen screen=new RemoteScreen(c,(x,y)->{},()->{});
+            assertNull("Redundant alternate mode removed",findButton(screen.root,"Buttons instead"));
+            assertNull(findButton(screen.root,"Move left"));
+            assertNull(findButton(screen.root,"Click once"));
+            assertEquals("Codes match on both screens. Save and connect",screen.confirm.getText().toString());
+            for (Button tab : new Button[]{screen.remoteTab,screen.padTab,screen.projectorTab,screen.tvTab,screen.displayTab})
+                assertTrue("Tab label is bold",tab.getTypeface().isBold());
+            screen.showTouchpad(true);layout(screen,c,384,800);
+            for(Button scroll:screen.scrollButtons.values())
+                assertTrue("Sensitivity follows every scroll button",bounds(screen,screen.sensitivity).top >= bounds(screen,scroll).bottom);
+            assertTrue(visible(screen,screen.touchpad));
+        });
+    }
+
+    @Test public void numberedSetupTextStaysInsideRowsAtNordDensityAndLargeFonts() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            for (int width : new int[]{320,384,800}) for (float scale : new float[]{1f,1.5f,2f}) {
+                Context base=context(width,width==800?360:800,scale);
+                Configuration config=new Configuration(base.getResources().getConfiguration());
+                config.densityDpi=450;
+                Context c=new ContextThemeWrapper(base.createConfigurationContext(config),R.style.RemoteTheme);
+                RemoteScreen screen=new RemoteScreen(c,(x,y)->{},()->{});
+                screen.showSetup(true);screen.showSetupSection(0);layout(screen,c,width,width==800?360:800);
+                for(int number=1;number<=3;number++) {
+                    TextView badge=findText(screen.root,Integer.toString(number));assertNotNull(badge);
+                    ViewGroup row=(ViewGroup)badge.getParent();
+                    TextView instruction=(TextView)row.getChildAt(1);
+                    assertTrue("Step text starts inside its own row",instruction.getTop()>=0);
+                    assertTrue("Multiline step text fits row at width="+width+" scale="+scale,
+                        instruction.getBottom()<=row.getHeight());
+                    if(number<3) {
+                        TextView nextBadge=findText(screen.root,Integer.toString(number+1));
+                        ViewGroup nextRow=(ViewGroup)nextBadge.getParent();
+                        assertTrue("Numbered rows do not overlap",bounds(screen,instruction).bottom <= bounds(screen,nextRow).top);
+                    }
+                }
+                if(width==384 && scale==1f)capture(screen,c,"prototype-setup-nord");
+            }
+        });
+    }
+
     @Test public void remoteAndSetupFitPortraitLandscapeAndLargeText() {
         InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
             int[][] sizes = {{320,800}, {360,800}, {800,360}};
@@ -360,9 +413,6 @@ public class RemoteScreenTest {
                 assertTrue(visible(screen,screen.touchpad));
                 assertFalse(visible(screen,screen.tvButtons.get(TvCommand.OK)));
                 for (Button control : screen.scrollButtons.values()) reachable(screen,control);
-                reachable(screen,screen.surfaceTab); reachable(screen,screen.buttonsTab);
-                screen.showPadButtons(true); layout(screen,c,size[0],size[1]);
-                for (Button control : new Button[]{screen.moveLeft,screen.moveRight,screen.moveUp,screen.moveDown,screen.click}) reachable(screen,control);
                 screen.showSetup(true); screen.showSetupSection(0); layout(screen,c,size[0],size[1]);
                 reachable(screen,screen.visible); reachable(screen,screen.confirm); reachable(screen,screen.forget);
                 screen.showSetupSection(1); layout(screen,c,size[0],size[1]);
@@ -473,9 +523,8 @@ public class RemoteScreenTest {
             screen.tvCode.setText("aB1234");
             screen.status.setText("Native teardown is unconfirmed. Input disabled.");
             for (Button nav : new Button[]{screen.remoteTab,screen.padTab,screen.setup,
-                    screen.projectorTab,screen.tvTab,screen.displayTab,screen.surfaceTab,
-                    screen.buttonsTab,screen.lightTheme,screen.darkTheme}) {
-                screen.showTouchpad(true);screen.showPadButtons(false);layout(screen,c,360,800);
+                    screen.projectorTab,screen.tvTab,screen.displayTab,screen.lightTheme,screen.darkTheme}) {
+                screen.showTouchpad(true);layout(screen,c,360,800);
                 screen.touchpad.setEnabled(true);
                 long t=SystemClock.uptimeMillis();
                 MotionEvent down=MotionEvent.obtain(t,t,MotionEvent.ACTION_DOWN,20,20,0);
@@ -514,8 +563,7 @@ public class RemoteScreenTest {
                 layout(screen,c,390,844);capture(screen,c,"prototype-connected"+suffix);
                 screen.showTouchpad(true);screen.touchpad.setEnabled(true);
                 for(Button b:screen.inputs)b.setEnabled(true);
-                screen.showPadButtons(false);layout(screen,c,390,844);capture(screen,c,"prototype-pad"+suffix);
-                screen.showPadButtons(true);layout(screen,c,390,844);capture(screen,c,"prototype-buttons"+suffix);
+                layout(screen,c,390,844);capture(screen,c,"prototype-pad"+suffix);
                 screen.stop.setEnabled(false);screen.touchpad.setEnabled(false);for(Button b:screen.inputs)b.setEnabled(false);
                 for(Button b:screen.tvButtons.values())b.setEnabled(false);
                 screen.setConnected(false);screen.setTvConnected(false);screen.tvStatus.setText("TV: not paired");

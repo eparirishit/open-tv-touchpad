@@ -222,3 +222,7 @@ reliability limitations; local STOP tests passed but do not certify those hardwa
   Bluetooth setup, muted-blue disabled OK, bounded sensitivity and visible OTP cells.
 - [ ] Owner0.19 hardware sensitivity/visible-OTP acceptance when private Wi-Fi
   connectivity is available; no network or TV pairing success is implied by UI checks.
+
+- [x] Owner0.20 simplification: one pad/scroll/sensitivity flow, native accessible
+  actions replacing the alternate mouse UI, nonoverlapping steps, shorter
+  confirmation, bold tabs and taller visible OTP cells.

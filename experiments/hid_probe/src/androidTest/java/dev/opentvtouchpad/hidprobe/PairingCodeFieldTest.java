@@ -146,7 +146,7 @@ public class PairingCodeFieldTest {
                     field.setText("");
                     layout(field, width);
                     float density = field.getResources().getDisplayMetrics().density;
-                    assertTrue(field.getHeight() >= Math.round(48 * density));
+                    assertTrue("OTP cells are taller",field.getHeight() >= Math.round(72 * density));
                     Bitmap image = Bitmap.createBitmap(field.getWidth(), field.getHeight(), Bitmap.Config.ARGB_8888);
                     field.draw(new Canvas(image));
                     int runs = 0;

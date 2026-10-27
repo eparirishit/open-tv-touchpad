@@ -1,5 +1,14 @@
 # Capabilities
 
+## Diagnostic0.20 — simplified Touchpad and readable setup
+
+Touchpad has one surface, four scroll controls and sensitivity below them. Buttons
+instead and redundant visible mouse buttons are removed; named native accessibility
+move/click actions preserve nonvisual control. Numbered setup text fits its rows,
+including the Nord’s450dpi display and larger fonts. The confirmation label reads
+“Codes match on both screens. Save and connect”. Tabs are bold and OTP cells are
+72dp tall. Verification/install evidence is in the UI report; live acceptance pending.
+
 ## Diagnostic0.19 — prototype details and touchpad speed
 
 Mouse and TV show independent colored dots beside truthful text, with a smaller

@@ -46,7 +46,7 @@ public final class PairingCodeField extends EditText {
         setAutofillHints((String[]) null);
         setImportantForAutofill(IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS);
         setImportantForContentCapture(IMPORTANT_FOR_CONTENT_CAPTURE_NO_EXCLUDE_DESCENDANTS);
-        setMinHeight(dp(56));
+        setMinHeight(dp(72));
         setMinWidth(dp(48));
         setBackgroundTintList(null);
         setBackground(new Drawable() {
