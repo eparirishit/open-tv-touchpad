@@ -46,6 +46,11 @@ public final class TouchpadView extends View {
         if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(false);
     }
 
+    public void setSensitivity(double sensitivity) {
+        gesture.setSensitivity(sensitivity);
+        cancelGesture();
+    }
+
     @Override public void setEnabled(boolean enabled) {
         super.setEnabled(enabled);
         if (gesture != null) gesture.setEnabled(enabled);
