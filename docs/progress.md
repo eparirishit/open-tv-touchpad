@@ -1,5 +1,18 @@
 # Project Progress
 
+## Touchpad simplification and setup overlap (2026-10-27)
+
+Owner requested removing redundant alternate mouse UI, moving sensitivity below
+scrolling, fixing overlapping numbered text, shortening confirmation text, bold
+tabs and taller OTP cells. Regression reproduced the row overflow at450dpi and
+normal font size. The row alignment/spacing fix stays in RemoteScreen; accessible
+input replaces visible fallback buttons through the same Activity gates. Final
+verification:176unit/26focused native UI/OTP/accessibility tests pass, lint0errors/
+41warnings and both APK builds pass. Reviews/rereviews found no actionable defects.
+Reviewed0.20 is installed with current enrollment bytes preserved and stable launch
+verified; owner visual/live control acceptance is pending. Installation/source/
+artifact evidence is in the UI report.
+
 ## UI details and visible OTP (2026-10-26)
 
 Owner requested prototype status indicators, quieter diagnostics, touchpad speed,

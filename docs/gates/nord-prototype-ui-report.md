@@ -1,5 +1,49 @@
 # Nord prototype UI refresh — diagnostic verification and hardware acceptance
 
+##0.20 touchpad simplification and setup overlap fix
+
+Source `ed26031` (including accessibility commit `ea972e6`) removes Buttons instead
+and the visible directional mouse/Click layout, flattening Touchpad to one pad,
+four scroll buttons and sensitivity below them. Accessible named fixed16-unit
+move actions and Click live on the pad through the existing callbacks/Activity
+admission checks. Each action cancels pending touch/frames; disabled actions reject
+input and ordinary touch taps still click once. No accessibility service/permission,
+transport or lifecycle change.
+
+Numbered setup overflow reproduced on the old app at450dpi,320dp width and normal
+font scale. Baseline alignment shifted multiline text outside its measured row.
+The owning layout now disables baseline alignment, top-aligns children, gives text
+readable line spacing and lets number badges grow naturally. Tabs are bold;
+confirmation is exactly “Codes match on both screens. Save and connect”. OTP
+minimum height increases56dp→72dp, with the visible one-buffer editor/privacy
+behavior unchanged.
+
+Verification:176 unit tests pass without failures/errors/skips. All26 focused
+native tests pass on API31:17 RemoteScreen,4 PairingCodeField,5 accessibility.
+Three UI/layout regressions failed against0.19 first; the five new accessibility
+checks also failed on the preserved old APK before passing on0.20. Tests cover
+450dpi row containment/nonoverlap at320/384/800dp and1×/1.5×/2× fonts, pad/scroll/
+sensitivity order, removed alternate UI, exact copy, bold tabs,72dp OTP editing/
+privacy/geometry, real Activity launch and existing keyboard/theme/admission flows.
+Accessibility proof covers attached-window node metadata, enabled-only named
+actions, queued gesture/tap cancellation and single clicks. The node fixture was
+corrected to attach to a real Activity before asserting framework metadata; all
+callbacks are synthetic and no run/transport is started. Native light/dark and
+Nord-density setup/pad/OTP screenshots were inspected.
+
+Lint/build:0errors/41warnings, both APKs assembled. Independent and complete Codex
+reviews/rereviews found no actionable defects. No complete TLS-suite PASS is
+claimed; its existing fixture-order issue and Bluetooth cleanup remain separate.
+
+Version20/0.20-diagnostic APK SHA256:
+`31c7bb4a0434bf1c25a251a59a90fd69f7642e7fb4d6e5dca895c262e401943c`.
+Installed on the verified authorized AC2001/API31 with installed19 and no probe
+service confirmed first. Source/APK hashes matched review; signing identity matches
+0.19/0.7. Current enrollment files remained byte-identical through install, launch
+and six-second stable foreground/PID verification. No automatic service/run,
+data clearing or unpairing. Owner visual/live control acceptance remains pending;
+no projector or network connection testing was performed for this UI increment.
+
 ##0.19 prototype details, sensitivity and visible OTP
 
 Source `24c42a2` (including gesture commit `f55d106`) adds independent9dp Mouse/TV
