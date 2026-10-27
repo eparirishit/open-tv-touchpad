@@ -2,6 +2,43 @@
 
 These instructions apply to the entire repository.
 
+## Requested prototype UI refresh (2026-10-26)
+
+The owner supplied an HTML UI prototype and requested updating the Android app
+from it. Follow `docs/superpowers/specs/2026-10-26-nord-prototype-ui-design.md`.
+This supersedes the diagnostic0.7 visual arrangement only: native Remote/Touchpad
+tabs, grouped Setup sections, light/dark appearance, circular D-pad and fixed
+Stop. The owner’s follow-up hides bottom tabs on Setup, removes Close, adds a
+square Stop icon and removes D-pad arrow circles. The next owner follow-up enables
+header Stop only for a ready connection, makes OK visibly disabled until TV input
+is ready, removes tab border highlights and adds theme/Netflix icons. The latest
+owner follow-up hides Stop unless connected, puts Settings at the right end of
+the header, and centers each theme icon directly above its label. Preserve all Activity admission, privacy, transport and lifecycle
+contracts. The0.13 Bluetooth recovery block remains unresolved; UI work does not
+certify or bypass it. Review and verify a stopped device before same-signature
+installation; both enrollments must remain byte-identical.
+
+## Requested Nord UI details (2026-10-26)
+
+Follow docs/superpowers/specs/2026-10-26-nord-ui-details-design.md for status dots,
+quieter diagnostic copy, numbered Bluetooth setup, muted-blue disabled OK, bounded
+0.5×–2× touchpad sensitivity and six-cell OTP entry. The owner explicitly requested
+VISIBLE OTP characters; this supersedes older masking requirements only for that
+field. Keep validation, one authoritative buffer, no saved state/autofill/learning/
+logging and clear-on-end/lifecycle. Preserve all transport, trust and admission
+contracts. Retain secondary accessibility buttons and four scroll controls.
+Wi-Fi/projector acceptance is deferred by the owner until tomorrow.
+
+## Requested Nord simplification (2026-10-27)
+
+Follow docs/superpowers/specs/2026-10-27-nord-ui-simplification-design.md. The owner
+wants the redundant Buttons instead mode and visible mouse buttons removed;
+this supersedes the old retain-buttons presentation rule. Preserve accessibility
+with native named move/click actions on the touchpad through existing Activity
+guards. Keep scrolling and sensitivity; place sensitivity below scroll controls.
+Use nonoverlapping numbered setup, the exact shorter comparison label, bold tab
+text and taller72dp visible OTP cells. Preserve privacy, trust and lifecycle.
+
 ## Approved TV trust-anchor compatibility (2026-10-25)
 
 The owner approved removing only the explicit peer trust-anchor self-signature

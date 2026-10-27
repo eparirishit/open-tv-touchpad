@@ -1,5 +1,99 @@
 # Project Progress
 
+##0.20 owner acceptance and next work (2026-10-27)
+
+The owner reports testing0.20 and “everything works fine”, accepting its requested
+UI changes and normal-use smoke. This closes the0.20 UI acceptance item; it does
+not independently certify previously unresolved failure/revocation scenarios.
+Next priority is Bluetooth-loss cleanup/reconnect, whose actual native completion
+acknowledgments are still missing in the captured trial. Keep the barrier and
+current Force stop recovery until a reviewed completion policy is proven. The
+TLS close-read fixture order issue also remains open. Then complete remaining
+N3 reliability evidence, integrate draft PRs #8/#9 in base-first order and design
+N4 daily-use lifecycle/packaging. No merge or new lifecycle contract is approved
+by the acceptance report alone.
+
+## Touchpad simplification and setup overlap (2026-10-27)
+
+Owner requested removing redundant alternate mouse UI, moving sensitivity below
+scrolling, fixing overlapping numbered text, shortening confirmation text, bold
+tabs and taller OTP cells. Regression reproduced the row overflow at450dpi and
+normal font size. The row alignment/spacing fix stays in RemoteScreen; accessible
+input replaces visible fallback buttons through the same Activity gates. Final
+verification:176unit/26focused native UI/OTP/accessibility tests pass, lint0errors/
+41warnings and both APK builds pass. Reviews/rereviews found no actionable defects.
+Reviewed0.20 is installed with current enrollment bytes preserved and stable launch
+verified; owner acceptance of the requested UI/normal-use smoke is now recorded
+above. Installation/source/
+artifact evidence is in the UI report.
+
+## UI details and visible OTP (2026-10-26)
+
+Owner requested prototype status indicators, quieter diagnostics, touchpad speed,
+numbered Bluetooth instructions, muted-blue disabled OK and six TV-code cells.
+The explicit follow-up requests visible OTP characters, superseding masking only.
+Implementation uses existing admission and native views; transport, saved pairings,
+Stop and lifecycle remain unchanged. Hardware Wi-Fi testing is deferred by owner
+until tomorrow.176unit and19focused native UI/OTP tests pass, lint0errors/41warnings,
+and both APK builds pass. Independent/Codex rereviews found no actionable defects.
+Reviewed0.19 is installed with current enrollment state preserved and stable launch
+verified; owner hardware presentation/OTP/sensitivity acceptance is pending.
+Verification/install evidence is in the UI report.
+
+## Header visibility and theme spacing (2026-10-26)
+
+Owner requested connected-only Stop visibility, Settings at the right edge and
+compact alignment of theme icons/labels. Implemented in0.18 using existing
+readiness and native compound drawable layout. Verification/install evidence
+is in the UI report. Reviewed0.18 is installed with current enrollment bytes
+preserved and stable launch verified. All12 focused UI native checks pass;
+167unit tests pass and lint/build pass. Broader native suite retains a TLS
+close-read assertion failure that passes standalone; tracked separately, with
+no full-suite PASS claim. Owner visual acceptance remains pending. Bluetooth
+cleanup and enrollment recovery remain separate.
+
+## Connection-state UI refinements (2026-10-26)
+
+Owner requested connection-dependent Stop, disabled-looking OK, borderless tab
+selection and theme/Netflix icons. Implemented in0.17 using existing admission
+and native presentation. The real-Activity Stop and missing-icon regressions
+failed on0.16 before implementation.167unit/27native tests pass (one opt-in
+projector diagnostic skipped); both reviews found no actionable issues. Reviewed
+0.17 is installed with current enrollment bytes preserved and stable launch
+confirmed. Owner visual/connection-state acceptance is pending; full evidence is
+in the UI report. Bluetooth cleanup and enrollment recovery remain separate.
+
+## UI refinements (2026-10-26)
+
+Owner requested hiding Setup’s bottom tabs, removing Close, adding a Stop square
+and simplifying D-pad styling. Implemented in0.16 without changing transport,
+admission or the launch fix. The footer regression reproduced the old behavior
+before implementation.167unit/26native tests pass (one opt-in diagnostic skipped);
+complete review found no actionable defects. Reviewed0.16 is installed with
+current enrollment bytes preserved and stable launch confirmed. Owner visual
+acceptance is pending; see the UI report.
+
+## Prototype launch correction (2026-10-26)
+
+Owner0.14 launch failed. The real Activity called the system-bar controller
+before its window decor existed; API31 emulator launch reproduced the failure.
+Version0.15 waits for view attachment and adds a real-Activity launch/theme test.
+167unit/24native tests pass; one opt-in projector diagnostic is skipped. Reviewed0.15 is installed and owner confirms app launch, screens and themes work.
+Both enrollment files were absent BEFORE the correction install; system logs show
+an app-data clear event of unknown origin. The owner denies clearing data. The
+installer preserved the verified-empty state. Pairing recovery/control smoke remain
+pending; see the [UI report](gates/nord-prototype-ui-report.md).
+
+## Prototype UI refresh (2026-10-26)
+
+Owner requested implementing the supplied HTML design in the native Nord app.
+Version0.14 separates Remote/Touchpad, groups Setup sections, adds light/dark
+appearance and keeps fixed Stop/Close. Only presentation and its tests change;
+Bluetooth recovery remains blocked. Reviewed0.14 is installed with both enrollment
+stores unchanged and no automatic run; owner smoke is pending.167unit/23native
+tests pass, with one opt-in hardware diagnostic skipped. Full evidence is in
+the [UI report](gates/nord-prototype-ui-report.md).
+
 ## Bluetooth-loss follow-up: recovery still blocked (2026-10-25)
 
 Owner confirmed0.13 Home/pointer smoke. Adapter interruption reached BLE_ON and

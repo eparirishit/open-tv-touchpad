@@ -15,6 +15,7 @@ final class TouchpadGesture {
     private long generation;
     private long downTime;
     private long lastDispatch;
+    private double sensitivity = 1;
     private double originX, originY, lastX, lastY, pendingX, pendingY;
 
     TouchpadGesture(double slop, BiConsumer<Integer, Integer> move, Runnable tap) {
@@ -25,6 +26,14 @@ final class TouchpadGesture {
 
     int pointerId() { return pointer; }
     long generation() { return generation; }
+
+    void setSensitivity(double sensitivity) {
+        if (!Double.isFinite(sensitivity) || sensitivity < 0.5 || sensitivity > 2) {
+            throw new IllegalArgumentException("Sensitivity must be finite and between 0.5 and 2");
+        }
+        cancel();
+        this.sensitivity = sensitivity;
+    }
 
     void down(int id, double x, double y, long now) {
         cancel();
@@ -42,8 +51,8 @@ final class TouchpadGesture {
             if (Math.hypot(x - originX, y - originY) <= slop) return;
             moving = true;
         }
-        pendingX = bounded(pendingX + x - lastX);
-        pendingY = bounded(pendingY + y - lastY);
+        pendingX = bounded(pendingX + (x - lastX) * sensitivity);
+        pendingY = bounded(pendingY + (y - lastY) * sensitivity);
         lastX = x;
         lastY = y;
     }

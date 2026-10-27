@@ -1,5 +1,70 @@
 # Capabilities
 
+## Diagnostic0.20 — simplified Touchpad and readable setup
+
+Touchpad has one surface, four scroll controls and sensitivity below them. Buttons
+instead and redundant visible mouse buttons are removed; named native accessibility
+move/click actions preserve nonvisual control. Numbered setup text fits its rows,
+including the Nord’s450dpi display and larger fonts. The confirmation label reads
+“Codes match on both screens. Save and connect”. Tabs are bold and OTP cells are
+72dp tall. The owner reports testing0.20 and everything working; requested UI
+changes/normal-use smoke are accepted. Failure/revocation scenarios remain separate.
+Verification/install and owner evidence are in the UI report.
+
+## Diagnostic0.19 — prototype details and touchpad speed
+
+Mouse and TV show independent colored dots beside truthful text, with a smaller
+styled diagnostic message. Bluetooth setup has numbered instructions. Disabled
+OK is muted blue. Touchpad offers a0.5×–2× sensitivity slider (default1×); changing
+it cancels the current gesture. Scroll buttons remain needed for Netflix; the
+secondary Buttons instead mode retains accessibility support. TV pairing uses six
+visible OTP-style cells with native editing/paste/backspace and six-hex validation.
+Pairing text is excluded from saved state/autofill/learning and clears on Stop/pause.
+Verification and installation status are in the UI report; Wi-Fi testing is deferred.
+
+## Diagnostic0.18 — header and theme alignment
+
+Stop is hidden unless connected, immediately left of the rightmost Settings icon.
+Each Display choice centers its icon directly above its label with a small gap.
+The scrollbar is hidden; page content remains scrollable.
+Notification Stop remains available during setup. Verification and installation
+status are in the UI report.
+
+## Diagnostic0.17 — connection states and icons
+
+Header Stop is disabled until the connection admits input, then disables again
+on disconnection/teardown. The existing notification Stop test can cancel setup.
+OK looks disabled before TV admission and turns blue when available. Tabs use
+selection/focus fill with no border highlights. Display adds sun/moon icons;
+Netflix uses its colored N mark, dimmed while disabled. Verification/install
+status is in the UI report.
+
+## Diagnostic0.16 — requested UI refinements
+
+Setup hides the bottom Remote/Touchpad tabs; the header toggle returns to the
+previous page. Close is removed, Stop has a square icon, OK remains blue while
+disabled and directional arrows lose their circles. Admission and Stop behavior
+are unchanged. Verification/install evidence is in the UI report.
+
+## Diagnostic0.15 — prototype UI with launch correction
+
+Version0.14 failed real Activity launch despite its synthetic-view checks.
+Version0.15 defers theme/window setup until attachment; actual Activity launch
+and light/dark changes pass on API31 emulator. Installed0.15 owner presentation
+smoke passes. Both app enrollment records were already absent before correction
+installation; an app-data clear event is logged with initiator unknown. Pairing
+recovery and combined control smoke remain pending.
+
+## Diagnostic0.14 — prototype UI (superseded)
+
+Remote presents the TV D-pad and playback controls; Touchpad presents pointer
+input, scroll controls and an accessible button alternative. Setup separates
+Projector, TV controls and Display. Both themes apply in place without changing
+session admission or pairing. Reviewed0.14 is installed; both pairings are
+preserved and owner UI smoke is pending. Automated and installation evidence is
+tracked in the [UI report](gates/nord-prototype-ui-report.md). This is not a
+Bluetooth recovery fix or daily-use release.
+
 ## Diagnostic0.13 — cleanup fix installed, hardware recovery blocked
 
 After profile loss during Stop, the new build can finish cleanup only when

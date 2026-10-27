@@ -82,6 +82,19 @@ design must be approved before an item moves into an active milestone.
   explicit reconnect without Force stop. The0.13 hardware trace still reached
   the deadline without disconnect/unregister callbacks. Existing failures and
   missing acknowledgments remain blocked; do not clear the barrier on timeout.
+- [x] Implement the owner-supplied prototype UI in0.14: Remote/Touchpad tabs,
+  circular D-pad, grouped Setup, light/dark appearance and native icons.
+  167unit tests and23native tests pass; one opt-in hardware diagnostic is skipped.
+  Existing lifecycle/transport remains unchanged. [UI evidence](docs/gates/nord-prototype-ui-report.md).
+- [x] Install0.14 on stopped Nord; same signature, both enrollments unchanged,
+  no automatic run.
+- [x] Diagnose0.14 launch crash and correct constructor-time Window access in0.15;
+  actual Activity launch/theme test plus167unit/24native tests pass, one diagnostic skipped.
+- [x] Owner0.15 presentation smoke: app opens, Remote/Touchpad/Setup and Light/Dark
+  work. The0.14 hardware launch failed and was superseded by0.15.
+- [ ] Recover pairing after observed app-data clear event (initiator unknown;
+  owner reports no manual clear), then owner0.15 pointer/scroll/TV/Stop smoke.
+  Correction installation preserved the verified-empty app record state.
 - [ ] N4: review daily-use lifecycle and packaging after combined functionality.
 - [ ] Before broader distribution, verify screen-reader/font-scale/layout behavior;
   current native alternative controls have not received a complete device audit.
@@ -190,3 +203,30 @@ reliability limitations; local STOP tests passed but do not certify those hardwa
 - [ ] Validate installed-PWA behavior on iPhone and Android after M1 is
   unblocked.
 - [ ] Evaluate a separately designed Windows-hosted server mode after V1.
+
+- [x] Owner0.16 UI refinements: Setup-only navigation, no Close, square Stop icon,
+  blue OK and circle-free D-pad arrows; no transport/lifecycle change.
+
+- [x] Owner0.17 refinements: connection-gated header Stop, visibly disabled OK,
+  borderless tab selection and native theme/Netflix icons.
+
+- [x] Owner0.18 refinements: connected-only Stop visibility, rightmost Settings
+  and centered compact Display icon/label pairs.
+
+- [ ] Investigate native TLS fixture order sensitivity: closeUnblocksEstablishedTlsRead
+  twice returned without its expected IOException in the full0.18 suite, but
+  passes standalone. Close did unblock; return value was not captured. Retain
+  the failed results; no transport or test-expectation change is included in UI work.
+
+- [x] Owner0.19 UI details: independent status dots, quieter status, numbered
+  Bluetooth setup, muted-blue disabled OK, bounded sensitivity and visible OTP cells.
+- [ ] Owner0.19 hardware sensitivity/visible-OTP acceptance when private Wi-Fi
+  connectivity is available; no network or TV pairing success is implied by UI checks.
+
+- [x] Owner0.20 simplification: one pad/scroll/sensitivity flow, native accessible
+  actions replacing the alternate mouse UI, nonoverlapping steps, shorter
+  confirmation, bold tabs and taller visible OTP cells.
+
+- [x] Owner0.20 acceptance: reports testing the update and everything working.
+  Requested UI changes/normal-use smoke accepted; unresolved failure/revocation
+  checks are not implicitly promoted. See the prototype UI report.

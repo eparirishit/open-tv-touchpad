@@ -5,12 +5,14 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
+import android.view.accessibility.AccessibilityNodeInfo;
 import java.util.function.BiConsumer;
 
 /** Native event/scheduling adapter. Activity callbacks retain all input admission checks. */
@@ -19,14 +21,31 @@ public final class TouchpadView extends View {
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final float density;
     private final TouchpadGesture gesture;
+    private final BiConsumer<Integer, Integer> move;
+    private final Runnable tap;
     private Runnable pendingFrame;
+    private int fill = Color.rgb(233,236,240), border = Color.rgb(220,224,229),
+            dot = Color.rgb(220,224,229), text = Color.rgb(91,99,109);
+
+    public void setPalette(int fill, int border, int dot, int text) {
+        this.fill = fill;
+        this.border = border;
+        this.dot = dot;
+        this.text = text;
+        invalidate();
+    }
 
     public TouchpadView(Context context, BiConsumer<Integer, Integer> move, Runnable tap) {
         super(context);
+        this.move = move;
+        this.tap = tap;
         density = getResources().getDisplayMetrics().density;
         gesture = new TouchpadGesture(ViewConfiguration.get(context).getScaledTouchSlop() / density,
-                move, () -> { performClick(); tap.run(); });
-        setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+                move, this::performClick);
+        setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_YES);
+        setContentDescription("Touchpad");
+        setFocusable(true);
+        setClickable(true);
         setEnabled(false);
     }
 
@@ -34,6 +53,11 @@ public final class TouchpadView extends View {
         if (gesture != null) gesture.cancel();
         clearFrame();
         if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(false);
+    }
+
+    public void setSensitivity(double sensitivity) {
+        gesture.setSensitivity(sensitivity);
+        cancelGesture();
     }
 
     @Override public void setEnabled(boolean enabled) {
@@ -106,8 +130,35 @@ public final class TouchpadView extends View {
     }
 
     @Override public boolean performClick() {
-        // Accessibility uses the separate directional/Click buttons; this never submits HID.
+        if (!isEnabled()) return false;
+        cancelGesture();
         super.performClick();
+        tap.run();
+        return true;
+    }
+
+    @Override public void onInitializeAccessibilityNodeInfo(AccessibilityNodeInfo info) {
+        super.onInitializeAccessibilityNodeInfo(info);
+        info.removeAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_CLICK);
+        if (!isEnabled()) return;
+        info.addAction(new AccessibilityNodeInfo.AccessibilityAction(R.id.touchpad_move_left, "Move left"));
+        info.addAction(new AccessibilityNodeInfo.AccessibilityAction(R.id.touchpad_move_right, "Move right"));
+        info.addAction(new AccessibilityNodeInfo.AccessibilityAction(R.id.touchpad_move_up, "Move up"));
+        info.addAction(new AccessibilityNodeInfo.AccessibilityAction(R.id.touchpad_move_down, "Move down"));
+        info.addAction(new AccessibilityNodeInfo.AccessibilityAction(AccessibilityNodeInfo.ACTION_CLICK, "Click"));
+    }
+
+    @Override public boolean performAccessibilityAction(int action, Bundle arguments) {
+        if (action == AccessibilityNodeInfo.ACTION_CLICK) return performClick();
+        int dx = 0, dy = 0;
+        if (action == R.id.touchpad_move_left) dx = -16;
+        else if (action == R.id.touchpad_move_right) dx = 16;
+        else if (action == R.id.touchpad_move_up) dy = -16;
+        else if (action == R.id.touchpad_move_down) dy = 16;
+        else return super.performAccessibilityAction(action, arguments);
+        if (!isEnabled()) return false;
+        cancelGesture();
+        move.accept(dx, dy);
         return true;
     }
 
@@ -116,17 +167,25 @@ public final class TouchpadView extends View {
         float inset = density;
         float radius = 28 * density;
         paint.setStyle(Paint.Style.FILL);
-        paint.setColor(isEnabled() ? Color.rgb(32, 32, 32) : Color.rgb(40, 40, 40));
+        paint.setColor(fill);
         canvas.drawRoundRect(inset, inset, getWidth() - inset, getHeight() - inset,
                 radius, radius, paint);
         paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(2 * density);
-        paint.setColor(isEnabled() ? Color.rgb(145, 145, 145) : Color.rgb(105, 105, 105));
+        paint.setStrokeWidth(density);
+        paint.setColor(border);
         canvas.drawRoundRect(inset, inset, getWidth() - inset, getHeight() - inset,
                 radius, radius, paint);
         paint.setStyle(Paint.Style.FILL);
-        paint.setColor(isEnabled() ? Color.rgb(80, 80, 80) : Color.rgb(64, 64, 64));
-        canvas.drawCircle(getWidth() / 2f, getHeight() / 2f, 24 * density, paint);
+        paint.setColor(dot);
+        canvas.drawCircle(getWidth() / 2f, getHeight() / 2f - 20 * density, 28 * density, paint);
+        paint.setColor(text);
+        paint.setAlpha(isEnabled() ? 255 : 160);
+        paint.setTextAlign(Paint.Align.CENTER);
+        paint.setTextSize(14 * getResources().getDisplayMetrics().scaledDensity);
+        float baseline = getHeight() / 2f + 38 * density;
+        canvas.drawText("Slide to move", getWidth() / 2f, baseline, paint);
+        canvas.drawText("Tap to click", getWidth() / 2f, baseline + paint.getFontSpacing(), paint);
+        paint.setAlpha(255);
     }
 
     @Override protected void onDetachedFromWindow() {

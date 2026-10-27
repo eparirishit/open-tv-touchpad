@@ -1,5 +1,51 @@
 # Architecture Status
 
+Diagnostic0.20 flattens Touchpad to pad, scroll controls and sensitivity. Alternate
+mouse-button pages and Activity bindings are removed; native accessibility actions
+on TouchpadView invoke the existing bounded move/click callbacks and cancel pending
+touch before acting. Activity admission remains authoritative. Numbered setup rows
+disable baseline alignment and use natural multiline height/spacing;72dp OTP cells
+retain the same editor/privacy behavior. Tab labels use native bold type.
+
+Diagnostic0.19 keeps new UI details in the native view layer. The Activity passes
+actual TV transport readiness separately from mouse input readiness; dots never
+grant admission. PairingCodeField is one native EditText with six rectangular
+cells and owner-requested visible OTP text, retaining filtering and no state/
+autofill/learning. It feeds the unchanged pairing/clear-on-pause/Stop path.
+TouchpadGesture scales physical-dp deltas after slop recognition and before its
+bounded accumulator; the view cancels pending frames on sensitivity changes.
+A native seven-position0.5×–2× slider persists only a bounded non-secret step.
+
+Diagnostic0.18 derives header Stop visibility in RemoteScreen.setConnected from
+the same Activity-owned readiness value already used for input and Stop enabling.
+Header ordering places Settings last. Theme choices use native top compound
+drawables so icon and label center together without custom measuring/drawing.
+The content ScrollView hides its vertical scrollbar while retaining scrolling.
+
+Diagnostic0.17 has Activity updateControls apply the existing run.ready() result
+to header Stop as well as pointer input. The service notification still offers
+Stop test during setup; lifecycle and timeout teardown remain authoritative.
+RemoteScreen gives disabled OK a neutral palette, preserves enabled blue, removes
+tab strokes while retaining selected/focus fill and adds bundled theme/Netflix
+vectors. No protocol, transport, pairing or new dependency is introduced.
+
+Diagnostic0.16 keeps footer visibility owned by RemoteScreen from Setup and IME
+state together. Close is removed from the header and Activity bindings; Stop and
+Android lifecycle shutdown remain unchanged. Native Stop icon and D-pad palette
+states are presentation only; disabled controls remain disabled.
+
+Diagnostic0.15 defers system-bar access until view attachment because the Activity
+window decor is unavailable during RemoteScreen construction. The real launch path
+is covered by a native Activity test.
+
+Diagnostic0.14 updates only native presentation to the owner-supplied prototype.
+RemoteScreen owns view navigation and appearance; ProbeActivity still owns all
+session state, enabled controls and action binding. The same view instances survive
+theme changes, preserving field privacy and callbacks. All presentation navigation
+cancels pending pad gestures. Appearance persistence contains only a dark-mode flag;
+no new network, permission, dependency, lifecycle or enrollment path is introduced.
+See the [UI design](superpowers/specs/2026-10-26-nord-prototype-ui-design.md).
+
 Diagnostic0.13 preserves the N3 teardown barrier while classifying profile loss
 during Stop as pending cleanup. Detached/disabled proxies cannot prove cleanup:
 require this Run's selected disconnect and unregister callbacks, no observed

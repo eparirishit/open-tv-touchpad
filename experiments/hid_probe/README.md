@@ -1,5 +1,55 @@
 # Disposable Nord remote — N3 diagnostic
 
+## Prototype UI in0.20
+
+Version0.20 removes Buttons instead and the redundant mouse-button layout. The
+pad keeps native named accessibility actions for movement/click through the same
+admission checks. Scroll controls remain, with sensitivity immediately below them.
+Numbered setup has corrected multiline row alignment/spacing, confirmation says
+“Codes match on both screens. Save and connect”, tabs are bold and visible OTP
+cells are72dp tall. All pairing privacy/trust and Stop/lifecycle rules remain.
+See the UI report for exact build, installation and live-acceptance evidence.
+
+## Previous prototype UI in0.19
+
+Version0.19 adds colored Mouse/TV status dots, a smaller diagnostic panel,
+numbered Bluetooth setup, muted-blue disabled OK and a native touchpad sensitivity
+slider (0.5×–2×, default1×). Changing speed cancels current/pending gestures; it
+does not affect taps, scrolling or the TV D-pad. Scroll controls and the secondary
+Buttons instead accessibility mode remain. TV pairing has six visible OTP cells
+backed by one native editor, with six-hex validation and normal paste/backspace.
+Code text is never saved to app state/autofill/learning and is cleared on Stop/pause.
+Wi-Fi/projector acceptance is deferred; see the UI report for exact build/install.
+
+## Previous prototype UI in0.18
+
+Version0.15 corrects the0.14 Activity launch crash by deferring system-bar setup
+until the view is attached. The owner-provided design separates TV buttons on **Remote** from mouse input on
+**Touchpad**. Touchpad offers a surface or **Buttons instead**, with four scroll
+buttons available in both modes. Version0.16 removes Close and adds a square icon
+before Stop. Setup hides the bottom tabs; use its header toggle to return.
+Version0.17 shows OK disabled until TV input is ready, then blue. Stop enables only
+for a successful input connection. Version0.18 hides Stop while disconnected
+and places it immediately before the rightmost Settings icon. Theme icons center
+directly above their labels with a small gap. The scrollbar is hidden while
+content remains scrollable. Use the notification’s Stop test to cancel
+setup. Tabs have fill-based selection/focus without border highlights. Display
+shows sun/moon icons, and Netflix uses its N mark, dimmed while unavailable.
+Direction arrows remain circle-free.
+The header keeps Setup and Stop reachable;
+Setup groups **Projector**, **TV controls** and **Display**. Display changes light/
+dark colors in place and saves only the appearance preference. Real connection
+status and the full diagnostic message remain visible in the scrollable content.
+
+Start/Connect, both pairings, masked TV-code entry and all control admission stay
+unchanged. Page and theme switches cancel pending gestures without starting or
+restarting a session. The five-minute limit and unresolved0.13 Bluetooth cleanup
+barrier remain. No re-pairing is required for this presentation update. See the
+[prototype UI report](../../docs/gates/nord-prototype-ui-report.md) for build,
+installation and owner-test status.
+
+## Earlier diagnostic increments
+
 The owner accepted remembering the verified projector for this isolated diagnostic
 on 2026-10-24, including the OS-bond continuity limitation. This is not a product
 companion, network bridge, or H1A PASS. The physical TV remote remains independent.
