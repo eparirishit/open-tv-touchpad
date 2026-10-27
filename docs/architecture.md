@@ -1,5 +1,14 @@
 # Architecture Status
 
+Diagnostic0.19 keeps new UI details in the native view layer. The Activity passes
+actual TV transport readiness separately from mouse input readiness; dots never
+grant admission. PairingCodeField is one native EditText with six rectangular
+cells and owner-requested visible OTP text, retaining filtering and no state/
+autofill/learning. It feeds the unchanged pairing/clear-on-pause/Stop path.
+TouchpadGesture scales physical-dp deltas after slop recognition and before its
+bounded accumulator; the view cancels pending frames on sensitivity changes.
+A native seven-position0.5×–2× slider persists only a bounded non-secret step.
+
 Diagnostic0.18 derives header Stop visibility in RemoteScreen.setConnected from
 the same Activity-owned readiness value already used for input and Stop enabling.
 Header ordering places Settings last. Theme choices use native top compound

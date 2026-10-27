@@ -864,10 +864,12 @@ public final class ProbeActivity extends Activity {
         screen.tvForget.setEnabled(resumed && !pendingTvForget);
         boolean tvReady = ready && run.tvMode == TvEnrollment.State.VALID && run.tv != null;
         for (Button button : screen.tvButtons.values()) button.setEnabled(tvReady);
+        boolean tvActive = run != null && run.ownership.active() && run.tv != null;
+        boolean tvConnected = tvActive && run.tv.ready();
         screen.tvStatus.setText(tvEnrollment.state() == TvEnrollment.State.UNUSABLE ? "TV: enrollment unusable"
-            : run != null && run.ownership.active() && run.tv != null
-                ? run.tv.ready() ? "TV: connected" : code ? "TV: code required" : "TV: connecting"
+            : tvActive ? tvConnected ? "TV: connected" : code ? "TV: code required" : "TV: connecting"
                 : tvEnrollment.state() == TvEnrollment.State.VALID ? "TV: paired, disconnected" : "TV: not paired");
+        screen.setTvConnected(tvConnected);
     }
 
     private void stop(String message) {

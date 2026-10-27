@@ -11,18 +11,17 @@ import android.graphics.drawable.StateListDrawable;
 import android.text.InputFilter;
 import android.text.InputType;
 import android.text.method.DigitsKeyListener;
-import android.text.method.PasswordTransformationMethod;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
-import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.SeekBar;
 import android.widget.Space;
 import android.widget.TextView;
 import java.util.ArrayList;
@@ -50,19 +49,20 @@ public final class RemoteScreen {
     public final EditText tvAddress, tvCode;
     public final Button tvSaveAddress, tvPair, tvConfirm, tvForget;
     public final TouchpadView touchpad;
+    public final SeekBar sensitivity;
     public final List<Button> inputs = new ArrayList<>();
 
     private final Context context;
     private final ScrollView scroll;
     private final LinearLayout remotePage, padPage, setupPage, projectorPage, tvPage, displayPage;
     private final LinearLayout surfacePage, mousePage, footer;
-    private final TextView connection, brand;
+    private final TextView connection, brand, sensitivityLabel;
     private final List<TextView> labels = new ArrayList<>();
     private final List<Button> controls = new ArrayList<>();
     private final List<Button> navigation = new ArrayList<>();
     private final List<View> cards = new ArrayList<>();
     private final List<View> tracks = new ArrayList<>();
-    private boolean showingSetup, showingTouchpad, padButtons, dark, connected, imeVisible;
+    private boolean showingSetup, showingTouchpad, padButtons, dark, connected, tvConnected, imeVisible;
     private int setupSection;
 
     public RemoteScreen(Context context, BiConsumer<Integer, Integer> move, Runnable tap) {
@@ -101,12 +101,16 @@ public final class RemoteScreen {
         cards.add(statusCard);
         add(content, statusCard);
         connection = text("Mouse: disconnected", 14);
+        connection.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         connection.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         add(statusCard, connection);
         tvStatus = text("TV: not paired", 14);
+        tvStatus.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         tvStatus.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         add(statusCard, tvStatus);
-        status = text("Start a five-minute run, then connect your projector.", 14);
+        status = text("Start a five-minute run, then connect your projector.", 13);
+        status.setPadding(dp(12), dp(10), dp(12), dp(10));
+        status.setLineSpacing(dp(2), 1.1f);
         status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         add(statusCard, status);
         start = button("Start");
@@ -176,6 +180,30 @@ public final class RemoteScreen {
         boolean landscape = context.getResources().getConfiguration().screenWidthDp
                 > context.getResources().getConfiguration().screenHeightDp;
         surfacePage.addView(touchpad, new LinearLayout.LayoutParams(-1, dp(landscape ? 180 : 240)));
+        sensitivityLabel = text("Touchpad sensitivity", 14);
+        add(surfacePage, sensitivityLabel);
+        sensitivity = new SeekBar(context);
+        sensitivity.setMax(6);
+        sensitivity.setMinHeight(dp(48));
+        sensitivity.setContentDescription("Touchpad sensitivity");
+        android.content.SharedPreferences touchpadPreferences = context.getSharedPreferences("touchpad-preferences", Context.MODE_PRIVATE);
+        Object storedSpeed = touchpadPreferences.getAll().get("sensitivity-step");
+        int speedStep = storedSpeed instanceof Integer value ? Math.max(0, Math.min(6, value)) : 2;
+        sensitivity.setProgress(speedStep);
+        updateSensitivity(speedStep);
+        sensitivity.setOnTouchListener((view, event) -> {
+            if (event.getActionMasked() == MotionEvent.ACTION_DOWN) touchpad.cancelGesture();
+            return false;
+        });
+        sensitivity.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar bar, int progress, boolean fromUser) {
+                updateSensitivity(progress);
+                touchpadPreferences.edit().putInt("sensitivity-step", progress).apply();
+            }
+            @Override public void onStartTrackingTouch(SeekBar bar) { touchpad.cancelGesture(); }
+            @Override public void onStopTrackingTouch(SeekBar bar) { }
+        });
+        add(surfacePage, sensitivity);
         mousePage = column();
         add(padPage, mousePage);
         moveLeft = iconButton("Move left", R.drawable.ui_left);
@@ -236,10 +264,11 @@ public final class RemoteScreen {
         add(projectorPage, migrationNotice);
         add(projectorPage, text("Five-minute diagnostic. First enrollment requires matching numbers on BOTH intended devices. "
                 + "A saved projector uses the current OS-managed bond; its original key cannot be pinned by this app.", 14));
+        addStep(projectorPage, 1, "Start a run, then make this phone visible for 120 seconds.");
+        addStep(projectorPage, 2, "Pair from the projector’s physical remote. No Bluetooth code is entered here.");
+        addStep(projectorPage, 3, "Compare the numbers on BOTH intended screens before accepting, then save and connect.");
         visible = button("Make visible for 120 seconds");
         add(projectorPage, visible);
-        add(projectorPage, text("Use the physical TV remote for Bluetooth pairing; no Bluetooth code is entered here. "
-                + "Compare the numbers on BOTH intended screens before accepting.", 14));
         confirm = button("I compared matching codes on BOTH screens — save and connect");
         add(projectorPage, confirm);
         add(projectorPage, text("Keep this screen open after Connect. After confirmation, leaving the app ends the run.", 14));
@@ -262,14 +291,8 @@ public final class RemoteScreen {
                 + "A changed certificate requires explicit Forget TV controls and fresh pairing on the intended TV.", 14));
         tvPair = button("Pair TV");
         add(tvPage, tvPair);
-        tvCode = entry("Six-character TV pairing code");
-        tvCode.setKeyListener(DigitsKeyListener.getInstance("0123456789abcdefABCDEF"));
-        tvCode.setRawInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD
-                | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-        tvCode.setTransformationMethod(PasswordTransformationMethod.getInstance());
-        tvCode.setFilters(new InputFilter[]{new InputFilter.LengthFilter(6)});
-        tvCode.setImeOptions(EditorInfo.IME_ACTION_DONE | EditorInfo.IME_FLAG_NO_EXTRACT_UI
-                | EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING);
+        add(tvPage, text("Pairing code from the TV", 14));
+        tvCode = new PairingCodeField(context);
         add(tvPage, tvCode);
         tvConfirm = button("Confirm TV code");
         add(tvPage, tvConfirm);
@@ -367,11 +390,35 @@ public final class RemoteScreen {
 
     public boolean isDark() { return dark; }
 
+    private void updateSensitivity(int step) {
+        double gain = 0.5 + step * 0.25;
+        touchpad.setSensitivity(gain);
+        String value = String.format(java.util.Locale.ROOT, "%.2f×", gain);
+        sensitivityLabel.setText("Touchpad sensitivity · " + value);
+        sensitivity.setStateDescription(value);
+    }
+
+    public void setTvConnected(boolean connected) {
+        tvConnected = connected;
+        tvStatus.setTextColor(color("#14171A", "#F2F4F6"));
+        statusDot(tvStatus, connected ? color("#1F8A4C", "#4ADE80") : color("#C27803", "#F4C675"));
+    }
+
+    private void statusDot(TextView label, int fill) {
+        GradientDrawable dot = new GradientDrawable();
+        dot.setShape(GradientDrawable.OVAL);
+        dot.setColor(fill);
+        dot.setBounds(0, 0, dp(9), dp(9));
+        label.setCompoundDrawablesRelative(dot, null, null, null);
+        label.setCompoundDrawablePadding(dp(7));
+    }
+
     public void setConnected(boolean connected) {
         this.connected = connected;
         stop.setVisibility(connected ? View.VISIBLE : View.GONE);
         connection.setText(connected ? "Mouse: connected" : "Mouse: disconnected");
-        connection.setTextColor(connected ? color("#1F8A4C", "#4ADE80") : color("#5B636D", "#9AA3AD"));
+        connection.setTextColor(color("#14171A", "#F2F4F6"));
+        statusDot(connection, connected ? color("#1F8A4C", "#4ADE80") : color("#8A929C", "#7C858F"));
     }
 
     private void updateFooter() {
@@ -420,6 +467,9 @@ public final class RemoteScreen {
         for (TextView label : labels) label.setTextColor(label.getTextSize() <= 14 * context.getResources().getDisplayMetrics().scaledDensity
                 ? color("#5B636D", "#9AA3AD") : color("#14171A", "#F2F4F6"));
         status.setTextColor(color("#5B636D", "#9AA3AD"));
+        status.setBackground(shape(color("#EEF2F7", "#20262D"), Color.TRANSPARENT, 12));
+        sensitivity.setProgressTintList(ColorStateList.valueOf(color("#2F6FEB", "#6AA8FF")));
+        sensitivity.setThumbTintList(ColorStateList.valueOf(color("#2F6FEB", "#6AA8FF")));
         for (View card : cards) card.setBackground(shape(color("#FFFFFF", "#181B1F"), color("#E1E4E8", "#2C323A"), card instanceof Dpad ? 120 : 24));
         for (View track : tracks) track.setBackground(shape(color("#E9ECF0", "#181B1F"), Color.TRANSPARENT, 28));
         for (Button button : controls) styleButton(button);
@@ -428,6 +478,10 @@ public final class RemoteScreen {
                     new int[]{color("#6B737C", "#9AA3AD"), color("#14171A", "#F2F4F6")}));
             field.setHintTextColor(color("#5B636D", "#9AA3AD"));
             field.setBackgroundTintList(null);
+            if (field instanceof PairingCodeField cells) {
+                cells.setPalette(color("#FFFFFF", "#181B1F"), color("#E1E4E8", "#2C323A"), color("#2F6FEB", "#6AA8FF"));
+                continue;
+            }
             StateListDrawable fieldBackground = new StateListDrawable();
             fieldBackground.addState(new int[]{android.R.attr.state_focused},
                     shape(color("#FFFFFF", "#181B1F"), color("#2F6FEB", "#6AA8FF"), 16));
@@ -442,6 +496,7 @@ public final class RemoteScreen {
         select(lightTheme, !dark);
         select(darkTheme, dark);
         setConnected(connected);
+        setTvConnected(tvConnected);
         applySystemBars();
     }
 
@@ -497,7 +552,7 @@ public final class RemoteScreen {
             border = Color.TRANSPARENT;
         }
         StateListDrawable background = new StateListDrawable();
-        background.addState(BUTTON_STATES[0], shape(direction ? fill : color("#E9ECF0", "#181B1F"), border, 100));
+        background.addState(BUTTON_STATES[0], shape(direction ? fill : ok ? color("#DCE8FF", "#233B60") : color("#E9ECF0", "#181B1F"), border, 100));
         background.addState(BUTTON_STATES[1], shape(direction || ok ? fill : color("#DCE8FF", "#2C4160"), direction || nav ? Color.TRANSPARENT : accent, 100));
         background.addState(BUTTON_STATES[2], shape(nav ? color("#DCE8FF", "#2C4160") : fill, nav ? Color.TRANSPARENT : accent, direction ? 8 : 100));
         background.addState(BUTTON_STATES[3], shape(fill, border, 100));
@@ -580,6 +635,19 @@ public final class RemoteScreen {
         LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(-1, -2);
         size.bottomMargin = dp(12);
         parent.addView(child, size);
+    }
+
+    private void addStep(LinearLayout parent, int number, String instruction) {
+        LinearLayout row = new LinearLayout(context);
+        TextView badge = text(Integer.toString(number), 13);
+        badge.setGravity(Gravity.CENTER);
+        badge.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        tracks.add(badge);
+        LinearLayout.LayoutParams badgeSize = new LinearLayout.LayoutParams(dp(28), dp(28));
+        badgeSize.setMarginEnd(dp(12));
+        row.addView(badge, badgeSize);
+        row.addView(text(instruction, 14), new LinearLayout.LayoutParams(0, -2, 1));
+        add(parent, row);
     }
 
     private void addRow(LinearLayout parent, View... children) { add(parent, row(children)); }

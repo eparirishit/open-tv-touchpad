@@ -1,5 +1,16 @@
 # Capabilities
 
+## Diagnostic0.19 — prototype details and touchpad speed
+
+Mouse and TV show independent colored dots beside truthful text, with a smaller
+styled diagnostic message. Bluetooth setup has numbered instructions. Disabled
+OK is muted blue. Touchpad offers a0.5×–2× sensitivity slider (default1×); changing
+it cancels the current gesture. Scroll buttons remain needed for Netflix; the
+secondary Buttons instead mode retains accessibility support. TV pairing uses six
+visible OTP-style cells with native editing/paste/backspace and six-hex validation.
+Pairing text is excluded from saved state/autofill/learning and clears on Stop/pause.
+Verification and installation status are in the UI report; Wi-Fi testing is deferred.
+
 ## Diagnostic0.18 — header and theme alignment
 
 Stop is hidden unless connected, immediately left of the rightmost Settings icon.

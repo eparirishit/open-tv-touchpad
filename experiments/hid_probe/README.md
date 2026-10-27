@@ -1,6 +1,17 @@
 # Disposable Nord remote — N3 diagnostic
 
-## Prototype UI in0.18
+## Prototype UI in0.19
+
+Version0.19 adds colored Mouse/TV status dots, a smaller diagnostic panel,
+numbered Bluetooth setup, muted-blue disabled OK and a native touchpad sensitivity
+slider (0.5×–2×, default1×). Changing speed cancels current/pending gestures; it
+does not affect taps, scrolling or the TV D-pad. Scroll controls and the secondary
+Buttons instead accessibility mode remain. TV pairing has six visible OTP cells
+backed by one native editor, with six-hex validation and normal paste/backspace.
+Code text is never saved to app state/autofill/learning and is cleared on Stop/pause.
+Wi-Fi/projector acceptance is deferred; see the UI report for exact build/install.
+
+## Previous prototype UI in0.18
 
 Version0.15 corrects the0.14 Activity launch crash by deferring system-bar setup
 until the view is attached. The owner-provided design separates TV buttons on **Remote** from mouse input on

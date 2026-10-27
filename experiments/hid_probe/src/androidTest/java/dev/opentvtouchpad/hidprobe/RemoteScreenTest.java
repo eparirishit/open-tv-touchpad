@@ -193,7 +193,7 @@ public class RemoteScreenTest {
                         background.draw(new Canvas(image));
                         boolean disabled = state[0] == -android.R.attr.state_enabled;
                         assertEquals(command == TvCommand.OK ? android.graphics.Color.parseColor(disabled
-                                ? dark ? "#181B1F" : "#E9ECF0"
+                                ? dark ? "#233B60" : "#DCE8FF"
                                 : dark ? "#6AA8FF" : "#2F6FEB") : 0,
                             image.getPixel(50,50));
                         image.recycle();
@@ -233,6 +233,96 @@ public class RemoteScreenTest {
                 }
             }
         });
+    }
+
+    @Test public void prototypeStatusDotsAndNumberedSetupAreVisibleWithoutAdmittingInput() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            RemoteScreen screen = new RemoteScreen(context(360,800,1f),(x,y)->fail("Status moved pointer"),()->fail("Status clicked"));
+            assertNotNull("TV status has a leading indicator",screen.tvStatus.getCompoundDrawablesRelative()[0]);
+            assertEquals(13f,screen.status.getTextSize()/screen.root.getResources().getDisplayMetrics().scaledDensity,0.1f);
+            screen.showSetup(true);
+            assertTrue(hasText(screen.root,"1"));
+            assertTrue(hasText(screen.root,"2"));
+            assertTrue(hasText(screen.root,"3"));
+            assertFalse(screen.touchpad.isEnabled());
+            for (Button control : screen.tvButtons.values()) assertFalse(control.isEnabled());
+        });
+    }
+
+    @Test public void independentStatusDotsSurviveThemeChanges() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            RemoteScreen screen = new RemoteScreen(context(360,800,1f),(x,y)->{},()->{});
+            screen.setConnected(true);
+            screen.setTvConnected(false);
+            for (boolean dark : new boolean[]{false,true}) {
+                screen.setDark(dark);
+                android.graphics.drawable.GradientDrawable tvDot = (android.graphics.drawable.GradientDrawable)screen.tvStatus.getCompoundDrawablesRelative()[0];
+                assertEquals(android.graphics.Color.parseColor(dark ? "#F4C675" : "#C27803"),tvDot.getColor().getDefaultColor());
+                assertEquals("TV: not paired",screen.tvStatus.getText().toString());
+                assertTrue(hasText(screen.root,"Mouse: connected"));
+                screen.tvStatus.setText("TV: connected");
+                screen.setTvConnected(true);
+                tvDot = (android.graphics.drawable.GradientDrawable)screen.tvStatus.getCompoundDrawablesRelative()[0];
+                assertEquals(android.graphics.Color.parseColor(dark ? "#4ADE80" : "#1F8A4C"),tvDot.getColor().getDefaultColor());
+                screen.tvStatus.setText("TV: not paired");
+                screen.setTvConnected(false);
+                for (Button control : screen.tvButtons.values()) assertFalse(control.isEnabled());
+            }
+            screen.setDark(false);
+        });
+    }
+
+    @Test public void sensitivityCancelsQueuedMotionAndTapWithoutGrantingAdmission() {
+        android.app.Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
+        AtomicInteger moves = new AtomicInteger(), taps = new AtomicInteger();
+        RemoteScreen[] screenRef = new RemoteScreen[1];
+        int[] original = new int[1];
+        instrumentation.runOnMainSync(() -> {
+            Context c = context(360,800,1f);
+            RemoteScreen screen = new RemoteScreen(c,(x,y)->moves.incrementAndGet(),taps::incrementAndGet);
+            screenRef[0] = screen;
+            original[0] = screen.sensitivity.getProgress();
+            assertEquals(6,screen.sensitivity.getMax());
+            screen.showTouchpad(true); layout(screen,c,360,800);
+            assertTrue(screen.sensitivity.getHeight() >= 48*c.getResources().getDisplayMetrics().density);
+            screen.touchpad.setEnabled(true);
+            float density = c.getResources().getDisplayMetrics().density;
+            long now = SystemClock.uptimeMillis();
+            MotionEvent down = MotionEvent.obtain(now,now,MotionEvent.ACTION_DOWN,20*density,20*density,0);
+            MotionEvent move = MotionEvent.obtain(now,now+10,MotionEvent.ACTION_MOVE,80*density,20*density,0);
+            MotionEvent up = MotionEvent.obtain(now,now+20,MotionEvent.ACTION_UP,80*density,20*density,0);
+            screen.touchpad.onTouchEvent(down); screen.touchpad.onTouchEvent(move);
+            screen.sensitivity.setProgress((original[0]+1)%7);
+            screen.touchpad.onTouchEvent(up);
+            down.recycle(); move.recycle(); up.recycle();
+            assertTrue("Slider preserves existing admission",screen.touchpad.isEnabled());
+            for (Button control : screen.inputs) assertFalse(control.isEnabled());
+            for (Button control : screen.tvButtons.values()) assertFalse(control.isEnabled());
+            RemoteScreen reopened = new RemoteScreen(c,(x,y)->{},()->{});
+            assertEquals(screen.sensitivity.getProgress(),reopened.sensitivity.getProgress());
+            assertFalse(reopened.touchpad.isEnabled());
+        });
+        SystemClock.sleep(60);
+        try {
+            instrumentation.runOnMainSync(() -> {
+                assertEquals("Changing speed discards queued motion",0,moves.get());
+                assertEquals(0,taps.get());
+                RemoteScreen screen = screenRef[0];
+                long now = SystemClock.uptimeMillis();
+                MotionEvent down = MotionEvent.obtain(now,now,MotionEvent.ACTION_DOWN,20,20,0);
+                MotionEvent up = MotionEvent.obtain(now,now+20,MotionEvent.ACTION_UP,20,20,0);
+                screen.touchpad.onTouchEvent(down);
+                screen.sensitivity.setProgress((screen.sensitivity.getProgress()+1)%7);
+                screen.touchpad.onTouchEvent(up);
+                down.recycle();up.recycle();
+                assertEquals("Changing speed also cancels pending tap",0,taps.get());
+            });
+        } finally {
+            instrumentation.runOnMainSync(() -> {
+                screenRef[0].touchpad.setEnabled(false);
+                screenRef[0].sensitivity.setProgress(original[0]);
+            });
+        }
     }
 
     @Test public void remoteAndSetupFitPortraitLandscapeAndLargeText() {
@@ -319,7 +409,7 @@ public class RemoteScreenTest {
         });
     }
 
-    @Test public void pairingCodeIsMaskedBoundedAndExcludedFromSavedStateAndAutofill() {
+    @Test public void pairingCodeIsVisibleOtpBoundedAndExcludedFromSavedStateAndAutofill() {
         InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
             Context c = context(360,800,1f);
             RemoteScreen screen = new RemoteScreen(c,(x,y)->{},()->{});
@@ -330,7 +420,7 @@ public class RemoteScreenTest {
             assertEquals(View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS,
                 screen.tvCode.getImportantForAutofill());
             assertNull(screen.tvCode.getAutofillHints());
-            assertTrue(screen.tvCode.getTransformationMethod() instanceof PasswordTransformationMethod);
+            assertFalse(screen.tvCode.getTransformationMethod() instanceof PasswordTransformationMethod);
             assertTrue((screen.tvCode.getInputType() & InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS) != 0);
             assertTrue((screen.tvCode.getImeOptions() & EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING) != 0);
             assertTrue((screen.tvCode.getImeOptions() & EditorInfo.IME_FLAG_NO_EXTRACT_UI) != 0);
@@ -343,9 +433,9 @@ public class RemoteScreenTest {
             screen.tvCode.setText("");
             screen.tvCode.getText().append("gGaB09");
             assertEquals("aB09", screen.tvCode.getText().toString());
-            CharSequence masked = screen.tvCode.getTransformationMethod()
-                .getTransformation(screen.tvCode.getText(),screen.tvCode);
-            assertNotEquals(screen.tvCode.getText().toString(),masked.toString());
+            assertTrue("OTP characters are visible",screen.tvCode.getTransformationMethod() == null
+                || screen.tvCode.getText().toString().contentEquals(screen.tvCode.getTransformationMethod()
+                    .getTransformation(screen.tvCode.getText(),screen.tvCode)));
             SparseArray<Parcelable> saved = new SparseArray<>();
             screen.root.saveHierarchyState(saved);
             assertNull(saved.get(screen.tvCode.getId()));
@@ -418,7 +508,7 @@ public class RemoteScreenTest {
                 screen.setDark(dark);String suffix=dark?"-dark":"-light";
                 screen.status.setText("Five-minute diagnostic. Start, then Connect.");
                 screen.showTouchpad(false);layout(screen,c,390,844);capture(screen,c,"prototype-remote"+suffix);
-                screen.setConnected(true);screen.stop.setEnabled(true);screen.tvStatus.setText("TV: connected");
+                screen.setConnected(true);screen.setTvConnected(true);screen.stop.setEnabled(true);screen.tvStatus.setText("TV: connected");
                 screen.status.setText("Both controls ready. Keep this screen open.");
                 for(Button b:screen.tvButtons.values())b.setEnabled(true);
                 layout(screen,c,390,844);capture(screen,c,"prototype-connected"+suffix);
@@ -428,7 +518,7 @@ public class RemoteScreenTest {
                 screen.showPadButtons(true);layout(screen,c,390,844);capture(screen,c,"prototype-buttons"+suffix);
                 screen.stop.setEnabled(false);screen.touchpad.setEnabled(false);for(Button b:screen.inputs)b.setEnabled(false);
                 for(Button b:screen.tvButtons.values())b.setEnabled(false);
-                screen.setConnected(false);screen.tvStatus.setText("TV: not paired");
+                screen.setConnected(false);screen.setTvConnected(false);screen.tvStatus.setText("TV: not paired");
                 screen.status.setText("Start a five-minute run, then connect your projector.");
                 screen.showSetup(true);
                 for(int page=0;page<3;page++) {

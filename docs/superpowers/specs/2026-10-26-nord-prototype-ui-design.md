@@ -11,17 +11,21 @@ Settings stays at the right end of the header; Stop sits immediately before it
 and is hidden while disconnected. Close is removed per owner follow-up.
 Stop has a leading square icon and is enabled only once the input connection is
 ready. Its visibility follows that same readiness. During setup the existing foreground-notification Stop test remains available.
-OK is visibly disabled before TV admission and blue when enabled; directional
+OK uses muted blue before TV admission and accent blue when enabled; directional
 arrows have no circular backgrounds, retaining a rectangular keyboard-focus outline.
 Tabs use fill/selected semantics and fill-based keyboard focus without border
 highlights. Display choices center sun/moon icons directly above their labels
 with a small native drawable gap; Netflix uses its N mark with
 a disabled treatment and the existing accessible Open Netflix label. Use the prototype's light/dark palettes, rounded
 cards, blue accents, native vector icons and a persisted appearance-only preference.
+The owner’s later UI-details request adds status dots, smaller styled diagnostics,
+bounded touchpad sensitivity, numbered Bluetooth steps and visible six-cell OTP
+entry; see 2026-10-26-nord-ui-details-design.md. It supersedes masking and the gray
+disabled OK palette only; disabled OK now uses muted blue.
 Theme changes update existing views in place; never recreate a live run or save
 pairing fields. Keep status truthful; do not reproduce the mock timer or address.
 
-Maintain all Activity-owned admission and button bindings, masked pairing code,
+Maintain all Activity-owned admission and button bindings, private pairing code,
 bounded inputs, explicit Start/Connect, five-minute foreground run, Stop behavior,
 and known Bluetooth cleanup block. No permissions/dependencies/transport changes.
 All page, setup-section, touchpad-mode and theme navigation cancels pending gestures
@@ -38,7 +42,7 @@ only when both conditions clear. The header Setup toggle returns to the previous
 Remote/Touchpad page. Light default, saved dark preference allowed.
 
 Acceptance: native screenshots of all pages/themes; real-view tests for navigation,
-large text/IME reachability, independent status and unchanged masking/admission;
+large text/IME reachability, independent status, OTP privacy and unchanged admission;
 all Nord unit tests, lint and APK assembly; independent review before device update.
 Hardware UI smoke pending until owner tests the exact installed artifact. Bluetooth
 recovery remains unresolved and is not part of this UI request.

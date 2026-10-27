@@ -18,6 +18,17 @@ contracts. The0.13 Bluetooth recovery block remains unresolved; UI work does not
 certify or bypass it. Review and verify a stopped device before same-signature
 installation; both enrollments must remain byte-identical.
 
+## Requested Nord UI details (2026-10-26)
+
+Follow docs/superpowers/specs/2026-10-26-nord-ui-details-design.md for status dots,
+quieter diagnostic copy, numbered Bluetooth setup, muted-blue disabled OK, bounded
+0.5×–2× touchpad sensitivity and six-cell OTP entry. The owner explicitly requested
+VISIBLE OTP characters; this supersedes older masking requirements only for that
+field. Keep validation, one authoritative buffer, no saved state/autofill/learning/
+logging and clear-on-end/lifecycle. Preserve all transport, trust and admission
+contracts. Retain secondary accessibility buttons and four scroll controls.
+Wi-Fi/projector acceptance is deferred by the owner until tomorrow.
+
 ## Approved TV trust-anchor compatibility (2026-10-25)
 
 The owner approved removing only the explicit peer trust-anchor self-signature

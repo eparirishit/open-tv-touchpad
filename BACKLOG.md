@@ -217,3 +217,8 @@ reliability limitations; local STOP tests passed but do not certify those hardwa
   twice returned without its expected IOException in the full0.18 suite, but
   passes standalone. Close did unblock; return value was not captured. Retain
   the failed results; no transport or test-expectation change is included in UI work.
+
+- [x] Owner0.19 UI details: independent status dots, quieter status, numbered
+  Bluetooth setup, muted-blue disabled OK, bounded sensitivity and visible OTP cells.
+- [ ] Owner0.19 hardware sensitivity/visible-OTP acceptance when private Wi-Fi
+  connectivity is available; no network or TV pairing success is implied by UI checks.
