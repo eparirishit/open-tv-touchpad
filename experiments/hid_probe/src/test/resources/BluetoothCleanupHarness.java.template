@@ -69,7 +69,8 @@ public class BluetoothCleanupHarness {
     String terminalReason;
     boolean active() { return ownership.active(); }
     void clearTvCode() {}
-    void updateControls() {}
+    void cancelGesture() { touchpad.cancelGesture(); }
+    void setStatus(String message) { status.setText(message); }
     void finishGuard() { guardFinished=true; }
     void completePendingTvForget() {}
     String storageFailure() { return "storage failed"; }

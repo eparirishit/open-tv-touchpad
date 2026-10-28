@@ -50,7 +50,8 @@ public class StopCleanupHarness {
     class Pad { void cancelGesture() { gesture.cancel(); } }
     String storageFailure() { return "storage failure"; }
     void trace(int event) {}
-    void updateControls() {}
+    void cancelGesture() { touchpad.cancelGesture(); }
+    void setStatus(String message) { status.setText(message); }
     void finishProfile() {}
     void finishGuard() { guardFinished = true; }
     void cleanupProgress() { cleaned = true; }

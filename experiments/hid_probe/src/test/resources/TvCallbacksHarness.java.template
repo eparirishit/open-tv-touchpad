@@ -28,7 +28,7 @@ public class TvCallbacksHarness {
     final NativeRunGate gates = new NativeRunGate();
     final NativeRunGate.Run ownership = gates.start();
     final Handler handler = new Handler();
-    final Guard guard = new Guard();
+    final Guard connectionService = new Guard();
     final Session session = new Session();
     final Status status = new Status();
     final TvEnrollment tvEnrollment = new TvEnrollment();
@@ -38,7 +38,7 @@ public class TvCallbacksHarness {
     boolean resumed = true, stopping, alive = true;
     int connects, stops;
     boolean active() { return ownership.active() && alive; }
-    void updateControls() {}
+    void setStatus(String message) { status.setText(message); }
     void cleanupProgress() {}
     void connect(Object peer) { connects++; }
     void stop(String message) { status.setText(message); stopping = true; stops++; ownership.stop(); }
@@ -53,7 +53,7 @@ __CALLBACK_METHOD__
         Recreated(NativeRunGate gate) { NATIVE_RUNS = gate; }
         void clearTvCode() {}
         void stop(String message) {}
-        void updateControls() {}
+        void setStatus(String message) { status.setText(message); }
 __FORGET_METHODS__
     }
     static void check(boolean condition) { if (!condition) throw new AssertionError(); }

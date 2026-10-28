@@ -10,7 +10,7 @@
         android:allowBackup="false" android:fullBackupContent="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:usesCleartextTraffic="false" android:supportsRtl="true">
-        <service android:name=".PairingGuardService" android:exported="false"
+        <service android:name=".RemoteConnectionService" android:exported="false"
             android:foregroundServiceType="connectedDevice" android:stopWithTask="true" />
         <!-- One owner for the in-memory enrollment view, including multi-window launches. -->
         <activity android:name=".ProbeActivity" android:exported="true" android:launchMode="singleInstance">
