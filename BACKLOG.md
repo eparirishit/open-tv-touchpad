@@ -1,5 +1,22 @@
 # Backlog
 
+## N4 daily-use readiness preparation (2026-10-27)
+
+- [x] Record owner choice: idle background connection, visible-only input.
+- [x] Prepare [lifecycle design](docs/superpowers/specs/2026-10-27-nord-daily-use-design.md),
+  [delivery plan](docs/superpowers/plans/2026-10-27-nord-daily-use.md) and
+  [readiness matrix](docs/gates/n4-readiness.md).
+- [ ] Owner review/approval of the concrete lifecycle/duration changes.
+- [ ] R0: establish TLS close-read outcome/timing and resolve native Bluetooth
+  cleanup proof; separately approve any replacement completion contract.
+- [ ] R1: extract service/runtime ownership with existing behavior unchanged.
+- [ ] R2: independent visibility epochs and retained-idle lifetime kernel.
+- [ ] R3: reviewed Nord lock/return, idle expiry and loss/revocation proofs.
+- [ ] R4: update continuity, endurance/battery observations and exact-artifact
+  owner acceptance for private daily use. Public distribution remains deferred.
+
+Preparation alone authorizes no lifecycle implementation or new APK installation.
+
 As of 2026-10-24, D1 is resolved: the owner requires protected projector transport
 and authorized browser-only H1B implementation. H1A remains NOT PASSED; no
 plaintext product exception is authorized. The accepted design supersedes the
@@ -95,7 +112,8 @@ design must be approved before an item moves into an active milestone.
 - [ ] Recover pairing after observed app-data clear event (initiator unknown;
   owner reports no manual clear), then owner0.15 pointer/scroll/TV/Stop smoke.
   Correction installation preserved the verified-empty app record state.
-- [ ] N4: review daily-use lifecycle and packaging after combined functionality.
+- [ ] N4: approve and deliver the prepared daily-use lifecycle/packaging plan;
+  see the readiness section above. Existing combined reliability gaps remain open.
 - [ ] Before broader distribution, verify screen-reader/font-scale/layout behavior;
   current native alternative controls have not received a complete device audit.
 

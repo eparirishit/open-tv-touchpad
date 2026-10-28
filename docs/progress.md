@@ -1,5 +1,20 @@
 # Project Progress
 
+## N4 daily-use preparation (2026-10-27)
+
+The owner selected idle background connections with input only while the remote
+is visible. The [N4 design](superpowers/specs/2026-10-27-nord-daily-use-design.md)
+and [delivery plan](superpowers/plans/2026-10-27-nord-daily-use.md) are drafts for
+owner review: service-owned transports, independent visibility epochs, proposed
+30-minute hidden retention and no five-minute cap during visible control.
+This preparation changes documentation only; installed0.20 and its approved
+five-minute/pause-stop behavior remain unchanged. The
+[readiness matrix](gates/n4-readiness.md) keeps Bluetooth native-completion recovery,
+the TLS close-read suite assertion and Nord background/endurance proof open.
+GitHub PRs #8/#9 are now merged; fetched main12664b4 has the same source tree
+as preparation snapshotda568d4. No existing gate becomes PASS; lifecycle
+implementation awaits design approval.
+
 ##0.20 owner acceptance and next work (2026-10-27)
 
 The owner reports testing0.20 and “everything works fine”, accepting its requested
@@ -9,8 +24,8 @@ Next priority is Bluetooth-loss cleanup/reconnect, whose actual native completio
 acknowledgments are still missing in the captured trial. Keep the barrier and
 current Force stop recovery until a reviewed completion policy is proven. The
 TLS close-read fixture order issue also remains open. Then complete remaining
-N3 reliability evidence, integrate draft PRs #8/#9 in base-first order and design
-N4 daily-use lifecycle/packaging. No merge or new lifecycle contract is approved
+N3 reliability evidence and obtain N4 lifecycle/packaging approval. PRs #8/#9
+are now merged; the readiness proposal targets main. No merge or new lifecycle contract is approved
 by the acceptance report alone.
 
 ## Touchpad simplification and setup overlap (2026-10-27)

@@ -1,5 +1,20 @@
 # Architecture Status
 
+## N4 ownership proposal — approval pending
+
+The owner's selected idle-background/visible-input direction requires separating
+transport lifetime from input authorization. The
+[N4 draft](superpowers/specs/2026-10-27-nord-daily-use-design.md) proposes promoting
+the existing foreground service to the sole RemoteRuntime owner, with no retained
+Activity/views. The Activity would render snapshots and send epoch-scoped input;
+visibility loss would revoke input immediately while healthy links idle within a
+proposed30-minute limit. Protocol, trust and actual native-cleanup bounds remain.
+This is a proposed extraction from Activity.Run, not implemented architecture.
+Current0.20 still uses PairingGuardService, an Activity-owned Run, a five-minute
+deadline and pause-stop. The [N4 matrix](gates/n4-readiness.md) records unresolved
+Bluetooth completion, TLS fixture and hardware platform proof. No runtime change
+or alternative cleanup evidence is authorized by this preparation.
+
 Diagnostic0.20 flattens Touchpad to pad, scroll controls and sensitivity. Alternate
 mouse-button pages and Activity bindings are removed; native accessibility actions
 on TouchpadView invoke the existing bounded move/click callbacks and cancel pending
