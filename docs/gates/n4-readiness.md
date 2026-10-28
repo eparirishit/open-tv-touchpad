@@ -1,8 +1,8 @@
 # N4 private daily-use readiness
 
-Prepared2026-10-27 against source `da568d4`; installed/accepted app remains0.20.
+Prepared2026-10-27 against source `da568d4`; previously accepted app0.20 is preserved locally.
 Merged main `12664b4` has the same source tree; PRs #8/#9 are merged.
-**Status: NOT READY — lifecycle design approved; implementation/verification in progress. No N4 changes installed on the Nord.**
+**Status: NOT READY — reviewed0.21 installed with preserved enrollment. Nord lifecycle and endurance acceptance pending.**
 
 ## Selected and proposed behavior
 
@@ -18,16 +18,16 @@ and [plan](../superpowers/plans/2026-10-27-nord-daily-use.md).
 | Gate | Evidence | Status |
 | --- | --- | --- |
 |0.20 UI/normal use | Owner reports testing/everything works;176unit/26focused native tests recorded | Accepted baseline only |
-| N4 lifecycle contract | Owner approved concrete design and plan2026-10-27 | Approved; not installed |
+| N4 lifecycle contract | Owner approved concrete design and plan2026-10-27 | Approved; candidate installed |
 | Bluetooth loss completion | Fresh0.20 trace has disconnect/unregister/complete after verified OFF; owner confirms explicit reconnect without Force stop. Earlier missing-callback trial retained | Baseline trial passed; N4 retest required |
 | TLS full-suite baseline | EOF(-1) captured in failing runs; test-only correction: isolated1pass; full runner41passes/1skip on emulator | [Evidence](n4-tls-close-read-report.md); integration check pending |
-| Service-owned runtime | R1 committed/reviewed; permission follow-up lint0errors. Installed0.20 remains Activity-owned | Software verified; N4 hardware pending |
+| Service-owned runtime | R1 committed/reviewed; permission follow-up lint0errors. 0.21 installed; device behavior pending | Software verified; N4 hardware pending |
 | Hidden-input epoch | Candidate implements current attachment/epoch and per-write checks;206unit tests | Software verified; reviews closed |
 | Lock/background HID retention | AOSP foreground-importance support; no Nord endurance proof | Not run |
-|30-minute retention/expiry | Candidate lifetime/first-loss/expiry unit proof; installed0.20 remains five-minute | Nord not run |
+|30-minute retention/expiry | Candidate lifetime/first-loss/expiry unit proof; previous0.20 was five-minute | Nord not run |
 | Notification Stop/task removal | Actual service methods verified; new lifecycle needs Nord proof | Hardware pending |
 | Loss/revocation/reboot/process recovery | Historical N3 coverage and gaps; no N4 proof | Not run for N4 |
-| Same-signature update/keys |0.20 record bytes preserved in prior update | N4 upgrade proof pending |
+| Same-signature update/keys |0.21 signer matches0.20; both records byte-identical across update/launch; stable process6s | Update preservation verified; key use pending owner Connect |
 | Soak/battery/thermal | No N4 measurements | Not run |
 | Private daily-use pilot | Requires preceding gates and exact-artifact owner acceptance | NOT READY |
 | Public release/device matrix | Out of private-pilot scope | Deferred |
@@ -48,7 +48,7 @@ Bluetooth recovery evidence and reviewed service ownership extraction. Tasks3/4
 implement retained-idle lifecycle and visible-input epochs. Review corrections
 pass206unit and44native tests (one opt-in skip), including permission granted/
 denied and actual focus-loss service destruction/rebinding. Complete and scoped re-reviews close all actionable findings.
-Nord update and retained-idle hardware acceptance remain pending.
+Nord update preservation is verified; retained-idle hardware acceptance remains pending.
 
 ## Preparation verification
 
@@ -63,7 +63,7 @@ runtime/build/hardware test result is claimed by this documentation-only review.
 ## Candidate implementation
 
 See the [software report](n4-candidate-report.md) and
-[private-use guide](../nord-daily-use.md). Version0.21 is implemented and under
-completed software review;206unit tests,44native passes/one opt-in skip, lint0errors/20warnings
-and both builds are recorded. No candidate Nord installation or hardware PASS is
-implied. The accepted0.20 APK remains preserved locally; no downgrade is planned.
+[private-use guide](../nord-daily-use.md). Version0.21 is implemented and software-reviewed;206unit tests,44native passes/one opt-in skip, lint0errors/20warnings
+and both builds are recorded. Reviewed0.21 is installed from source `6abbc23`; the Activity was not observed
+resumed. Owner short-control/Home-return/Stop result is pending. No hardware PASS
+is implied. The accepted0.20 APK remains preserved locally; no downgrade is planned.

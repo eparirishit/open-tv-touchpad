@@ -105,6 +105,8 @@ existing native UI/privacy/accessibility tests.
 
 - [ ] Build/review, record exact source/APK/provider/firmware and verify stopped
   same-signature installation with current enrollment bytes and key usability.
+  Update/signature/enrollment checks passed for6abbc23; key usability awaits
+  owner Connect and remains unchecked here.
 - [ ] Prove short idle home/lock retention first; no hidden actions can reach TV.
   Return healthy without re-pairing; a new gesture works and no old input replays.
 - [ ] Prove30-minute idle/expiry via monotonic observations, visible use beyond

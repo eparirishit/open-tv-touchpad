@@ -9,8 +9,11 @@ only in the candidate. Visible control is uncapped; pairing remains bounded.
 Actual-source regressions caught and fixed revocation/deadline ordering before
 native readiness I/O.206unit tests and44native tests pass; one opt-in live
 projector diagnostic skips. Lint0errors/20warnings and both APK builds pass.
-The installed Nord remains accepted0.20. [Candidate evidence](gates/n4-candidate-report.md)
-and [readiness](gates/n4-readiness.md) separate software proof from pending update,
+The reviewed candidate from source `6abbc23` is installed on the Nord; both
+enrollment records stayed byte-identical and its process survived six seconds.
+The Activity was not observed resumed; owner connection/short Home-return testing
+is pending. [Candidate evidence](gates/n4-candidate-report.md)
+and [readiness](gates/n4-readiness.md) separate software/update proof from pending
 Nord lock/retention/recovery checks and endurance/battery acceptance. No public
 release or replacement Bluetooth cleanup proof is approved or claimed.
 

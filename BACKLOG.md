@@ -14,8 +14,8 @@
   remain blocked unless a separately reviewed completion contract is approved.
 - [x] R1: extract/review service/runtime ownership with existing behavior unchanged;
   b1d3256 plus verified permission correction62d0e6a.
-- [ ] R2: candidate kernel/caller integration passes unit/native verification;
-  complete independent/Codex review before publishing/installing.
+- [x] R2: candidate kernel/caller integration verified and re-reviewed; published
+  in draft PR11 and installed0.21 with both enrollment records preserved.
 - [ ] R3: reviewed Nord lock/return, idle expiry and loss/revocation proofs.
 - [ ] R4: update continuity, endurance/battery observations and exact-artifact
   owner acceptance for private daily use. Public distribution remains deferred.

@@ -1,7 +1,7 @@
 # Nord0.21 daily-use candidate — software verification
 
-Date2026-10-27. Status: SOFTWARE CANDIDATE; Nord installation and N4 hardware
-acceptance pending. The owner approved the [N4 contract](../superpowers/specs/2026-10-27-nord-daily-use-design.md).
+Date2026-10-27. Status: SOFTWARE CANDIDATE installed; N4 hardware acceptance
+pending. Source `6abbc23c53c64d40e6618c562ac3442455e23b8e`. The owner approved the [N4 contract](../superpowers/specs/2026-10-27-nord-daily-use-design.md).
 This report does not promote original M0/M1 or H1A/H1B gates or authorize release.
 
 ## Implemented behavior
@@ -67,7 +67,18 @@ Verified androidTest APK SHA256: `1a70bfb87ef0bc6c48cd8d823c4dd2f0a752c75f5de44f
 The APK signer matches the accepted0.20 artifact. Trust/identity/enrollment/report
 sources, permission set and backup attributes match the accepted baseline.
 Review/install outcomes are recorded in [N4 readiness](n4-readiness.md). Generated APKs and raw
-logs stay local. No Nord update or candidate device result is claimed here yet.
+logs stay local.
+
+## Reviewed Nord update
+
+Installed version21 in place from the exact app artifact above. Its signer
+matches the accepted0.20 APK; both enrollment files were compared in memory and
+remained byte-identical before update, after update and after launch. The process
+stayed stable for six seconds. The Activity was not observed resumed, and no
+foreground-run counter was available; no Start/Connect, pairing or input was
+injected. This proves the update checks, not successful on-device connection or
+background retention. The owner was asked to unlock/open manually and run a short
+foreground-control →30-second Home/return →Stop check; that result is pending.
 
 ## Review corrections
 
@@ -99,7 +110,7 @@ dispositions remain in the private review record; no unrelated scope was added.
 
 ## Hardware and pilot gates still open
 
-Reviewed same-signature update with exact enrollment preservation; short Home/
+Short Home/
 lock/return on the Nord; use beyond five minutes; near-deadline retained return
 and idle expiry; notification/task removal; current-artifact Bluetooth/Wi-Fi
 loss, explicit recovery, reboot/process/bond/pin scenarios; two-hour active soak

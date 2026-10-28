@@ -33,8 +33,9 @@ visibility loss would revoke input immediately while healthy links idle within a
 proposed30-minute limit. Protocol, trust and actual native-cleanup bounds remain.
 R1 ownership extraction is committed/reviewed inb1d3256/62d0e6a. The candidate
 now integrates the separate idle/visibility policy; Nord acceptance is pending.
-Current0.20 still uses PairingGuardService, an Activity-owned Run, a five-minute
-deadline and pause-stop. The [N4 matrix](gates/n4-readiness.md) records unresolved
+The previously accepted0.20 used PairingGuardService, an Activity-owned Run, a
+five-minute deadline and pause-stop. Reviewed0.21 is now installed with both
+enrollments preserved; its Nord retention/input acceptance remains pending. The [N4 matrix](gates/n4-readiness.md) records unresolved
 Bluetooth completion, TLS fixture and hardware platform proof. No runtime change
 or alternative cleanup evidence is implied by planning or emulator-only checks.
 
