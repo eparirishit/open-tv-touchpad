@@ -161,6 +161,10 @@ public final class ProbeActivity extends Activity {
     }
 
     private void makeVisible() {
+        if (checkSelfPermission(Manifest.permission.BLUETOOTH_ADVERTISE) != PackageManager.PERMISSION_GRANTED) {
+            request(RemoteRuntime.Request.STOP, null);
+            return;
+        }
         if (controller == null || !controller.makeVisible(attachment)) return;
         Intent intent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
         intent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 120);
