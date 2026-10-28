@@ -21,10 +21,11 @@ import java.util.List;
 /** UI attachment only; native lifetime and callbacks belong to the service/runtime. */
 public final class ProbeActivity extends Activity {
     private final Handler handler = new Handler(Looper.getMainLooper());
+    private ServiceConnection connection;
     private RemoteConnectionService.LocalBinder controller;
     private RemoteRuntime.Snapshot renderedSnapshot;
     private String displayedRuntimeStatus;
-    private long attachment, codeRevision = -1, gestureRevision = -1;
+    private long attachment, inputEpoch, codeRevision = -1, gestureRevision = -1;
     private boolean resumed, bound, closed, initialized;
     private List<Button> inputs;
     private TextView status, migrationNotice;
@@ -44,9 +45,10 @@ public final class ProbeActivity extends Activity {
         inputs = screen.inputs;
         touchpad = screen.touchpad;
         setContentView(screen.root);
+        screen.setPageListener(this::syncUiState);
         status.setText("Opening remote…");
         bind(start, this::requestStart);
-        bind(connect, () -> request(RemoteRuntime.Request.CONNECT, null));
+        bind(connect, this::connectRemote);
         bind(visible, this::makeVisible);
         bind(confirm, () -> request(RemoteRuntime.Request.CONFIRM, null));
         bind(screen.forget, () -> request(RemoteRuntime.Request.FORGET, null));
@@ -68,7 +70,7 @@ public final class ProbeActivity extends Activity {
             control.setOnTouchListener((view, event) -> {
                 if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
                     touchpad.cancelGesture();
-                    if (controller != null) controller.scrollTouchDown(attachment);
+                    if (controller != null) controller.scrollTouchDown(attachment, inputEpoch);
                 }
                 return false;
             });
@@ -78,49 +80,57 @@ public final class ProbeActivity extends Activity {
         handler.post(refresh);
     }
 
-    private final ServiceConnection connection = new ServiceConnection() {
-        @Override public void onServiceConnected(ComponentName name, IBinder binder) {
-            if (closed) { releaseBinding(); return; }
-            controller = (RemoteConnectionService.LocalBinder) binder;
-            renderedSnapshot = null;
-            attachment = controller.attach();
-            codeRevision = gestureRevision = -1;
-            controller.foreground(attachment, resumed);
-            render();
-        }
-        @Override public void onServiceDisconnected(ComponentName name) {
-            touchpad.cancelGesture();
-            clearTvCode();
-            if (controller != null) controller.connectionLost(attachment);
-            controller = null;
-            releaseBinding();
-            status.setText("Pairing service lost. Native teardown unconfirmed.");
-            disableControls();
-        }
-        @Override public void onBindingDied(ComponentName name) { onServiceDisconnected(name); }
-        @Override public void onNullBinding(ComponentName name) { onServiceDisconnected(name); }
-    };
+    private ServiceConnection newConnection() {
+        return new ServiceConnection() {
+            @Override public void onServiceConnected(ComponentName name, IBinder binder) {
+                if (!bound || connection != this) return;
+                if (closed || !resumed || !hasWindowFocus()) { releaseBinding(); return; }
+                controller = (RemoteConnectionService.LocalBinder) binder;
+                renderedSnapshot = null;
+                attachment = controller.attach();
+                codeRevision = gestureRevision = -1;
+                controller.foreground(attachment, resumed);
+                syncUiState();
+                render();
+            }
+            @Override public void onServiceDisconnected(ComponentName name) {
+                if (!bound || connection != this) return;
+                touchpad.cancelGesture();
+                clearTvCode();
+                if (controller != null) controller.connectionLost(attachment);
+                controller = null;
+                releaseBinding();
+                status.setText("Pairing service lost. Native teardown unconfirmed.");
+                disableControls();
+            }
+            @Override public void onBindingDied(ComponentName name) { onServiceDisconnected(name); }
+            @Override public void onNullBinding(ComponentName name) { onServiceDisconnected(name); }
+        };
+    }
 
     // Poll immutable values on this Activity's handler; the service never stores a UI listener.
     private final Runnable refresh = new Runnable() {
         @Override public void run() {
-            if (closed) return;
+            if (closed || !resumed || !hasWindowFocus()) return;
             render();
             handler.postDelayed(this, 100);
         }
     };
 
     private void bindController() {
-        if (bound || closed) return;
+        if (bound || closed || !resumed || !hasWindowFocus()) return;
+        connection = newConnection();
         bound = bindService(new Intent(this, RemoteConnectionService.class), connection, Context.BIND_AUTO_CREATE);
         if (!bound) status.setText("Pairing service unavailable.");
-        disableControls();
+        pauseControls();
     }
 
     private void releaseBinding() {
         if (!bound) return;
         bound = false;
-        unbindService(connection);
+        ServiceConnection previous = connection;
+        connection = null;
+        unbindService(previous);
     }
 
     private void bind(Button button, Runnable action) {
@@ -138,6 +148,23 @@ public final class ProbeActivity extends Activity {
             && checkSelfPermission(Manifest.permission.BLUETOOTH_ADVERTISE) == PackageManager.PERMISSION_GRANTED;
     }
 
+    private void syncUiState() {
+        renderedSnapshot = null;
+        if (controller != null) controller.uiState(attachment, hasWindowFocus(), screen.inputSurfaceVisible());
+    }
+
+    private void connectRemote() {
+        if (!resumed) return;
+        if (!permissions()) {
+            requestPermissions(new String[] {Manifest.permission.BLUETOOTH_CONNECT,
+                Manifest.permission.BLUETOOTH_ADVERTISE}, 1);
+            return;
+        }
+        screen.showSetup(false);
+        syncUiState();
+        request(RemoteRuntime.Request.REMOTE_CONNECT, null);
+    }
+
     private void requestStart() {
         if (!resumed) return;
         if (!permissions()) {
@@ -150,12 +177,16 @@ public final class ProbeActivity extends Activity {
 
     @Override public void onRequestPermissionsResult(int request, String[] names, int[] results) {
         super.onRequestPermissionsResult(request, names, results);
-        if (request == 1) status.setText(permissions() ? "Permission granted. Tap Start." : "Nearby devices permission is required.");
+        if (request == 1) status.setText(permissions() ? (screen.inputSurfaceVisible() ? "Permission granted. Tap Connect." : "Permission granted. Tap Start setup.") : "Nearby devices permission is required.");
     }
 
     private void request(RemoteRuntime.Request request, String value) {
         touchpad.cancelGesture();
-        if (request == RemoteRuntime.Request.STOP || request == RemoteRuntime.Request.FORGET_TV) clearTvCode();
+        if (request == RemoteRuntime.Request.STOP || request == RemoteRuntime.Request.FORGET_TV) {
+            inputEpoch = 0;
+            clearTvCode();
+        }
+        if (request == RemoteRuntime.Request.CONFIRM) { screen.showSetup(false); syncUiState(); }
         if (controller != null) controller.request(attachment, request, value);
         render();
     }
@@ -178,25 +209,30 @@ public final class ProbeActivity extends Activity {
     }
 
     private void clearTvCode() { screen.tvCode.getText().clear(); }
-    private void move(int dx, int dy) { if (controller != null) controller.move(attachment, dx, dy); render(); }
-    private void click() { if (controller != null) controller.click(attachment); render(); }
+    private void move(int dx, int dy) { if (controller != null) controller.move(attachment, inputEpoch, dx, dy); render(); }
+    private void click() { if (controller != null) controller.click(attachment, inputEpoch); render(); }
     private void scroll(MouseReport.Direction direction) {
         touchpad.cancelGesture();
-        if (controller != null) controller.scroll(attachment, direction);
+        if (controller != null) controller.scroll(attachment, inputEpoch, direction);
         render();
     }
     private void tvCommand(TvCommand command) {
         touchpad.cancelGesture();
-        if (controller != null) controller.tvCommand(attachment, command);
+        if (controller != null) controller.tvCommand(attachment, inputEpoch, command);
         render();
     }
 
     private void disableControls() {
+        pauseControls();
+        screen.stop.setEnabled(false);
+        screen.setConnected(false);
+    }
+
+    private void pauseControls() {
+        inputEpoch = 0;
         start.setEnabled(false); visible.setEnabled(false); confirm.setEnabled(false); connect.setEnabled(false);
         for (Button button : inputs) button.setEnabled(false);
         touchpad.setEnabled(false);
-        screen.stop.setEnabled(false);
-        screen.setConnected(false);
         screen.tvAddress.setEnabled(false); screen.tvSaveAddress.setEnabled(false);
         screen.tvPair.setEnabled(false); screen.tvCode.setEnabled(false); screen.tvConfirm.setEnabled(false);
         screen.tvForget.setEnabled(false);
@@ -204,10 +240,11 @@ public final class ProbeActivity extends Activity {
     }
 
     private void render() {
-        if (controller == null) return;
+        if (controller == null || !resumed || !hasWindowFocus()) return;
         RemoteRuntime.Snapshot snapshot = controller.snapshot(attachment);
         if (snapshot.equals(renderedSnapshot)) return;
         renderedSnapshot = snapshot;
+        inputEpoch = snapshot.inputEpoch();
         if (!java.util.Objects.equals(displayedRuntimeStatus, snapshot.status())) {
             displayedRuntimeStatus = snapshot.status();
             status.setText(displayedRuntimeStatus);
@@ -224,7 +261,7 @@ public final class ProbeActivity extends Activity {
         confirm.setEnabled(snapshot.confirm()); connect.setEnabled(snapshot.connect());
         for (Button button : inputs) button.setEnabled(snapshot.ready());
         touchpad.setEnabled(snapshot.ready());
-        screen.stop.setEnabled(snapshot.ready()); screen.setConnected(snapshot.ready());
+        screen.stop.setEnabled(snapshot.connected()); screen.setConnected(snapshot.connected());
         screen.tvAddress.setEnabled(snapshot.tvAddressEnabled()); screen.tvSaveAddress.setEnabled(snapshot.tvAddressEnabled());
         screen.tvPair.setEnabled(snapshot.tvPair());
         screen.tvCode.setEnabled(snapshot.tvCode()); screen.tvConfirm.setEnabled(snapshot.tvCode());
@@ -242,31 +279,61 @@ public final class ProbeActivity extends Activity {
     @Override protected void onResume() {
         super.onResume();
         resumed = true;
+        touchpad.cancelGesture();
         if (controller != null) controller.foreground(attachment, true);
         else bindController();
+        syncUiState();
         render();
+        handler.removeCallbacks(refresh);
+        handler.post(refresh);
     }
 
     @Override protected void onPause() {
+        resumed = false;
+        inputEpoch = 0;
+        if (controller != null) controller.foreground(attachment, false);
         clearTvCode();
         touchpad.cancelGesture();
-        resumed = false;
-        if (controller != null) controller.foreground(attachment, false);
-        render();
+        screen.root.cancelPendingInputEvents();
+        handler.removeCallbacks(refresh);
+        pauseControls();
+        releaseBinding();
+        controller = null;
+        attachment = 0;
         super.onPause();
     }
 
     @Override public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
-        if (!hasFocus && touchpad != null) touchpad.cancelGesture();
+        if (!hasFocus) inputEpoch = 0;
+        if (screen != null && (!hasFocus || resumed)) syncUiState();
+        if (!hasFocus) {
+            handler.removeCallbacks(refresh);
+            if (touchpad != null) {
+                touchpad.cancelGesture();
+                screen.root.cancelPendingInputEvents();
+                clearTvCode();
+                pauseControls();
+            }
+            releaseBinding();
+            controller = null;
+            attachment = 0;
+        } else if (resumed) {
+            if (controller == null) bindController();
+            render();
+            handler.removeCallbacks(refresh);
+            handler.post(refresh);
+        }
     }
 
     @Override protected void onDestroy() {
         closed = true;
         handler.removeCallbacksAndMessages(null);
-        touchpad.cancelGesture();
-        clearTvCode();
+        inputEpoch = 0;
         if (controller != null) controller.detach(attachment);
+        touchpad.cancelGesture();
+        screen.root.cancelPendingInputEvents();
+        clearTvCode();
         controller = null;
         releaseBinding();
         super.onDestroy();

@@ -6,16 +6,22 @@
 - [x] Prepare [lifecycle design](docs/superpowers/specs/2026-10-27-nord-daily-use-design.md),
   [delivery plan](docs/superpowers/plans/2026-10-27-nord-daily-use.md) and
   [readiness matrix](docs/gates/n4-readiness.md).
-- [ ] Owner review/approval of the concrete lifecycle/duration changes.
-- [ ] R0: establish TLS close-read outcome/timing and resolve native Bluetooth
-  cleanup proof; separately approve any replacement completion contract.
-- [ ] R1: extract service/runtime ownership with existing behavior unchanged.
-- [ ] R2: independent visibility epochs and retained-idle lifetime kernel.
+- [x] Owner review/approval of the concrete lifecycle/duration changes2026-10-27.
+- [x] R0 current baseline: reproduce/verify TLS close-read correction; collect
+  actual Bluetooth shutdown acknowledgments and owner explicit reconnect without
+  Force stop on0.20. Retain prior missing-callback evidence.
+- [ ] Repeat loss/reconnect on the new N4 artifact; missing native proof must
+  remain blocked unless a separately reviewed completion contract is approved.
+- [x] R1: extract/review service/runtime ownership with existing behavior unchanged;
+  b1d3256 plus verified permission correction62d0e6a.
+- [ ] R2: candidate kernel/caller integration passes unit/native verification;
+  complete independent/Codex review before publishing/installing.
 - [ ] R3: reviewed Nord lock/return, idle expiry and loss/revocation proofs.
 - [ ] R4: update continuity, endurance/battery observations and exact-artifact
   owner acceptance for private daily use. Public distribution remains deferred.
 
-Preparation alone authorizes no lifecycle implementation or new APK installation.
+The approved plan authorizes staged implementation; updates still require review
+and stopped-device preservation checks. No gate waiver is implied.
 
 As of 2026-10-24, D1 is resolved: the owner requires protected projector transport
 and authorized browser-only H1B implementation. H1A remains NOT PASSED; no

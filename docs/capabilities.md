@@ -1,13 +1,13 @@
 # Capabilities
 
-## Daily-use direction — proposed, not available
+## Daily-use direction — approved, not installed
 
 The owner selected retaining an idle connection when the Nord locks or switches
 apps, with input only while the remote is visible. The
-[N4 draft](superpowers/specs/2026-10-27-nord-daily-use-design.md) proposes a single
+[approved N4 design](superpowers/specs/2026-10-27-nord-daily-use-design.md) targets a single
 saved Connect/Stop flow, 30-minute idle retention and healthy return without
-re-pairing; loss, Stop or expiry still require explicit Connect. These are not
-installed capabilities. Current0.20 remains the five-minute diagnostic and stops
+re-pairing; loss, Stop or expiry still require explicit Connect. These are implemented in the0.21 candidate and are not yet installed
+on the Nord. Current0.20 remains the five-minute diagnostic and stops
 on foreground loss. [Daily-use readiness](gates/n4-readiness.md) is NOT READY.
 
 ## Diagnostic0.20 — simplified Touchpad and readable setup

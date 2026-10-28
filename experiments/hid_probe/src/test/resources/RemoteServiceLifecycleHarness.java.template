@@ -21,6 +21,7 @@ public class RemoteServiceLifecycleHarness extends ServiceBase {
     class Runtime {
         final Object receiver = new Object();
         int stops;
+        boolean sessionAlive() { return SystemClock.now < deadline; }
         void serviceStopped(String reason) { stops++; owner.stop(); }
         void destroyed() { owner.stop(); owner.completed(SERVICE); }
     }

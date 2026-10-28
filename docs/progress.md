@@ -1,30 +1,45 @@
 # Project Progress
 
+## N4 candidate software (2026-10-27)
+
+The approved lifecycle is implemented as0.21-daily-use-candidate; independent
+and complete Codex review findings are fixed and re-reviewed. Service-owned runtime, single normal Connect, independent visible-input
+epochs and a first-loss30-minute idle clock replace the diagnostic ownership/life
+only in the candidate. Visible control is uncapped; pairing remains bounded.
+Actual-source regressions caught and fixed revocation/deadline ordering before
+native readiness I/O.206unit tests and44native tests pass; one opt-in live
+projector diagnostic skips. Lint0errors/20warnings and both APK builds pass.
+The installed Nord remains accepted0.20. [Candidate evidence](gates/n4-candidate-report.md)
+and [readiness](gates/n4-readiness.md) separate software proof from pending update,
+Nord lock/retention/recovery checks and endurance/battery acceptance. No public
+release or replacement Bluetooth cleanup proof is approved or claimed.
+
 ## N4 daily-use preparation (2026-10-27)
 
 The owner selected idle background connections with input only while the remote
 is visible. The [N4 design](superpowers/specs/2026-10-27-nord-daily-use-design.md)
-and [delivery plan](superpowers/plans/2026-10-27-nord-daily-use.md) are drafts for
-owner review: service-owned transports, independent visibility epochs, proposed
+and [delivery plan](superpowers/plans/2026-10-27-nord-daily-use.md) are approved
+by the owner2026-10-27 (“go ahead”): service-owned transports, independent visibility epochs, proposed
 30-minute hidden retention and no five-minute cap during visible control.
-This preparation changes documentation only; installed0.20 and its approved
-five-minute/pause-stop behavior remain unchanged. The
-[readiness matrix](gates/n4-readiness.md) keeps Bluetooth native-completion recovery,
-the TLS close-read suite assertion and Nord background/endurance proof open.
+Implementation has started with unchanged-policy service ownership extraction
+and the TLS fixture investigation; installed0.20 and its five-minute/pause-stop
+behavior remain unchanged. The
+[readiness matrix](gates/n4-readiness.md) records current baseline recovery/TLS
+evidence separately from the pending N4 artifact and background/endurance proof.
 GitHub PRs #8/#9 are now merged; fetched main12664b4 has the same source tree
 as preparation snapshotda568d4. No existing gate becomes PASS; lifecycle
-implementation awaits design approval.
+implementation follows the staged gates; no replacement cleanup proof was approved.
 
 ##0.20 owner acceptance and next work (2026-10-27)
 
 The owner reports testing0.20 and “everything works fine”, accepting its requested
 UI changes and normal-use smoke. This closes the0.20 UI acceptance item; it does
 not independently certify previously unresolved failure/revocation scenarios.
-Next priority is Bluetooth-loss cleanup/reconnect, whose actual native completion
-acknowledgments are still missing in the captured trial. Keep the barrier and
-current Force stop recovery until a reviewed completion policy is proven. The
-TLS close-read fixture order issue also remains open. Then complete remaining
-N3 reliability evidence and obtain N4 lifecycle/packaging approval. PRs #8/#9
+The earlier0.13 Bluetooth-loss trial remains incomplete. A fresh0.20 trial now
+contains actual shutdown completion and owner explicit reconnect without Force
+stop; it does not erase the older missing-callback case. The TLS fixture issue
+is reproduced and corrected in9f5098c; production TLS is unchanged. Continue
+remaining reliability evidence and the approved N4 implementation. PRs #8/#9
 are now merged; the readiness proposal targets main. No merge or new lifecycle contract is approved
 by the acceptance report alone.
 

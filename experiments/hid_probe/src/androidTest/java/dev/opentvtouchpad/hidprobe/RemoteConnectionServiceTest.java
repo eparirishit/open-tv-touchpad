@@ -36,8 +36,16 @@ public class RemoteConnectionServiceTest {
                 result[0] = label.getText().toString();
                 instrumentation.callActivityOnResume(activity);
             });
-            assertTrue(result[0].equals("Permission granted. Tap Start.")
-                || result[0].equals("Nearby devices permission is required."));
+            boolean granted = activity.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
+                == android.content.pm.PackageManager.PERMISSION_GRANTED
+                && activity.checkSelfPermission(android.Manifest.permission.BLUETOOTH_ADVERTISE)
+                == android.content.pm.PackageManager.PERMISSION_GRANTED;
+            var screenField = ProbeActivity.class.getDeclaredField("screen");
+            screenField.setAccessible(true);
+            RemoteScreen screen = (RemoteScreen) screenField.get(activity);
+            String expected = granted ? (screen.inputSurfaceVisible() ? "Permission granted. Tap Connect."
+                : "Permission granted. Tap Start setup.") : "Nearby devices permission is required.";
+            assertEquals(expected, result[0]);
             Thread.sleep(200);
             instrumentation.runOnMainSync(() -> assertEquals(result[0], label.getText().toString()));
         } finally {

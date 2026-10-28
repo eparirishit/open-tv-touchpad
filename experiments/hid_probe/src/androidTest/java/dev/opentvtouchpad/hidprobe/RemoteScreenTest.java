@@ -403,7 +403,7 @@ public class RemoteScreenTest {
                 }
                 assertFalse(screen.touchpad.isEnabled());
                 reachable(screen,screen.stop); reachable(screen,screen.setup);
-                reachable(screen,screen.start); reachable(screen,screen.connect);
+                assertEquals(View.GONE, screen.start.getVisibility()); reachable(screen,screen.connect);
                 reachable(screen,screen.remoteTab); reachable(screen,screen.padTab);
                 {
                     screen.showSetup(false); layout(screen,c,size[0],size[1]);
@@ -414,6 +414,7 @@ public class RemoteScreenTest {
                 assertFalse(visible(screen,screen.tvButtons.get(TvCommand.OK)));
                 for (Button control : screen.scrollButtons.values()) reachable(screen,control);
                 screen.showSetup(true); screen.showSetupSection(0); layout(screen,c,size[0],size[1]);
+                reachable(screen,screen.start); assertEquals(View.GONE, screen.connect.getVisibility());
                 reachable(screen,screen.visible); reachable(screen,screen.confirm); reachable(screen,screen.forget);
                 screen.showSetupSection(1); layout(screen,c,size[0],size[1]);
                 reachable(screen,screen.tvAddress); reachable(screen,screen.tvCode);

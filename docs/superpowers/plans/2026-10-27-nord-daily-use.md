@@ -32,11 +32,11 @@ Files: TvTlsTest.java; BluetoothCleanupTest.java; NativeStopTest.java;
 ProbeActivity.Run cleanup only if evidence identifies an in-scope ordering fix;
 docs/gates/n3-report.md and new N4 readiness report.
 
-- [ ] Capture close-read integer/exception, close/completion timing and server
+- [x] Capture close-read integer/exception, close/completion timing and server
   outcome on the same artifact/provider, isolated and full-suite ordering.
-- [ ] Reproduce any assertion defect before a separate test-only correction;
+- [x] Reproduce any assertion defect before a separate test-only correction;
   retain pending100ms and closed2s bounds. No TLS runtime change without evidence.
-- [ ] Capture one contiguous owner-operated Bluetooth loss/recovery trace when
+- [x] Capture one contiguous owner-operated Bluetooth loss/recovery trace when
   available; establish actual native completion, stale-owner fencing and explicit
   reconnect. Do not repeat UI smoke or erase prior failure evidence.
 - [ ] If callbacks remain unavailable, stop at the gate and review a concrete
@@ -53,11 +53,11 @@ TvRemoteClient and bounded input adapters. Service alone owns callbacks/timers.
 Activity binds to immutable snapshots and closed Connect/setup/Stop/input requests;
 no runtime callback retains Activity/View references.
 
-- [ ] Write failing actual-method tests for rotation/detach, one active owner,
+- [x] Write failing actual-method tests for rotation/detach, one active owner,
   resource completion, late callbacks and service/TV-worker teardown.
-- [ ] Extract owner/callbacks, atomically update manifest and notification targets;
+- [x] Extract owner/callbacks, atomically update manifest and notification targets;
   retain current five-minute/pause-stop behavior and foreground-only pairing.
-- [ ] Run176+ existing unit and relevant native suites, inspect exports/permissions/
+- [x] Run176+ existing unit and relevant native suites, inspect exports/permissions/
   backup/Keystore aliases and review before any stopped-device update.
 
 ### Task 3 — explicit policy kernel and UI-input epoch (R2)
@@ -75,14 +75,14 @@ first eligibility loss. Only a healthy eligible return before expiry ends idle;
 maintenance/repeated hide events cannot extend its deadline. Hiding during a
 control connection attempt cancels it; only already ready links can be retained.
 
-- [ ] Red tests: revoked/stale epoch at submission and immediately before user
+- [x] Red tests: revoked/stale epoch at submission and immediately before user
   writes; queued command cancellation; mid-frame uncertainty closes the session;
   click release; new-down requirement; lock/focus loss and Setup never authorize.
-- [ ] Separate transport readiness from input lease; revoke without blocking on
+- [x] Separate transport readiness from input lease; revoke without blocking on
   I/O, clear unsent input and keep only protocol maintenance while idle.
-- [ ] Preserve all phase/liveness/rate/queue/write bounds from the spec. Do not
+- [x] Preserve all phase/liveness/rate/queue/write bounds from the spec. Do not
   extend dead-peer deadlines or replay commands when idle retention renews.
-- [ ] Test first-loss deadline, repeated hide/maintenance without renewal, hiding
+- [x] Test first-loss deadline, repeated hide/maintenance without renewal, hiding
   during connection, expiry after sleep, race with return, task removal, notification
   Stop, permission/bond/pin loss, service death and explicit reconnect requirements.
 
@@ -91,11 +91,11 @@ control connection attempt cancels it; only already ready links can be retained.
 Files: ProbeActivity, RemoteScreen, RemoteConnectionService, AndroidManifest.xml,
 existing native UI/privacy/accessibility tests.
 
-- [ ] Normal saved remote uses Connect/Stop; setup remains explicit and bounded.
+- [x] Normal saved remote uses Connect/Stop; setup remains explicit and bounded.
   Replace diagnostic session copy only once the new behavior is implemented.
-- [ ] Start connectedDevice service from visible user action; non-exported,
+- [x] Start connectedDevice service from visible user action; non-exported,
   START_NOT_STICKY, notification Open/Stop, no notification input controls.
-- [ ] Bind/recreate without changing live ownership. Healthy return grants a new
+- [x] Bind/recreate without changing live ownership. Healthy return grants a new
   input epoch only on a visible/unlocked Remote/Touchpad surface. Failure/expiry
   never launches a new connection automatically; UI gives an explicit action.
 - [ ] Native real-Activity tests for home/lock/focus/Setup/rotation, accessibility

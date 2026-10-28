@@ -28,7 +28,8 @@ public class RemoteOwnershipTest {
         assertTrue("Service-owned runtime must exist", Files.isRegularFile(source.resolve("RemoteRuntime.java")));
         String runtime = new String(Files.readAllBytes(source.resolve("RemoteRuntime.java")), java.nio.charset.StandardCharsets.UTF_8);
         StringBuilder methods = new StringBuilder();
-        for (String signature : new String[] {"    long attach() {", "    boolean attached(long token) {",
+        for (String signature : new String[] {"    private boolean attended() {", "    private void setInputEligible(boolean eligible) {",
+                "    private void refreshEligibility() {", "    private void deferVisibilityRefresh() {", "    void uiState(long token, boolean focused, boolean surfaceVisible) {", "    long attach() {", "    boolean attached(long token) {",
                 "    void foreground(long token, boolean foreground) {", "    void detach(long token) {",
                 "    void destroyed() {", "    void serviceStopped(String reason) {", "    void connectionLost(long token) {"}) methods.append(method(runtime, signature)).append('\n');
         String template;
@@ -41,7 +42,7 @@ public class RemoteOwnershipTest {
             Path harness = temporary.resolve("RemoteOwnershipHarness.java");
             Files.write(harness, template.replace("__METHODS__", methods).getBytes(java.nio.charset.StandardCharsets.UTF_8));
             Process compiler = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin", "javac").toString(),
-                "-d", temporary.toString(), harness.toString(), source.resolve("NativeRunGate.java").toString(),
+                "-d", temporary.toString(), harness.toString(), source.resolve("NativeRunGate.java").toString(), source.resolve("InputVisibilityGate.java").toString(), source.resolve("SessionLifetime.java").toString(),
                 source.resolve("ProbeSession.java").toString(), source.resolve("EnrollmentStore.java").toString())
                 .redirectErrorStream(true).start();
             String diagnostic = new String(compiler.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);

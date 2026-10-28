@@ -16,7 +16,7 @@ import java.util.function.LongSupplier;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
 
-/** A single foreground run's attempt. Callbacks must only post bounded owner-tagged work. */
+/** A single transport run's attempt. Callbacks must only post bounded owner-tagged work. */
 final class TvRemoteClient {
     // Closed diagnostic vocabulary: no peer data or exception text crosses the callback.
     enum Stage {
@@ -39,7 +39,8 @@ final class TvRemoteClient {
 
     private final Object gate = new Object();
     private final LongSupplier clock;
-    private final long deadline;
+    private final LongSupplier deadline;
+    private final InputVisibilityGate visibility;
     private final Listener listener;
     private final NativeIo nativeIo;
     private final ArrayDeque<Frame> replies = new ArrayDeque<>();
@@ -51,12 +52,13 @@ final class TvRemoteClient {
     private SSLSocket socket;
     private char[] code;
     private TvCommand pending;
-    private long pendingAt, nextUserAt, phaseUntil, writeUntil, readAt;
+    private Frame inFlightUser;
+    private long pendingAt, pendingEpoch, nextUserAt, phaseUntil, writeUntil, readAt;
     private long readCredit = 2000;
     private int outstandingReplies;
 
-    TvRemoteClient(LongSupplier monotonicMillis, long absoluteDeadlineMillis, Listener listener) {
-        this(monotonicMillis, absoluteDeadlineMillis, listener, new NativeIo() {
+    TvRemoteClient(LongSupplier monotonicMillis, LongSupplier deadline, InputVisibilityGate visibility, Listener listener) {
+        this(monotonicMillis, deadline, visibility, listener, new NativeIo() {
             public KeyStore.PrivateKeyEntry identity(boolean fresh) throws Exception {
                 if (fresh) {
                     TvIdentity.delete(TvEnrollment.KEY_ALIAS);
@@ -73,12 +75,13 @@ final class TvRemoteClient {
         });
     }
 
-    TvRemoteClient(LongSupplier monotonicMillis, long absoluteDeadlineMillis, Listener listener, NativeIo nativeIo) {
+    TvRemoteClient(LongSupplier monotonicMillis, LongSupplier deadline, InputVisibilityGate visibility, Listener listener, NativeIo nativeIo) {
         this.clock = Objects.requireNonNull(monotonicMillis);
-        this.deadline = absoluteDeadlineMillis;
+        this.deadline = Objects.requireNonNull(deadline);
+        this.visibility = Objects.requireNonNull(visibility);
         this.listener = Objects.requireNonNull(listener);
         this.nativeIo = Objects.requireNonNull(nativeIo);
-        phaseUntil = deadline;
+        phaseUntil = Long.MAX_VALUE;
         operation = thread("tv-operation", this::operate);
         writer = thread("tv-writer", this::writeLoop);
         coordinator = thread("tv-watchdog", this::supervise);
@@ -95,7 +98,7 @@ final class TvRemoteClient {
             address = locator;
             enrollment = record;
             readAt = clock.getAsLong();
-            phaseUntil = Math.min(deadline, readAt + 12000);
+            phaseUntil = readAt + 12000;
             launch();
         }
     }
@@ -114,12 +117,13 @@ final class TvRemoteClient {
         if (invalid) terminate(true);
     }
 
-    boolean submit(TvCommand command) {
+    boolean submit(TvCommand command, long epoch) {
         synchronized (gate) {
             long now = clock.getAsLong();
-            if (command == null || !live() || !ready || pairing || pending != null || now < nextUserAt) return false;
+            if (command == null || !visibility.accepts(epoch) || !live() || !ready || pairing || pending != null || now < nextUserAt) return false;
             pending = command;
             pendingAt = now;
+            pendingEpoch = epoch;
             nextUserAt = now + 100;
             gate.notifyAll();
             return true;
@@ -129,6 +133,13 @@ final class TvRemoteClient {
     boolean ready() { synchronized (gate) { return live() && ready; } }
     boolean needsCode() { synchronized (gate) { return live() && needsCode; } }
     void stop() { terminate(false); }
+    void inputRevoked() {
+        synchronized (gate) {
+            pending = null;
+            if (inFlightUser != null) terminate(true);
+            gate.notifyAll();
+        }
+    }
 
     private void launch() {
         if (launched) return;
@@ -143,10 +154,13 @@ final class TvRemoteClient {
     }
 
     // gate guards admission/state only; no socket or key operation holds it.
-    private boolean live() { return !stopped && clock.getAsLong() < deadline && clock.getAsLong() < phaseUntil; }
+    private boolean live() {
+        long now = clock.getAsLong();
+        return !stopped && now < deadline.getAsLong() && now < phaseUntil;
+    }
     private void requireLive() throws IOException { if (!live()) throw new IOException("TV operation ended"); }
     private void phase(long milliseconds) throws IOException {
-        synchronized (gate) { requireLive(); phaseUntil = Math.min(deadline, clock.getAsLong() + milliseconds); gate.notifyAll(); }
+        synchronized (gate) { requireLive(); phaseUntil = clock.getAsLong() + milliseconds; gate.notifyAll(); }
     }
 
     private void stage(Stage next) {
@@ -242,9 +256,9 @@ final class TvRemoteClient {
         byte[] bytes = new byte[4];
         for (int i = 0; i < 4; i++) bytes[i] = (byte)Integer.parseInt(parts[i]);
         int remaining;
-        synchronized (gate) { requireLive(); remaining = (int)Math.max(1, phaseUntil-clock.getAsLong()); }
+        synchronized (gate) { requireLive(); remaining = (int)Math.max(1, Math.min(phaseUntil, deadline.getAsLong())-clock.getAsLong()); }
         created.connect(new InetSocketAddress(InetAddress.getByAddress(bytes), peer == null ? 6467 : 6466), remaining);
-        synchronized (gate) { requireLive(); remaining = (int)Math.max(1, phaseUntil-clock.getAsLong()); }
+        synchronized (gate) { requireLive(); remaining = (int)Math.max(1, Math.min(phaseUntil, deadline.getAsLong())-clock.getAsLong()); }
         stage(peer == null ? Stage.PAIRING_TLS : Stage.CONTROL_TLS);
         created.setSoTimeout(remaining);
         created.startHandshake();
@@ -254,7 +268,7 @@ final class TvRemoteClient {
 
     private byte[] read(SSLSocket current) throws Exception {
         int remaining;
-        synchronized (gate) { requireLive(); remaining = (int)Math.max(1, phaseUntil-clock.getAsLong()); }
+        synchronized (gate) { requireLive(); remaining = (int)Math.max(1, Math.min(phaseUntil, deadline.getAsLong())-clock.getAsLong()); }
         current.setSoTimeout(remaining);
         byte[] frame = TvWire.read(current.getInputStream());
         synchronized (gate) {
@@ -279,7 +293,7 @@ final class TvRemoteClient {
                 synchronized (gate) {
                     while (outstandingReplies != 0) { requireLive(); gate.wait(); }
                     requireLive(); ready = true; announced = true;
-                    phaseUntil = Math.min(deadline, clock.getAsLong()+30000);
+                    phaseUntil = clock.getAsLong()+30000;
                     if (candidate == null) listener.connected();
                     else listener.enrolled(candidate);
                 }
@@ -292,7 +306,7 @@ final class TvRemoteClient {
             try {
                 requireLive();
                 if (current != socket || outstandingReplies >= 8) throw new IOException("TV reply backlog exceeded");
-                Frame frame = new Frame(current, bytes, false, 0);
+                Frame frame = new Frame(current, bytes, false, 0, 0);
                 replies.addLast(frame); outstandingReplies++; gate.notifyAll(); return frame;
             } catch (IOException failure) { Arrays.fill(bytes, (byte)0); throw failure; }
         }
@@ -314,27 +328,38 @@ final class TvRemoteClient {
                     if (!replies.isEmpty()) frame = replies.removeFirst();
                     else {
                         TvCommand command = pending; pending = null;
-                        if (clock.getAsLong()-pendingAt > 250) continue;
-                        frame = new Frame(socket, command.message().toByteArray(), true, pendingAt);
+                        if (clock.getAsLong()-pendingAt > 250 || !visibility.accepts(pendingEpoch)) continue;
+                        frame = new Frame(socket, command.message().toByteArray(), true, pendingAt, pendingEpoch);
                     }
                     if (frame.socket != socket) throw new IOException("Stale TV writer");
-                    writeUntil = Math.min(deadline, clock.getAsLong()+2000);
+                    writeUntil = clock.getAsLong()+2000;
                 }
                 try {
                     OutputStream output = frame.socket.getOutputStream();
                     TvWire.write(new OutputStream() {
-                        private void admit(boolean sending) throws IOException {
+                        private boolean admit(boolean sending) throws IOException {
                             synchronized (gate) {
                                 requireLive();
                                 if (frame.socket != socket || clock.getAsLong() >= writeUntil)
                                     throw new IOException("TV write ended");
-                                if (sending && frame.user && (!ready || pairing || clock.getAsLong()-frame.at > 250))
-                                    throw new IOException("TV command expired");
+                                if (frame.user) {
+                                    if (!visibility.accepts(frame.epoch)) {
+                                        if (!frame.started) return false;
+                                        throw new IOException("TV input revoked during write");
+                                    }
+                                    if (sending && (!ready || pairing || clock.getAsLong()-frame.at > 250))
+                                        throw new IOException("TV command expired");
+                                    if (sending) {
+                                        frame.started = true;
+                                        inFlightUser = frame;
+                                    }
+                                }
+                                return true;
                             }
                         }
-                        public void write(int value) throws IOException { admit(true); output.write(value); }
-                        public void write(byte[] bytes, int offset, int length) throws IOException { admit(true); output.write(bytes, offset, length); }
-                        public void flush() throws IOException { admit(false); output.flush(); }
+                        public void write(int value) throws IOException { if (admit(true)) output.write(value); }
+                        public void write(byte[] bytes, int offset, int length) throws IOException { if (admit(true)) output.write(bytes, offset, length); }
+                        public void flush() throws IOException { if (admit(false)) output.flush(); }
                     }, frame.bytes);
                 } catch (Exception failure) {
                     // Fence failure before completion can wake pairing/readiness waiters.
@@ -343,7 +368,10 @@ final class TvRemoteClient {
                 } finally {
                     Arrays.fill(frame.bytes, (byte)0);
                     synchronized (gate) {
+                        // Epoch loss during the final native flush is still an uncertain user frame.
+                        if (frame.started && !visibility.accepts(frame.epoch)) terminate(true);
                         writeUntil = 0; frame.done = true;
+                        if (inFlightUser == frame) inFlightUser = null;
                         if (!frame.user) outstandingReplies--;
                         gate.notifyAll();
                     }
@@ -353,7 +381,6 @@ final class TvRemoteClient {
     }
 
     private void terminate(boolean error) {
-        SSLSocket owned;
         synchronized (gate) {
             if (!stopped) {
                 if (error) failureStage = stage;
@@ -362,10 +389,8 @@ final class TvRemoteClient {
                 while (!replies.isEmpty()) { Arrays.fill(replies.removeFirst().bytes, (byte)0); outstandingReplies--; }
                 gate.notifyAll();
             }
-            owned = socket;
             launch();
         }
-        if (owned != null) closeSocket(owned);
     }
 
     private void closeSocket(SSLSocket owned) {
@@ -392,10 +417,12 @@ final class TvRemoteClient {
         } catch (InterruptedException interrupted) {
             terminate(true);
         } finally {
-            join(operation); join(writer);
             SSLSocket owned;
             synchronized (gate) { owned = socket; }
             if (owned != null) closeSocket(owned);
+            join(operation); join(writer);
+            synchronized (gate) { owned = socket; }
+            if (owned != null && !owned.isClosed()) closeSocket(owned);
             synchronized (gate) {
                 if (!cleanupFailed && (socket == null || socket.isClosed())) listener.closed();
             }
@@ -415,10 +442,10 @@ final class TvRemoteClient {
         final SSLSocket socket;
         final byte[] bytes;
         final boolean user;
-        final long at;
-        boolean done;
-        Frame(SSLSocket socket, byte[] bytes, boolean user, long at) {
-            this.socket=socket; this.bytes=bytes; this.user=user; this.at=at;
+        final long at, epoch;
+        boolean done, started;
+        Frame(SSLSocket socket, byte[] bytes, boolean user, long at, long epoch) {
+            this.socket=socket; this.bytes=bytes; this.user=user; this.at=at; this.epoch=epoch;
         }
     }
 }

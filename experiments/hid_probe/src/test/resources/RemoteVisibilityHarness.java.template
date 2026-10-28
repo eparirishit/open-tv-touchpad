@@ -1,0 +1,122 @@
+package dev.opentvtouchpad.hidprobe;
+
+public class RemoteVisibilityHarness {
+    private boolean resumed, focused, surfaceVisible, serviceDestroyed, deviceAvailable = true;
+    private long attachment, nextAttachment, now, generation = 1, codeRevision, gestureRevision;
+    private final InputVisibilityGate inputVisibility = new InputVisibilityGate();
+    private final SessionLifetime lifetime = new SessionLifetime(() -> now);
+    private final Session session = new Session();
+    private final ConnectionService connectionService = new ConnectionService();
+    private Run run;
+    private String status;
+    private boolean uiLossReturned, rejectHealth;
+    private final Handler handler = new Handler();
+    private final Runnable visibilityRefresh = this::refreshEligibility;
+    private static class Handler {
+        final java.util.ArrayDeque<Runnable> queue = new java.util.ArrayDeque<>();
+        void post(Runnable action) { queue.add(action); }
+        void removeCallbacks(Runnable action) { queue.removeIf(item -> item == action); }
+        void drain() { while (!queue.isEmpty()) queue.removeFirst().run(); }
+    }
+    private static final Object PAUSE = new Object();
+    private boolean interactiveUnlocked() { if(rejectHealth) throw new AssertionError("Stop entered platform health before cancellation"); return deviceAvailable; }
+    private void clearTvCode() { codeRevision++; }
+    private void cancelGesture() { gestureRevision++; }
+    private void setStatus(String message) { status = message; }
+    private void stop(String message) {
+        inputVisibility.update(false); lifetime.end();
+        if (run != null) run.stopping = true;
+        status = message;
+    }
+    private static class Owner { boolean active() { return true; } boolean owns() { return true; } }
+    private static class Tv { int revocations; boolean stopped; void inputRevoked() { revocations++; } void stop() { stopped = true; } }
+    private static class Run {
+        final Owner ownership = new Owner(); final long generation = 1;
+        final Tv tv = new Tv(); boolean stopping, established = true, connecting, connectOnRegister;
+        boolean active() { return !stopping; }
+        Runnable beforeState = () -> {};
+        boolean transportReady() { beforeState.run(); return established && !stopping; }
+        void trace(Object event) {}
+    }
+    private static class Session { boolean running = true; void foreground(long generation, boolean visible) {} boolean active(long generation) { return running; } void stop() { running = false; } String savedPeer() { return "saved"; } boolean isRegistered(long generation) { return false; } }
+    private static class ConnectionService { void scheduleDeadline() {} }
+    private void requestStart() { requestStart(false); }
+    private void requestStart(boolean controlAttempt) {
+        run = new Run(); run.established = false; run.connecting = controlAttempt;
+        session.running = true; lifetime.beginSetup();
+    }
+    private void connectSaved() { throw new AssertionError("Registration was deliberately held"); }
+    enum Request { START, REMOTE_CONNECT, CONNECT, CONFIRM, FORGET, PAIR_TV, TV_CODE, SAVE_TV_ADDRESS, FORGET_TV, STOP }
+    private void confirmAndConnect() {} private void forget() {} private void pairTv(String value) {}
+    private void confirmTvCode(String value) {} private void saveTvAddress(String value) {} private void forgetTv() {}
+__REQUEST__
+__CONNECT_REMOTE__
+__POLICY__
+    private void check(boolean value, String message) { if (!value) throw new AssertionError(message); }
+    private void establish() {
+        run = new Run(); session.running = true; lifetime.beginSetup(); resumed = focused = surfaceVisible = true;
+        attachment = ++nextAttachment; refreshEligibility();
+        check(lifetime.control() && inputVisibility.epoch() != 0, "ready visible session grants input");
+    }
+    private void scenarios() {
+        establish(); long ui = attachment, old = inputVisibility.epoch();
+        run.beforeState = () -> {
+            check(uiLossReturned, "UI loss must return without waiting for native readiness I/O");
+            check(inputVisibility.epoch() == 0, "revocation must precede native readiness I/O");
+            check(lifetime.deadlineMillis() == 1800001, "idle clock must start before native readiness I/O");
+            now += 1000;
+        };
+        now = 1; foreground(ui, false); uiLossReturned = true; handler.drain();
+        run.beforeState = () -> {};
+        check(!run.stopping && lifetime.alive(), "hide retains established transport");
+        check(!inputVisibility.accepts(old), "old epoch revoked on pause");
+        long until = lifetime.deadlineMillis(); now = 9000; for (int i = 0; i < 20; i++) foreground(ui, false);
+        check(handler.queue.size() <= 1, "visibility refresh is coalesced and bounded");
+        check(lifetime.deadlineMillis() == until, "repeated hide does not renew retention");
+        foreground(ui, true); uiState(ui, true, true);
+        check(inputVisibility.epoch() != 0 && !inputVisibility.accepts(old), "return grants fresh epoch");
+        old = inputVisibility.epoch(); uiState(ui, true, false);
+        check(!run.stopping && !inputVisibility.accepts(old), "Setup is idle, never input");
+        uiState(ui, true, true); deviceAvailable = false; refreshEligibility();
+        check(inputVisibility.epoch() == 0, "lock/screen-off revokes without Activity pause");
+        deviceAvailable = true; refreshEligibility();
+        old = inputVisibility.epoch(); long replacement = attach(); foreground(replacement, true); uiState(replacement, true, true);
+        long current = inputVisibility.epoch(); foreground(ui, false); detach(ui);
+        check(current != 0 && inputVisibility.accepts(current) && !inputVisibility.accepts(old), "stale UI cannot revoke replacement");
+        detach(replacement); check(!run.stopping && inputVisibility.epoch() == 0, "detach idles healthy link");
+        now = lifetime.deadlineMillis(); refreshEligibility();
+        check(run.stopping && inputVisibility.epoch() == 0, "sleep/idle expiry stops before reuse");
+        establish(); run.established = false; run.connecting = true; foreground(attachment, false); handler.drain();
+        check(run.stopping, "hide cancels unfinished control connection");
+    }
+    private void pendingRegistration() {
+        long ui = attach(); foreground(ui, true); uiState(ui, true, true);
+        connectRemote();
+        check(run.connecting && run.connectOnRegister, "ordinary Connect must own pending registration as a control attempt");
+        refreshEligibility();
+        check(session.running && !run.stopping && run.connecting && run.connectOnRegister,"visible registration polling must preserve ordinary Connect");
+        foreground(ui, false);
+        check(!session.running && !run.connectOnRegister, "hiding must irreversibly cancel pending ordinary Connect");
+        foreground(ui, true); uiState(ui, true, true); handler.drain();
+        check(run.stopping && inputVisibility.epoch() == 0, "quick return cannot revive an old registration attempt");
+        RemoteVisibilityHarness setup = new RemoteVisibilityHarness();
+        ui = setup.attach(); setup.foreground(ui, true); setup.uiState(ui, true, false);
+        setup.requestStart(false); setup.foreground(ui, false); setup.handler.drain();
+        check(setup.session.running && !setup.run.stopping, "bounded pre-confirmation setup dialog exception remains");
+    }
+    private void stopAdmission() {
+        establish(); long ui = attachment, queued = inputVisibility.epoch();
+        run.beforeState = () -> { throw new AssertionError("Stop fetched native readiness before revocation"); };
+        rejectHealth = true;
+        check(!request(ui + 1, Request.STOP, null), "stale attachment cannot Stop a current session");
+        check(inputVisibility.accepts(queued), "stale Stop cannot revoke current input");
+        check(request(ui, Request.STOP, null), "current Stop admitted without attendance/health checks");
+        check(!inputVisibility.accepts(queued) && !lifetime.alive() && run.stopping,
+            "Stop revokes queued authority before any native readiness observation");
+    }
+    public static void main(String[] args) {
+        new RemoteVisibilityHarness().scenarios();
+        new RemoteVisibilityHarness().pendingRegistration();
+        new RemoteVisibilityHarness().stopAdmission();
+    }
+}

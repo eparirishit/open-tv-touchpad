@@ -1,6 +1,11 @@
 package dev.opentvtouchpad.hidprobe;
 import java.util.List;
 public class StopCleanupHarness {
+    final InputVisibilityGate inputVisibility = new InputVisibilityGate();
+    final SessionLifetime lifetime = new SessionLifetime(() -> 0);
+    { inputVisibility.update(true); lifetime.beginSetup(); }
+    void setInputEligible(boolean eligible) { inputVisibility.update(eligible); }
+
     static final int STOP = 1;
     static class BluetoothDevice {}
     static class BluetoothProfile { static final int STATE_DISCONNECTED = 0; }
@@ -93,6 +98,7 @@ __STOP_METHOD__
             } catch (IllegalArgumentException expected) { escaped = true; }
             check(!escaped && p.stopping && p.session.stopped && !p.gesture.hasPendingMotion());
             check(p.tv.stopped && p.codeCleared);
+            check(p.inputVisibility.epoch() == 0 && !p.lifetime.alive());
             check(p.guardFinished && p.cleaned && p.hid.disconnected == (mode == 8 ? 0 : 1) && p.hid.unregistered == 1);
             check(!p.ownership.active() && !p.gates.available());
             System.out.println((tap ? "tap release" : "scheduled movement") +

@@ -7,7 +7,7 @@ public class TvCallbacksHarness {
         interface Listener { void needCode(); void connected(); void enrolled(TvEnrollment.Record r); void failed(Stage stage); void closed(); }
         final Listener listener;
         boolean ready = true;
-        TvRemoteClient(java.util.function.LongSupplier time, long deadline, Listener listener) { this.listener = listener; }
+        TvRemoteClient(java.util.function.LongSupplier time, java.util.function.LongSupplier deadline, Object visibility, Listener listener) { this.listener = listener; }
         boolean ready() { return ready; }
     }
     static class TvEnrollment {
@@ -29,6 +29,8 @@ public class TvCallbacksHarness {
     final NativeRunGate.Run ownership = gates.start();
     final Handler handler = new Handler();
     final Guard connectionService = new Guard();
+    final Guard lifetime = new Guard();
+    final Object inputVisibility = new Object();
     final Session session = new Session();
     final Status status = new Status();
     final TvEnrollment tvEnrollment = new TvEnrollment();

@@ -5,7 +5,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-feature android:name="android.hardware.bluetooth" android:required="true" />
-    <application android:label="Open TV HID Probe" android:icon="@android:drawable/ic_menu_compass"
+    <application android:label="Open TV" android:icon="@android:drawable/ic_menu_compass"
         android:theme="@style/RemoteTheme"
         android:allowBackup="false" android:fullBackupContent="false"
         android:dataExtractionRules="@xml/data_extraction_rules"

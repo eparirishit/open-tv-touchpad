@@ -1,4 +1,14 @@
-# Disposable Nord remote — N3 diagnostic
+# Nord remote — private N4 candidate
+
+## Version0.21 daily-use candidate
+
+The approved N4 lifecycle is implemented for private verification, with service-
+owned established links, a single normal Connect, visible-only input epochs and
+30-minute idle retention. Pairing remains attended/bounded. No native cleanup
+proof is waived, no public release is enabled and no N4 hardware PASS is claimed.
+Use the [private guide](../../docs/nord-daily-use.md) and
+[readiness matrix](../../docs/gates/n4-readiness.md). Nord installation is pending
+final review; accepted0.20 remains installed and its pairings must be preserved.
 
 ## Prototype UI in0.20
 

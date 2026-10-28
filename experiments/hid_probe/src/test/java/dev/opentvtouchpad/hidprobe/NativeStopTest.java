@@ -42,7 +42,7 @@ public class NativeStopTest {
             Process compiler = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin", "javac").toString(),
                 "-d", temporary.toString(),
                 harness.toString(), source.resolve("InputSubmission.java").toString(),
-                source.resolve("TouchpadGesture.java").toString(), source.resolve("NativeRunGate.java").toString(),
+                source.resolve("TouchpadGesture.java").toString(), source.resolve("NativeRunGate.java").toString(), source.resolve("InputVisibilityGate.java").toString(), source.resolve("SessionLifetime.java").toString(),
                 source.resolve("MouseReport.java").toString(), source.resolve("ScrollInput.java").toString())
                 .redirectErrorStream(true).start();
             String diagnostics = new String(compiler.getInputStream().readAllBytes(), StandardCharsets.UTF_8);

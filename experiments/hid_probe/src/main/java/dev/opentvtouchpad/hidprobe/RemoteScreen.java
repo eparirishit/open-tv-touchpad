@@ -106,13 +106,13 @@ public final class RemoteScreen {
         tvStatus.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         tvStatus.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         add(statusCard, tvStatus);
-        status = text("Start a five-minute run, then connect your projector.", 13);
+        status = text("Connect your saved projector, or open Settings for setup.", 13);
         status.setPadding(dp(12), dp(10), dp(12), dp(10));
         status.setLineSpacing(dp(2), 1.1f);
         status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         add(statusCard, status);
-        start = button("Start");
-        start.setContentDescription("Start five-minute remote run");
+        start = button("Start setup");
+        start.setContentDescription("Start attended setup");
         connect = button("Connect");
         connect.setContentDescription("Connect saved projector");
         addRow(statusCard, start, connect);
@@ -321,9 +321,14 @@ public final class RemoteScreen {
         applyTheme();
     }
 
+    private Runnable pageListener = () -> {};
+    public void setPageListener(Runnable listener) { pageListener = java.util.Objects.requireNonNull(listener); }
+    public boolean inputSurfaceVisible() { return !showingSetup; }
+
     public void showSetup(boolean show) {
-        touchpad.cancelGesture();
         showingSetup = show;
+        pageListener.run();
+        touchpad.cancelGesture();
         updatePages();
         scroll.scrollTo(0, 0);
     }
@@ -332,6 +337,7 @@ public final class RemoteScreen {
         touchpad.cancelGesture();
         showingTouchpad = show;
         showingSetup = false;
+        pageListener.run();
         updatePages();
         scroll.scrollTo(0, 0);
     }
@@ -341,6 +347,7 @@ public final class RemoteScreen {
         touchpad.cancelGesture();
         setupSection = section;
         showingSetup = true;
+        pageListener.run();
         updatePages();
         scroll.scrollTo(0, 0);
     }
@@ -405,6 +412,8 @@ public final class RemoteScreen {
         select(projectorTab, setupSection == 0);
         select(tvTab, setupSection == 1);
         select(displayTab, setupSection == 2);
+        start.setVisibility(showingSetup ? View.VISIBLE : View.GONE);
+        connect.setVisibility(showingSetup ? View.GONE : View.VISIBLE);
     }
 
     private void select(Button button, boolean selected) {

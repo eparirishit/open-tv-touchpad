@@ -47,7 +47,7 @@ public class BluetoothCleanupTest {
             Path harness = temporary.resolve("BluetoothCleanupHarness.java");
             Files.write(harness, template.replace("__METHODS__", methods).getBytes(java.nio.charset.StandardCharsets.UTF_8));
             Process compiler = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin", "javac").toString(),
-                "-d", temporary.toString(), harness.toString(), source.resolve("NativeRunGate.java").toString(),
+                "-d", temporary.toString(), harness.toString(), source.resolve("NativeRunGate.java").toString(), source.resolve("InputVisibilityGate.java").toString(), source.resolve("SessionLifetime.java").toString(),
                 source.resolve("ProbeTrace.java").toString(), source.resolve("MouseReport.java").toString())
                 .redirectErrorStream(true).start();
             String output = new String(compiler.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);

@@ -14,6 +14,16 @@ public class ProbeSessionTest {
         assertFenced(0);
     }
 
+    @Test public void foregroundLossRevokesInputButRetainsEstablishedPeer() {
+        long generation = ready();
+        session.foreground(generation, false);
+        assertTrue("Established transport survives hidden UI", session.active(generation));
+        assertEquals(PEER, session.eligiblePeer());
+        assertFalse(session.canSend(generation, PEER));
+        session.foreground(generation, true);
+        assertTrue(session.canSend(generation, PEER));
+    }
+
     @Test public void newSessionCannotConfirmUntilForegrounded() {
         long generation = session.start();
         session.registered(generation, true);
@@ -389,13 +399,6 @@ public class ProbeSessionTest {
         session.bonded(generation, PEER);
         assertTrue(session.confirmComparison(generation));
         session.foreground(generation, false);
-        assertFenced(generation);
-    }
-
-    @Test public void backgroundingConnectedSessionImmediatelyFencesInput() {
-        long generation = ready();
-        session.foreground(generation, false);
-        assertFalse(session.canSend(generation, PEER));
         assertFenced(generation);
     }
 
