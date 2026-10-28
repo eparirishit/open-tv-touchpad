@@ -9,12 +9,12 @@ without compromising teardown proof or saved trust.
 snapshot/controller with an epoch-scoped visibility lease. Protocol and gesture
 bounds remain separate from session duration.
 **Tech Stack:** Existing Java/API31+/Android SDK36, current libraries only.
-**Spec:** ../specs/2026-10-27-nord-daily-use-design.md (DRAFT, requires approval).
+**Spec:** ../specs/2026-10-27-nord-daily-use-design.md (APPROVED2026-10-27).
 
 ## Global constraints
 
-No runtime change is authorized by this preparation commit. Keep installed0.20
-and its five-minute behavior until design approval. Preserve app ID/signer/keys/
+The owner approved implementation2026-10-27. Keep installed0.20 unchanged until
+a reviewed same-signature update is ready; R1 preserves five-minute/pause-stop. Preserve app ID/signer/keys/
 enrollment/backup policy; no uninstall, auto-pair, boot-start, cloud/bridge or new
 commands. Never clear a cleanup barrier merely on timeout. No hidden user input.
 
@@ -26,7 +26,7 @@ commands. Never clear a cleanup barrier merely on timeout. No hidden user input.
 - Missing native acknowledgments cannot turn into a successful restart by timeout.
 - Upgrade/rotation/process death cannot lose trust or automatically regain input.
 
-### Task1 — close prerequisite evidence (R0)
+### Task 1 — close prerequisite evidence (R0)
 
 Files: TvTlsTest.java; BluetoothCleanupTest.java; NativeStopTest.java;
 ProbeActivity.Run cleanup only if evidence identifies an in-scope ordering fix;
@@ -42,7 +42,7 @@ docs/gates/n3-report.md and new N4 readiness report.
 - [ ] If callbacks remain unavailable, stop at the gate and review a concrete
   recovery-proof decision. No alternative evidence is pre-approved by this plan.
 
-### Task2 — move ownership without changing policy (R1)
+### Task 2 — move ownership without changing policy (R1)
 
 Create: RemoteRuntime.java. Replace internal PairingGuardService.java component
 with RemoteConnectionService.java; update AndroidManifest.xml, ProbeActivity.java,
@@ -60,7 +60,7 @@ no runtime callback retains Activity/View references.
 - [ ] Run176+ existing unit and relevant native suites, inspect exports/permissions/
   backup/Keystore aliases and review before any stopped-device update.
 
-### Task3 — explicit policy kernel and UI-input epoch (R2)
+### Task 3 — explicit policy kernel and UI-input epoch (R2)
 
 Create: InputVisibilityGate.java and SessionLifetime.java plus focused tests.
 Modify: RemoteRuntime, ProbeSession, TvRemoteClient, ProbeActivity and
@@ -86,7 +86,7 @@ control connection attempt cancels it; only already ready links can be retained.
   during connection, expiry after sleep, race with return, task removal, notification
   Stop, permission/bond/pin loss, service death and explicit reconnect requirements.
 
-### Task4 — UI binding and foreground service lifecycle
+### Task 4 — UI binding and foreground service lifecycle
 
 Files: ProbeActivity, RemoteScreen, RemoteConnectionService, AndroidManifest.xml,
 existing native UI/privacy/accessibility tests.
@@ -101,7 +101,7 @@ existing native UI/privacy/accessibility tests.
 - [ ] Native real-Activity tests for home/lock/focus/Setup/rotation, accessibility
   while hidden, OTP clear/no saved state and reachable notification/Stop paths.
 
-### Task5 — controlled Nord proof (R3)
+### Task 5 — controlled Nord proof (R3)
 
 - [ ] Build/review, record exact source/APK/provider/firmware and verify stopped
   same-signature installation with current enrollment bytes and key usability.
@@ -115,7 +115,7 @@ existing native UI/privacy/accessibility tests.
 - [ ] Gate failures keep readiness BLOCKED; do not silently select a different
   lifecycle, waive evidence or alter a threshold after seeing failure.
 
-### Task6 — private pilot packaging and acceptance (R4)
+### Task 6 — private pilot packaging and acceptance (R4)
 
 - [ ] Same module/app ID/signature and retained keys/stores for the first pilot;
   verify versioned upgrade from0.20 and rollback/recovery compatibility before

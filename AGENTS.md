@@ -2,6 +2,18 @@
 
 These instructions apply to the entire repository.
 
+## Approved N4 daily-use lifecycle (2026-10-27)
+
+The owner approved the N4 design and implementation plan with “go ahead”. Follow
+`docs/superpowers/specs/2026-10-27-nord-daily-use-design.md` and its plan. This
+supersedes the five-minute/pause-stop policy only through the staged, reviewed N4
+work: service-owned established links, visible/unlocked input epochs and30-minute
+idle retention. R1 first preserves existing behavior. Missing Bluetooth native
+completion and Nord retention/endurance evidence remain hard gates; approval
+includes no replacement cleanup proof, timeout bypass or automatic reconnection.
+Preserve application identity, both enrollments, backup restrictions and protected
+transports. Public release and other-device bridges remain outside this approval.
+
 ## Requested prototype UI refresh (2026-10-26)
 
 The owner supplied an HTML UI prototype and requested updating the Android app

@@ -1,10 +1,10 @@
 # Nord daily-use readiness — N4 lifecycle design
 
-Status: DRAFT FOR OWNER APPROVAL. Preparation snapshot: `da568d4` / accepted0.20.
+Status: APPROVED by the owner (2026-10-27), “go ahead”. Preparation snapshot: `da568d4` / accepted0.20.
 Fetched merged main `12664b4` has an identical source tree.
 The owner selected “Keep an idle background connection for faster return; input
 only while the remote is visible”. That direction is selected; the concrete
-lifecycle/duration changes below are proposals, not shipped behavior.
+lifecycle/duration changes below are approved targets, not shipped behavior.
 
 ## Goal and scope
 
@@ -33,7 +33,7 @@ trust restoration. Public release/signing and wider-device certification are lat
 
 ## Proposed observable policy
 
-Builder defaults here require approval with this design:
+The owner approved these lifecycle defaults with this design:
 
 - One saved projector and one established session. Existing manual enrollment
   and exact peer/certificate/key checks remain; no automatic pairing or new peer.
