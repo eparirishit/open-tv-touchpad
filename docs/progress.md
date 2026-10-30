@@ -17,7 +17,9 @@ The exact reviewed0.22 APK is now installed in place on the stopped Nord.
 Its signer matches the actual prior installation; both enrollment records and
 optional address draft stayed byte-identical across installation and launch.
 The Activity was resumed, its process stayed stable for six seconds, and no
-connection started automatically. Owner Manage/saved Connect acceptance is pending.
+connection started automatically. The owner reports all non-destructive0.22
+Review setup/Appearance/saved Connect/Home/pointer/scroll/Stop checks passing,
+including the teardown-completed status, without re-pairing.
 See the [wizard evidence](gates/nord-setup-wizard-report.md). Native pairing/reset
 hardware acceptance and the existing N4 lock/retention/endurance gates remain
 pending. No daily-use or public-release certification is claimed.

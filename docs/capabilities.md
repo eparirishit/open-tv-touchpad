@@ -8,8 +8,10 @@ Manage separates locator changes from confirmed trust replacement/reset; the
 other enrollment is preserved. A setup link admits no remote input and every
 transition waits for actual native teardown. Existing pairings are reused by
 normal Connect. The reviewed0.22 is installed on the Nord with both enrollment
-records unchanged; launch/no-automatic-connection checks pass. Owner Manage and
-saved Connect acceptance remains pending.
+records unchanged; launch/no-automatic-connection checks pass. The owner confirms
+Review setup, Appearance, saved Connect, Home, pointer, scrolling and Stop with
+teardown-completed status all pass without re-pairing. Fresh wizard/reset trials
+remain pending.
 [Wizard proof and pending checks](gates/nord-setup-wizard-report.md).
 
 ## Daily-use candidate — installed, hardware acceptance pending

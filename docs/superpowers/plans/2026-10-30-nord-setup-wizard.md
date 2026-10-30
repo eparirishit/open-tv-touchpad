@@ -134,6 +134,8 @@ capabilities, architecture, backlog, experiment README and new gate report.
 - [x] If authorized Nord endpoint is unavailable, request only the current main
   Wireless debugging IP/port. No install before review and stopped proof. Verify
   exact APK, same signer and byte-identical enrollments across install/launch.
-- [ ] Owner test of non-destructive Manage/appearance/reconnect first; fresh wizard
-  pairing/reset hardware trial only after owner explicitly prepares the test bonds.
-  Do not claim wizard/N4 hardware PASS from software fixtures.
+- [x] Owner test of non-destructive Review setup/Appearance/saved Connect/Home/
+  pointer/scroll/Stop, including teardown-completed status, without re-pairing.
+- [ ] Fresh wizard pairing/mismatch/reset hardware trial only after the owner
+  explicitly prepares the test bonds. Do not claim wizard/N4 hardware PASS from
+  software fixtures or the non-destructive acceptance check.

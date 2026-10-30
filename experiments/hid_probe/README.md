@@ -18,8 +18,9 @@ settings without changing anything automatically; auto-launch stays Off.
 The reviewed candidate is installed on the stopped Nord, with actual signer
 continuity and both enrollment records unchanged before/after install and launch.
 The resumed Activity stayed stable for six seconds without an automatic connection.
-Owner non-destructive Manage and saved Connect checks are pending; fresh wizard/
-reset hardware trials require owner-prepared test bonds. [Evidence and remaining checks](../../docs/gates/nord-setup-wizard-report.md).
+The owner confirms Review setup, Appearance, saved Connect, Home, pointer,
+scrolling and Stop/teardown-completed checks pass without re-pairing. Fresh wizard/
+reset hardware trials still require owner-prepared test bonds. [Evidence and remaining checks](../../docs/gates/nord-setup-wizard-report.md).
 The historical setup steps below describe their dated versions, not this wizard.
 
 ## Version0.21 daily-use candidate

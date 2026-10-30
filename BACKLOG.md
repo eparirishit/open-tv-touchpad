@@ -8,7 +8,8 @@
 - [x] Implement the single guided flow, truthful resume/timers/cleanup and safe Manage/Reset.
 - [x] Complete independent review and native lifecycle/privacy/layout verification.
 - [x] Reviewed stopped-device in-place update, preserving both enrollments.
-- [ ] Owner non-destructive Manage/saved Connect check; owner-prepared fresh wizard/reset trial.
+- [x] Owner non-destructive Review setup/Appearance/saved Connect/Home/pointer/scroll/Stop checks.
+- [ ] Owner-prepared fresh wizard, mismatch and per-item reset trials.
 
 
 ## N4 daily-use readiness preparation (2026-10-27)

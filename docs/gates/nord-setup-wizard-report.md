@@ -81,8 +81,13 @@ restarting other debugging sessions. No device addresses or enrollment contents
 are included in evidence. No unpair, reset, data clear or projector input was
 injected. Do not uninstall or clear app storage for the pending owner checks.
 
-First verify non-destructive Manage, Appearance, saved Connect, Home, pointer,
-scroll and Stop without re-pairing. Full first-time wizard/mismatch/reset trials
+The owner reported all non-destructive0.22 acceptance checks passing: Review setup
+shows Bluetooth, address and TV controls saved; Appearance works; saved Connect,
+Home, pointer movement and one scroll step work; Stop reaches “Native teardown
+completed.” No re-pairing was needed. This is owner-observed acceptance, not a
+new independently captured native trace or fresh-enrollment test.
+
+Full first-time wizard/mismatch/reset trials
 require the owner to prepare the intended test bonds explicitly. Test denied
 permission/discoverability, foreground loss/code expiry, unreachable peer and
 recovery with accurate copy. Never treat a fixture result as a hardware PASS.
