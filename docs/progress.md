@@ -7,8 +7,8 @@ The owner supplied a three-step native wizard prototype: Bluetooth → TV addres
 The [implementation design](superpowers/specs/2026-10-30-nord-setup-wizard-design.md)
 records the selected UX, real timers/progress/cleanup, existing native code entry
 and enrollment-preserving repair. An independent builder check found nothing
-important left before planning. This is a proposed design awaiting owner review;
-no application source, installed APK or pairings changed. N4 hardware/readiness
+important left before planning. The owner approved the written design with “go ahead”; implementation is
+underway on nord-guided-setup. No new APK or pairing changes are installed. N4 hardware/readiness
 gates remain as recorded below.
 
 ## N4 Nord Home-return remedy verified (2026-10-29)

@@ -2,6 +2,15 @@
 
 These instructions apply to the entire repository.
 
+## Approved guided setup wizard (2026-10-30)
+
+The owner approved docs/superpowers/specs/2026-10-30-nord-setup-wizard-design.md
+with “go ahead”. Implement its single native wizard and safe Manage/Reset on the
+existing Nord app. Internal separate enrollment runs may be orchestrated, but
+native cleanup, pairing trust, no-setup-input, code privacy and existing N4
+lifecycle remain mandatory. Preserve signer/credential formats and existing
+pairings on update. No implicit reset or new product release is authorized.
+
 ## Approved Nord background-policy opt-in (2026-10-29)
 
 The owner explicitly approved enabling Allow background activity for Open TV only
