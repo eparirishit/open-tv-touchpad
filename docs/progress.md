@@ -1,15 +1,22 @@
 # Project Progress
 
-## Guided setup design (2026-10-30)
+## Guided setup implementation (2026-10-30)
 
-The owner supplied a three-step native wizard prototype: Bluetooth → TV address
-→ Pair TV, with resumable overview, All set, Manage and confirmed per-item Reset.
-The [implementation design](superpowers/specs/2026-10-30-nord-setup-wizard-design.md)
-records the selected UX, real timers/progress/cleanup, existing native code entry
-and enrollment-preserving repair. An independent builder check found nothing
-important left before planning. The owner approved the written design with “go ahead”; implementation is
-underway on nord-guided-setup. No new APK or pairing changes are installed. N4 hardware/readiness
-gates remain as recorded below.
+The approved native wizard replaces the repeated manual Start/Stop journey with
+Overview → Bluetooth → TV address → Pair TV → All set. Configuration determines
+resumable progress; normal saved Connect remains on Remote/Touchpad. Manage has
+confirmed per-item Re-pair/Forget, and Appearance remains separate. The runtime
+owns setup intent, actual discovery/code deadlines and cleanup-gated handoff.
+Setup never grants input, including its temporary Bluetooth verification link.
+The private address draft changes no credential format or trust rule.
+
+Version0.22-guided-setup-candidate passes software checks and final review on
+nord-guided-setup:218JVM tests,58native passes/one explicit live diagnostic skip,
+lint0errors/25warnings and both APK builds. The signer matches the prior candidate.
+No wizard APK is installed on the Nord; it remains on0.21 with its saved pairings.
+See the [wizard evidence](gates/nord-setup-wizard-report.md). Native pairing/reset
+hardware acceptance and the existing N4 lock/retention/endurance gates remain
+pending. No daily-use or public-release certification is claimed.
 
 ## N4 Nord Home-return remedy verified (2026-10-29)
 

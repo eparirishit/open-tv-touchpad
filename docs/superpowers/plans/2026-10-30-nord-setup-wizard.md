@@ -57,12 +57,12 @@ SetupAddressFileTest.java. All Java paths are under experiments/hid_probe/src/
   bound reads to18bytes to reject trailing data. Missing file is empty; I/O failure
   is distinct. Verified atomic write/readback. Existing credential files untouched.
 
-- [ ] Add failing real-model tests for all8 completion combinations, first missing
+- [x] Add failing real-model tests for all8 completion combinations, first missing
   and per-item chips; progress must not authorize input.
-- [ ] Add store tests: missing/corrupt/oversize/version/non-private/port/leading-zero,
+- [x] Add store tests: missing/corrupt/oversize/version/non-private/port/leading-zero,
   save/reload, failed write/readback and successful explicit retry. No secrets/logs.
-- [ ] Implement only these classes, native atomic-file test and run focused tests.
-- [ ] Parent task-scoped spec/quality review and coherent commit.
+- [x] Implement only these classes, native atomic-file test and run focused tests.
+- [x] Parent task-scoped spec/quality review and coherent commit.
 
 ### Task 2 — real wizard operations and native presentation
 
@@ -86,34 +86,34 @@ Parent and UI worker have disjoint write sets; do not run Gradle concurrently.
 - SetupScreen action values are typed; APPEARANCE/BATTERY_SETTINGS/OPEN_REMOTE are
   Activity/View navigation, all native configuration mutation goes through binder.
 
-- [ ] Parent writes failing actual-runtime tests for setup intent/phase handoff,
+- [x] Parent writes failing actual-runtime tests for setup intent/phase handoff,
   registration→TV pairing, no setup input epoch, stale callbacks/results and real
   cleanup-gated navigation. Keep current visibility/Stop regressions meaningful.
-- [ ] UI worker writes native view/flow/privacy/layout expectations before replacing
+- [x] UI worker writes native view/flow/privacy/layout expectations before replacing
   old setup tabs. Observe expected red where feasible against old UI.
-- [ ] Runtime owns ephemeral wizard page, cleanup target and per-run setup intent.
+- [x] Runtime owns ephemeral wizard page, cleanup target and per-run setup intent.
   Reuse start/register/pair/confirm/forget helpers. Bluetooth enrollment runs use
   BT-only session mode even if TV is saved, without mutating its store. Only this
   setup intent bypasses TV connection for temporary enrollment; normal Connect
   remains unchanged. Callback neutral/completion starts safe closing, never input.
-- [ ] Bluetooth Start pairing requests permission if needed, waits registration,
+- [x] Bluetooth Start pairing requests permission if needed, waits registration,
   asks Android visibility once per generation. Start ring only from granted
   result; cap120s/earlier setup expiry. Clear deferred requests on cancellation/
   invalid departure; keep existing bounded system-dialog exception.
-- [ ] BT closing waits actual NativeRunGate availability including Service.onDestroy;
+- [x] BT closing waits actual NativeRunGate availability including Service.onDestroy;
   next native run starts only on explicit Pair TV, not on screen rebind/timer.
-- [ ] Pair TV single action starts/registers the existing TV-only pairing run, then
+- [x] Pair TV single action starts/registers the existing TV-only pairing run, then
   consumes its generation-bound pending pair request while attended. Show real
   code deadline, clear code on loss, preserve failure stage/retry/changed locator.
-- [ ] Draft address write gates address Done; credential locator wins over draft.
+- [x] Draft address write gates address Done; credential locator wins over draft.
   Re-pair/Forget are confirmed explicit actions; safely stop/clear only affected
   trust. Draft-save failure cannot prevent explicit credential revocation.
-- [ ] UI worker matches supplied prototype’s overview, stepper, states, timelines,
+- [x] UI worker matches supplied prototype’s overview, stepper, states, timelines,
   sheets and summaries. Reuse PairingCodeField; no hidden web input, fake number,
   canned countdown/completion, prefilled sample IP or false readiness checks.
-- [ ] Native view tests cover portrait/landscape/font/IME/TalkBack actions and all
+- [x] Native view tests cover portrait/landscape/font/IME/TalkBack actions and all
   step error/closing/recovery states. Parent actual tests cover lifecycle admission.
-- [ ] Combined unit/native/lint/build check, task-scoped independent review; fix
+- [x] Combined unit/native/lint/build check, task-scoped independent review; fix
   actionable criteria violations and re-review affected code before commit.
 
 ### Task 3 — evidence, complete review and safe delivery
@@ -121,15 +121,16 @@ Parent and UI worker have disjoint write sets; do not run Gradle concurrently.
 **Files:** build.gradle.kts version22/0.22-guided-setup-candidate; progress,
 capabilities, architecture, backlog, experiment README and new gate report.
 
-- [ ] Confirm same signer, protected trust/store/command/report sources, permission
+- [x] Confirm same signer, protected trust/store/command/report sources, permission
   and backup rules; no new runtime I/O endpoint or dependency. Update docs to actual
   implemented flow and exact verified artifact; keep hardware claims pending.
-- [ ] Run full affected module unit/native suites, lint and both APK builds. Use
+- [x] Run full affected module unit/native suites, lint and both APK builds. Use
   existing emulator only for native fixtures; no injected physical gate gestures.
-- [ ] Complete independent whole-change and required Codex review relative to
+- [x] Complete independent whole-change and required Codex review relative to
   cc416a3 plus all untracked files/callers, using approved spec; scoped fix review.
 - [ ] Commit/push feature branch and create/attach draft PR; main not changed.
-  This branch depends on N4 PR11 until main includes it; preserve published history.
+  PR11 is merged; its merge commit has the same tree as cc416a3. Target main and
+  preserve published history.
 - [ ] If authorized Nord endpoint is unavailable, request only the current main
   Wireless debugging IP/port. No install before review and stopped proof. Verify
   exact APK, same signer and byte-identical enrollments across install/launch.

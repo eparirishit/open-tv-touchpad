@@ -5,8 +5,10 @@
 - [x] Review the supplied wizard prototype and current native pairing flow.
 - [x] Write and builder-check the [design](docs/superpowers/specs/2026-10-30-nord-setup-wizard-design.md).
 - [x] Owner approval of the written implementation design (“go ahead”).
-- [ ] Implement the single guided flow, truthful resume/timers/cleanup and safe Manage/Reset.
-- [ ] Verify native lifecycle/privacy/layout and reviewed stopped-device update.
+- [x] Implement the single guided flow, truthful resume/timers/cleanup and safe Manage/Reset.
+- [x] Complete independent review and native lifecycle/privacy/layout verification.
+- [ ] Reviewed stopped-device in-place update, preserving both enrollments.
+- [ ] Owner non-destructive Manage/saved Connect check; owner-prepared fresh wizard/reset trial.
 
 
 ## N4 daily-use readiness preparation (2026-10-27)

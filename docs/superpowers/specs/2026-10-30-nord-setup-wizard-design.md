@@ -3,7 +3,8 @@
 Status: APPROVED by the owner (“go ahead”),2026-10-30.
 Reference: owner-supplied Open TV Setup Flow.html and the six-part flow described
 in chat. The attachment is a visual/interaction reference; its simulated progress,
-timers and example values are not production state. No application changes yet.
+timers and example values are not production state. Implementation evidence is
+recorded in ../../gates/nord-setup-wizard-report.md.
 
 ## Goal and selected approach
 
