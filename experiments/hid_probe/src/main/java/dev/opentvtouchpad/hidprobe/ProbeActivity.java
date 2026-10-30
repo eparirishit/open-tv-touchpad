@@ -28,8 +28,14 @@ public final class ProbeActivity extends Activity {
     private long attachment, inputEpoch, codeRevision = -1, gestureRevision = -1;
     private boolean resumed, bound, closed, initialized;
     private List<Button> inputs;
-    private TextView status, migrationNotice;
-    private Button start, visible, confirm, connect;
+    private TextView status;
+    private Button connect;
+    private SetupState.Action pendingPermissionAction;
+    private long permissionActionAt, discoveryGeneration;
+    private boolean permissionActionReady;
+    private Integer pendingDiscoveryResult;
+    // This marker survives deliberate binder handoff, but the UI can revoke it without a live service.
+    private java.util.concurrent.atomic.AtomicBoolean setupVisit = new java.util.concurrent.atomic.AtomicBoolean(true);
     private RemoteScreen screen;
     private TouchpadView touchpad;
 
@@ -37,25 +43,14 @@ public final class ProbeActivity extends Activity {
         super.onCreate(state);
         screen = new RemoteScreen(this, this::move, this::click);
         status = screen.status;
-        migrationNotice = screen.migrationNotice;
-        start = screen.start;
         connect = screen.connect;
-        visible = screen.visible;
-        confirm = screen.confirm;
         inputs = screen.inputs;
         touchpad = screen.touchpad;
         setContentView(screen.root);
         screen.setPageListener(this::syncUiState);
         status.setText("Opening remote…");
-        bind(start, this::requestStart);
         bind(connect, this::connectRemote);
-        bind(visible, this::makeVisible);
-        bind(confirm, () -> request(RemoteRuntime.Request.CONFIRM, null));
-        bind(screen.forget, () -> request(RemoteRuntime.Request.FORGET, null));
-        bind(screen.tvSaveAddress, () -> request(RemoteRuntime.Request.SAVE_TV_ADDRESS, screen.tvAddress.getText().toString()));
-        bind(screen.tvPair, () -> request(RemoteRuntime.Request.PAIR_TV, screen.tvAddress.getText().toString()));
-        bind(screen.tvConfirm, this::confirmTvCode);
-        bind(screen.tvForget, () -> request(RemoteRuntime.Request.FORGET_TV, null));
+        screen.setupView.setActionListener(this::setupAction);
         for (TvCommand command : TvCommand.values()) {
             Button button = screen.tvButtons.get(command);
             bind(button, () -> tvCommand(command));
@@ -87,7 +82,7 @@ public final class ProbeActivity extends Activity {
                 if (closed || !resumed || !hasWindowFocus()) { releaseBinding(); return; }
                 controller = (RemoteConnectionService.LocalBinder) binder;
                 renderedSnapshot = null;
-                attachment = controller.attach();
+                attachment = controller.attach(setupVisit);
                 codeRevision = gestureRevision = -1;
                 controller.foreground(attachment, resumed);
                 syncUiState();
@@ -119,6 +114,7 @@ public final class ProbeActivity extends Activity {
 
     private void bindController() {
         if (bound || closed || !resumed || !hasWindowFocus()) return;
+        if (!setupVisit.get()) setupVisit = new java.util.concurrent.atomic.AtomicBoolean(true);
         connection = newConnection();
         bound = bindService(new Intent(this, RemoteConnectionService.class), connection, Context.BIND_AUTO_CREATE);
         if (!bound) status.setText("Pairing service unavailable.");
@@ -165,19 +161,88 @@ public final class ProbeActivity extends Activity {
         request(RemoteRuntime.Request.REMOTE_CONNECT, null);
     }
 
-    private void requestStart() {
-        if (!resumed) return;
-        if (!permissions()) {
-            requestPermissions(new String[] {Manifest.permission.BLUETOOTH_CONNECT,
-                Manifest.permission.BLUETOOTH_ADVERTISE}, 1);
+    private void setupAction(SetupState.Action action, String value) {
+        touchpad.cancelGesture();
+        clearTvCodeUnlessSubmitting(action);
+        if (action == SetupState.Action.APPEARANCE) { screen.showAppearance(); syncUiState(); return; }
+        if (action == SetupState.Action.BATTERY_SETTINGS) {
+            startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                android.net.Uri.parse("package:" + getPackageName())));
             return;
         }
-        request(RemoteRuntime.Request.START, null);
+        if (action == SetupState.Action.OPEN_REMOTE) {
+            if (controller != null) controller.setupAction(attachment, action, null);
+            screen.showSetup(false); syncUiState(); render(); return;
+        }
+        if (action == SetupState.Action.BACK && renderedSnapshot != null
+                && (renderedSnapshot.wizard().page() == SetupState.Page.OVERVIEW
+                    || renderedSnapshot.wizard().page() == SetupState.Page.MANAGE)) {
+            screen.showSetup(false); syncUiState(); render(); return;
+        }
+        if (!resumed || !hasWindowFocus()) return;
+        if ((action == SetupState.Action.BT_PAIR || action == SetupState.Action.PAIR_TV) && !permissions()) {
+            pendingPermissionAction = action;
+            permissionActionAt = android.os.SystemClock.elapsedRealtime();
+            permissionActionReady = false;
+            requestPermissions(new String[]{Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_ADVERTISE}, 1);
+            return;
+        }
+        if (controller != null) controller.setupAction(attachment, action, value);
+        if (action == SetupState.Action.CONFIRM_TV) clearTvCode();
+        render();
+    }
+
+    private void clearTvCodeUnlessSubmitting(SetupState.Action action) {
+        if (action != SetupState.Action.CONFIRM_TV) clearTvCode();
     }
 
     @Override public void onRequestPermissionsResult(int request, String[] names, int[] results) {
         super.onRequestPermissionsResult(request, names, results);
-        if (request == 1) status.setText(permissions() ? (screen.inputSurfaceVisible() ? "Permission granted. Tap Connect." : "Permission granted. Tap Start setup.") : "Nearby devices permission is required.");
+        if (request == 1) {
+            permissionActionReady = permissions() && pendingPermissionAction != null;
+            if (!permissions()) pendingPermissionAction = null;
+            status.setText(permissions() ? (screen.inputSurfaceVisible() ? "Permission granted. Tap Connect." : "Permission granted. Continue setup.")
+                : "Nearby devices permission is required.");
+        }
+    }
+
+    @Override protected void onActivityResult(int request, int result, Intent data) {
+        super.onActivityResult(request, result, data);
+        if (request == 2 && discoveryGeneration != 0) pendingDiscoveryResult = result;
+    }
+
+    private void continueSetupUi(SetupState.Snapshot wizard) {
+        if (controller == null || !resumed || !hasWindowFocus() || screen.inputSurfaceVisible()) return;
+        if (permissionActionReady && pendingPermissionAction != null) {
+            SetupState.Action pending = pendingPermissionAction;
+            pendingPermissionAction = null; permissionActionReady = false;
+            if (permissions() && android.os.SystemClock.elapsedRealtime() - permissionActionAt <= 300000
+                    && ((pending == SetupState.Action.BT_PAIR && wizard.page() == SetupState.Page.BT_START)
+                        || (pending == SetupState.Action.PAIR_TV && wizard.page() == SetupState.Page.TV_START)))
+                controller.setupAction(attachment, pending, null);
+        }
+        if (pendingDiscoveryResult != null) {
+            int result = pendingDiscoveryResult; pendingDiscoveryResult = null;
+            long generation = discoveryGeneration; discoveryGeneration = 0;
+            controller.discoveryResult(attachment, generation, result);
+        }
+        if (wizard.requestDiscoverable() && controller.takeDiscoverabilityRequest(attachment, wizard.generation())) {
+            discoveryGeneration = wizard.generation();
+            try {
+                Intent intent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
+                intent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 120);
+                startActivityForResult(intent, 2);
+            } catch (SecurityException | IllegalStateException | android.content.ActivityNotFoundException failure) {
+                controller.discoveryResult(attachment, discoveryGeneration, 0);
+                discoveryGeneration = 0;
+            }
+        }
+    }
+
+    @Override protected void onStop() {
+        pendingPermissionAction = null;
+        permissionActionReady = false;
+        super.onStop();
     }
 
     private void request(RemoteRuntime.Request request, String value) {
@@ -186,29 +251,11 @@ public final class ProbeActivity extends Activity {
             inputEpoch = 0;
             clearTvCode();
         }
-        if (request == RemoteRuntime.Request.CONFIRM) { screen.showSetup(false); syncUiState(); }
         if (controller != null) controller.request(attachment, request, value);
         render();
     }
 
-    private void makeVisible() {
-        if (checkSelfPermission(Manifest.permission.BLUETOOTH_ADVERTISE) != PackageManager.PERMISSION_GRANTED) {
-            request(RemoteRuntime.Request.STOP, null);
-            return;
-        }
-        if (controller == null || !controller.makeVisible(attachment)) return;
-        Intent intent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
-        intent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 120);
-        startActivity(intent);
-    }
-
-    private void confirmTvCode() {
-        String code = screen.tvCode.getText().toString();
-        clearTvCode();
-        request(RemoteRuntime.Request.TV_CODE, code);
-    }
-
-    private void clearTvCode() { screen.tvCode.getText().clear(); }
+    private void clearTvCode() { screen.setupView.clearCode(); }
     private void move(int dx, int dy) { if (controller != null) controller.move(attachment, inputEpoch, dx, dy); render(); }
     private void click() { if (controller != null) controller.click(attachment, inputEpoch); render(); }
     private void scroll(MouseReport.Direction direction) {
@@ -230,19 +277,17 @@ public final class ProbeActivity extends Activity {
 
     private void pauseControls() {
         inputEpoch = 0;
-        start.setEnabled(false); visible.setEnabled(false); confirm.setEnabled(false); connect.setEnabled(false);
+        connect.setEnabled(false);
         for (Button button : inputs) button.setEnabled(false);
         touchpad.setEnabled(false);
-        screen.tvAddress.setEnabled(false); screen.tvSaveAddress.setEnabled(false);
-        screen.tvPair.setEnabled(false); screen.tvCode.setEnabled(false); screen.tvConfirm.setEnabled(false);
-        screen.tvForget.setEnabled(false);
+        screen.setupView.pauseControls();
         for (Button button : screen.tvButtons.values()) button.setEnabled(false);
     }
 
     private void render() {
         if (controller == null || !resumed || !hasWindowFocus()) return;
         RemoteRuntime.Snapshot snapshot = controller.snapshot(attachment);
-        if (snapshot.equals(renderedSnapshot)) return;
+        if (snapshot.equals(renderedSnapshot)) { continueSetupUi(snapshot.wizard()); return; }
         renderedSnapshot = snapshot;
         inputEpoch = snapshot.inputEpoch();
         if (!java.util.Objects.equals(displayedRuntimeStatus, snapshot.status())) {
@@ -254,20 +299,15 @@ public final class ProbeActivity extends Activity {
         if (!initialized) {
             initialized = true;
             screen.showSetup(snapshot.setup());
-            if (snapshot.tvAddress() != null) screen.tvAddress.setText(snapshot.tvAddress());
         }
-        migrationNotice.setVisibility(snapshot.migration() ? View.VISIBLE : View.GONE);
-        start.setEnabled(snapshot.start()); visible.setEnabled(snapshot.visible());
-        confirm.setEnabled(snapshot.confirm()); connect.setEnabled(snapshot.connect());
+        connect.setEnabled(snapshot.connect());
         for (Button button : inputs) button.setEnabled(snapshot.ready());
         touchpad.setEnabled(snapshot.ready());
         screen.stop.setEnabled(snapshot.connected()); screen.setConnected(snapshot.connected());
-        screen.tvAddress.setEnabled(snapshot.tvAddressEnabled()); screen.tvSaveAddress.setEnabled(snapshot.tvAddressEnabled());
-        screen.tvPair.setEnabled(snapshot.tvPair());
-        screen.tvCode.setEnabled(snapshot.tvCode()); screen.tvConfirm.setEnabled(snapshot.tvCode());
-        screen.tvForget.setEnabled(snapshot.tvForget());
+        screen.setupView.render(snapshot.wizard());
         for (Button button : screen.tvButtons.values()) button.setEnabled(snapshot.tvReady());
         screen.tvStatus.setText(snapshot.tvStatus()); screen.setTvConnected(snapshot.tvConnected());
+        continueSetupUi(snapshot.wizard());
         if (snapshot.releaseBinding()) releaseBinding();
         if (snapshot.destroyed()) {
             controller = null;
@@ -289,6 +329,7 @@ public final class ProbeActivity extends Activity {
     }
 
     @Override protected void onPause() {
+        setupVisit.set(false);
         resumed = false;
         inputEpoch = 0;
         if (controller != null) controller.foreground(attachment, false);
@@ -305,7 +346,7 @@ public final class ProbeActivity extends Activity {
 
     @Override public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
-        if (!hasFocus) inputEpoch = 0;
+        if (!hasFocus) { setupVisit.set(false); inputEpoch = 0; }
         if (screen != null && (!hasFocus || resumed)) syncUiState();
         if (!hasFocus) {
             handler.removeCallbacks(refresh);
@@ -327,6 +368,7 @@ public final class ProbeActivity extends Activity {
     }
 
     @Override protected void onDestroy() {
+        setupVisit.set(false);
         closed = true;
         handler.removeCallbacksAndMessages(null);
         inputEpoch = 0;

@@ -35,25 +35,28 @@ public class DailyUseScreenTest {
         field.setAccessible(true);
         RemoteScreen screen = (RemoteScreen) field.get(activity);
         try {
-            await(() -> activity.hasWindowFocus() && screen.start.isEnabled());
+            await(activity::hasWindowFocus);
+            instrumentation.runOnMainSync(() -> screen.showSetup(true));
+            await(() -> screen.setupView.primary.isEnabled());
             var controllerField = ProbeActivity.class.getDeclaredField("controller");
             controllerField.setAccessible(true);
             var bound = (RemoteConnectionService.LocalBinder) controllerField.get(activity);
             assertNotNull(bound);
             instrumentation.runOnMainSync(() -> {
                 screen.showSetup(false);
-                assertEquals("Normal remote has no diagnostic Start", View.GONE, screen.start.getVisibility());
+                assertEquals("Normal remote hides the wizard", View.GONE, ((View)screen.setupView.root.getParent()).getVisibility());
                 assertEquals(View.VISIBLE, screen.connect.getVisibility());
                 screen.showSetup(true);
-                assertEquals(View.VISIBLE, screen.start.getVisibility());
+                assertEquals(View.VISIBLE, screen.setupView.root.getVisibility());
+                assertFalse(screen.inputSurfaceVisible());
                 assertEquals(View.GONE, screen.connect.getVisibility());
                 activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);
             });
-            await(() -> !activity.hasWindowFocus() && !screen.start.isEnabled());
+            await(() -> !activity.hasWindowFocus() && !screen.setupView.primary.isEnabled());
             await(() -> bound.snapshot(0).destroyed());
             assertNull("Hidden Activity releases binding without waiting for a later render", controllerField.get(activity));
             instrumentation.runOnMainSync(() -> activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE));
-            await(() -> activity.hasWindowFocus() && screen.start.isEnabled());
+            await(() -> activity.hasWindowFocus() && screen.setupView.primary.isEnabled());
             instrumentation.runOnMainSync(() -> {
                 assertEquals(View.GONE, screen.stop.getVisibility());
                 assertFalse(screen.touchpad.isEnabled());

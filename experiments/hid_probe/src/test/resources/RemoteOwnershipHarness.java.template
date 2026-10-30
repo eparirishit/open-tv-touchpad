@@ -2,6 +2,11 @@ package dev.opentvtouchpad.hidprobe;
 import static dev.opentvtouchpad.hidprobe.NativeRunGate.Resource.*;
 import static dev.opentvtouchpad.hidprobe.ProbeTrace.Event.*;
 public class RemoteOwnershipHarness {
+    enum SetupIntent { NONE, BLUETOOTH, TV }
+    SetupIntent pendingSetupIntent=SetupIntent.NONE;
+    java.util.concurrent.atomic.AtomicBoolean setupVisit;
+    void refreshSetupEligibility() { throw new AssertionError("normal-control fixture cannot use setup path"); }
+
     final NativeRunGate gates = new NativeRunGate();
     final ProbeSession session = new ProbeSession(new EnrollmentStore(new EnrollmentStore.Disk() {
         byte[] bytes = new byte[0];
@@ -28,7 +33,7 @@ public class RemoteOwnershipHarness {
     class Run {
         final NativeRunGate.Run ownership = gates.start();
         final long generation = session.start();
-        boolean stopping, connecting, connectOnRegister;
+        boolean stopping, connecting, connectOnRegister; SetupIntent setupIntent = SetupIntent.NONE;
         final Tv tv = new Tv();
         Run() { lifetime.beginSetup(); }
         boolean transportReady() { return false; }

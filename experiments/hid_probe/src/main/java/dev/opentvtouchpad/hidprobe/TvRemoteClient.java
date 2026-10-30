@@ -131,6 +131,9 @@ final class TvRemoteClient {
     }
 
     boolean ready() { synchronized (gate) { return live() && ready; } }
+    long codeDeadlineMillis() {
+        synchronized (gate) { return live() && needsCode ? Math.min(phaseUntil, deadline.getAsLong()) : 0; }
+    }
     boolean needsCode() { synchronized (gate) { return live() && needsCode; } }
     void stop() { terminate(false); }
     void inputRevoked() {

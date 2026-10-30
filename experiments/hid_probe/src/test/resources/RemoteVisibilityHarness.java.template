@@ -1,6 +1,11 @@
 package dev.opentvtouchpad.hidprobe;
 
 public class RemoteVisibilityHarness {
+    enum SetupIntent { NONE, BLUETOOTH, TV }
+    SetupIntent pendingSetupIntent=SetupIntent.NONE;
+    java.util.concurrent.atomic.AtomicBoolean setupVisit;
+    void refreshSetupEligibility() { throw new AssertionError("normal-control fixture cannot use setup path"); }
+
     private boolean resumed, focused, surfaceVisible, serviceDestroyed, deviceAvailable = true;
     private long attachment, nextAttachment, now, generation = 1, codeRevision, gestureRevision;
     private final InputVisibilityGate inputVisibility = new InputVisibilityGate();
@@ -32,7 +37,7 @@ public class RemoteVisibilityHarness {
     private static class Tv { int revocations; boolean stopped; void inputRevoked() { revocations++; } void stop() { stopped = true; } }
     private static class Run {
         final Owner ownership = new Owner(); final long generation = 1;
-        final Tv tv = new Tv(); boolean stopping, established = true, connecting, connectOnRegister;
+        final Tv tv = new Tv(); boolean stopping, established = true, connecting, connectOnRegister; SetupIntent setupIntent = SetupIntent.NONE;
         boolean active() { return !stopping; }
         Runnable beforeState = () -> {};
         boolean transportReady() { beforeState.run(); return established && !stopping; }
@@ -66,7 +71,9 @@ __POLICY__
             check(lifetime.deadlineMillis() == 1800001, "idle clock must start before native readiness I/O");
             now += 1000;
         };
-        now = 1; foreground(ui, false); uiLossReturned = true; handler.drain();
+        pendingSetupIntent=SetupIntent.TV;
+        now = 1; foreground(ui, false);
+        check(pendingSetupIntent==SetupIntent.NONE,"leaving UI clears any cleanup continuation"); uiLossReturned = true; handler.drain();
         run.beforeState = () -> {};
         check(!run.stopping && lifetime.alive(), "hide retains established transport");
         check(!inputVisibility.accepts(old), "old epoch revoked on pause");
@@ -77,7 +84,9 @@ __POLICY__
         check(inputVisibility.epoch() != 0 && !inputVisibility.accepts(old), "return grants fresh epoch");
         old = inputVisibility.epoch(); uiState(ui, true, false);
         check(!run.stopping && !inputVisibility.accepts(old), "Setup is idle, never input");
-        uiState(ui, true, true); deviceAvailable = false; refreshEligibility();
+        pendingSetupIntent=SetupIntent.TV;uiState(ui, true, true);
+        check(pendingSetupIntent==SetupIntent.NONE,"returning to remote abandons setup continuation");
+        deviceAvailable = false; refreshEligibility();
         check(inputVisibility.epoch() == 0, "lock/screen-off revokes without Activity pause");
         deviceAvailable = true; refreshEligibility();
         old = inputVisibility.epoch(); long replacement = attach(); foreground(replacement, true); uiState(replacement, true, true);
