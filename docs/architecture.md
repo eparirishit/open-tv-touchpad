@@ -1,5 +1,53 @@
 # Architecture Status
 
+## Nord background-policy observation (2026-10-29)
+
+A started foreground service did not prevent OnePlus Hans from freezing0.21
+approximately30seconds after Home on the tested Nord. The owner approved the
+optional Open TV-only Allow background activity setting, with auto-launch Off;
+application ownership/input/trust/liveness/cleanup behavior is unchanged. See the
+[before/after trial](gates/n4-home-return-report.md). The short awake Home-return retest passed with the same APK; broader hardware
+acceptance remains pending. No wake lock or automatic exemption was added.
+
+## N4 candidate implementation
+
+RemoteConnectionService owns one process RemoteRuntime and its native callbacks,
+resources, storage and lifetime. Activity-local polling runs only while resumed
+and focused;
+immutable snapshots and attachment-tagged requests carry no UI references into
+runtime. InputVisibilityGate is a separate synchronized epoch authority and
+SessionLifetime owns monotonic setup/active/idle/ended transitions. UI loss
+revokes input and anchors idle before native readiness I/O. Activity loss clears
+local input and unbinds without fetching health; the started service independently
+retains established links and can actually destroy itself on Stop/expiry while
+the UI stays hidden. Focused resume rebinds with a new attachment, fencing late
+binding callbacks. Pending ordinary Connect cancels from before registration;
+explicit attended setup retains its bounded system-dialog exception. Header Stop
+validates attachment and revokes before attendance or health observations. Requests retain their
+epoch through the TV writer, which closes uncertain user frames and reports
+completion only after real workers/socket closure. Protocol deadlines stay bounded
+independently of active duration. Setup retains its attended five-minute ceiling.
+The0.21 candidate keeps application ID, signing identity, enrollment/Keystore and
+backup boundaries. Its [software report](gates/n4-candidate-report.md) records
+verification; Nord retained-link/endurance acceptance remains separate.
+
+## N4 ownership target — approved2026-10-27
+
+The owner's selected idle-background/visible-input direction requires separating
+transport lifetime from input authorization. The
+[N4 design](superpowers/specs/2026-10-27-nord-daily-use-design.md) specifies promoting
+the existing foreground service to the sole RemoteRuntime owner, with no retained
+Activity/views. The Activity would render snapshots and send epoch-scoped input;
+visibility loss would revoke input immediately while healthy links idle within a
+proposed30-minute limit. Protocol, trust and actual native-cleanup bounds remain.
+R1 ownership extraction is committed/reviewed inb1d3256/62d0e6a. The candidate
+now integrates the separate idle/visibility policy; Nord acceptance is pending.
+The previously accepted0.20 used PairingGuardService, an Activity-owned Run, a
+five-minute deadline and pause-stop. Reviewed0.21 is now installed with both
+enrollments preserved; its Nord retention/input acceptance remains pending. The [N4 matrix](gates/n4-readiness.md) records unresolved
+Bluetooth completion, TLS fixture and hardware platform proof. No runtime change
+or alternative cleanup evidence is implied by planning or emulator-only checks.
+
 Diagnostic0.20 flattens Touchpad to pad, scroll controls and sensitivity. Alternate
 mouse-button pages and Activity bindings are removed; native accessibility actions
 on TouchpadView invoke the existing bounded move/click callbacks and cancel pending

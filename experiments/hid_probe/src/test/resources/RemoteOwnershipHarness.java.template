@@ -1,0 +1,98 @@
+package dev.opentvtouchpad.hidprobe;
+import static dev.opentvtouchpad.hidprobe.NativeRunGate.Resource.*;
+import static dev.opentvtouchpad.hidprobe.ProbeTrace.Event.*;
+public class RemoteOwnershipHarness {
+    final NativeRunGate gates = new NativeRunGate();
+    final ProbeSession session = new ProbeSession(new EnrollmentStore(new EnrollmentStore.Disk() {
+        byte[] bytes = new byte[0];
+        public byte[] read() { return bytes.clone(); }
+        public void write(byte[] record) { bytes = record.clone(); }
+    }));
+    long attachment, nextAttachment;
+    boolean resumed, focused, surfaceVisible, serviceDestroyed, windowStarted;
+    final Handler handler = new Handler();
+    final Runnable visibilityRefresh = this::refreshEligibility;
+    static class Handler {
+        final java.util.ArrayDeque<Runnable> queue = new java.util.ArrayDeque<>();
+        void post(Runnable action) { queue.add(action); }
+        void removeCallbacks(Runnable action) { queue.removeIf(item -> item == action); }
+        void drain() { while (!queue.isEmpty()) queue.removeFirst().run(); }
+    }
+    final InputVisibilityGate inputVisibility = new InputVisibilityGate();
+    final SessionLifetime lifetime = new SessionLifetime(() -> 0);
+    boolean interactiveUnlocked() { return true; }
+    static class ConnectionService { void scheduleDeadline() {} }
+    ConnectionService connectionService = new ConnectionService();
+    int cancellations, clears;
+    Run run;
+    class Run {
+        final NativeRunGate.Run ownership = gates.start();
+        final long generation = session.start();
+        boolean stopping, connecting, connectOnRegister;
+        final Tv tv = new Tv();
+        Run() { lifetime.beginSetup(); }
+        boolean transportReady() { return false; }
+        Object lastEvent;
+        void trace(Object event) { lastEvent = event; }
+        void cleanupProgress() {}
+    }
+    static class Tv { void inputRevoked() {} void stop() {} }
+    void setStatus(String message) {}
+    void cancelGesture() { cancellations++; }
+    void clearTvCode() { clears++; }
+    void stop(String message) {
+        inputVisibility.update(false); lifetime.end();
+        session.stop();
+        if (run != null) { run.stopping = true; run.ownership.stop(); }
+    }
+__METHODS__
+    static void check(boolean value, String why) { if (!value) throw new AssertionError(why); }
+    public static void main(String[] args) {
+        RemoteOwnershipHarness h = new RemoteOwnershipHarness();
+        long old = h.attach();
+        h.foreground(old, true); h.uiState(old, true, true);
+        h.run = h.new Run();
+        h.session.foreground(h.run.generation, true);
+        h.run.ownership.await(SERVICE); h.run.ownership.await(TV);
+        h.foreground(old, false);
+        check(h.session.active(h.run.generation), "unfinished Bluetooth comparison survives pairing UI pause");
+        h.detach(old); h.handler.drain();
+        check(!h.session.active(h.run.generation) && h.run.stopping, "rotation/detach stops even unfinished setup");
+        check(h.cancellations > 0 && h.clears > 0, "UI loss cancels gesture/code");
+        long current = h.attach();
+        h.foreground(current, true); h.uiState(current, true, true);
+        h.foreground(old, false); h.detach(old); h.handler.drain();
+        check(h.resumed && h.attached(current) && !h.attached(old), "late old screen cannot affect new screen");
+        check(h.gates.start() == null, "detach cannot replace outstanding native owner");
+        h.destroyed();
+        check(h.gates.start() == null, "service destruction does not imply TV worker completion");
+        h.run.ownership.completed(TV);
+        check(h.gates.start() != null, "actual service plus worker completion releases owner");
+
+        h = new RemoteOwnershipHarness(); old = h.attach(); h.foreground(old, true); h.uiState(old, true, true); h.run = h.new Run();
+        long generation = h.run.generation;
+        h.session.foreground(generation, true); h.session.registered(generation, true);
+        h.session.observePairing(generation, "AA:BB:CC:DD:EE:FF", 2);
+        h.session.bonded(generation, "AA:BB:CC:DD:EE:FF");
+        check(h.session.confirmComparison(generation), "confirmed comparison fixture");
+        h.run.ownership.await(SERVICE);
+        h.foreground(old, false); h.handler.drain();
+        check(h.run.stopping && !h.session.active(generation), "unfinished confirmed connection stops on pause");
+        h = new RemoteOwnershipHarness(); h.attach(); h.run = h.new Run(); h.run.ownership.await(SERVICE);
+        h.serviceStopped("Session window expired. Both channels stopped.");
+        check(h.run.lastEvent == ProbeTrace.Event.RUN_DEADLINE && h.run.stopping, "deadline retains fixed diagnostic trace and stops owner");
+        h.serviceStopped("Stopped from notification.");
+        check(h.run.lastEvent == ProbeTrace.Event.RUN_DEADLINE, "recursive/late service stop cannot overwrite terminal cause");
+        h = new RemoteOwnershipHarness(); h.attach(); h.run = h.new Run(); h.run.ownership.await(SERVICE);
+        h.serviceStopped("Stopped from notification.");
+        check(h.run.lastEvent == ProbeTrace.Event.SERVICE_STOP && h.run.stopping, "notification retains service Stop trace");
+        h = new RemoteOwnershipHarness(); old = h.attach(); h.run = h.new Run(); h.run.ownership.await(SERVICE);
+        h.connectionLost(old);
+        check(h.run.lastEvent == ProbeTrace.Event.SERVICE_LOST && h.run.stopping, "unexpected service loss fences owner");
+        h.destroyed();
+        check(!h.gates.available(), "service destruction cannot clear unexpected-loss failed latch");
+        System.out.println("actual runtime attachment/pause/detach/service completion scenarios passed");
+    }
+}
+class TvEnrollment { enum State { ABSENT, VALID, UNUSABLE } }
+class ProbeTrace { enum Event { PAUSE, RUN_DEADLINE, SERVICE_STOP, SERVICE_LOST } }

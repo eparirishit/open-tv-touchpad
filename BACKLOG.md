@@ -1,5 +1,30 @@
 # Backlog
 
+## N4 daily-use readiness preparation (2026-10-27)
+
+- [x] Record owner choice: idle background connection, visible-only input.
+- [x] Prepare [lifecycle design](docs/superpowers/specs/2026-10-27-nord-daily-use-design.md),
+  [delivery plan](docs/superpowers/plans/2026-10-27-nord-daily-use.md) and
+  [readiness matrix](docs/gates/n4-readiness.md).
+- [x] Owner review/approval of the concrete lifecycle/duration changes2026-10-27.
+- [x] R0 current baseline: reproduce/verify TLS close-read correction; collect
+  actual Bluetooth shutdown acknowledgments and owner explicit reconnect without
+  Force stop on0.20. Retain prior missing-callback evidence.
+- [ ] Repeat loss/reconnect on the new N4 artifact; missing native proof must
+  remain blocked unless a separately reviewed completion contract is approved.
+- [x] R1: extract/review service/runtime ownership with existing behavior unchanged;
+  b1d3256 plus verified permission correction62d0e6a.
+- [x] R2: candidate kernel/caller integration verified and re-reviewed; published
+  in draft PR11 and installed0.21 with both enrollment records preserved.
+- [x] Diagnose0.21 short Home-return loss: owner-approved Open TV-only background
+  activity resolves observed Hans freeze; same APK passes return control and Stop.
+- [ ] R3: Nord lock/return, idle expiry and loss/revocation proofs remain.
+- [ ] R4: update continuity, endurance/battery observations and exact-artifact
+  owner acceptance for private daily use. Public distribution remains deferred.
+
+The approved plan authorizes staged implementation; updates still require review
+and stopped-device preservation checks. No gate waiver is implied.
+
 As of 2026-10-24, D1 is resolved: the owner requires protected projector transport
 and authorized browser-only H1B implementation. H1A remains NOT PASSED; no
 plaintext product exception is authorized. The accepted design supersedes the
@@ -95,7 +120,8 @@ design must be approved before an item moves into an active milestone.
 - [ ] Recover pairing after observed app-data clear event (initiator unknown;
   owner reports no manual clear), then owner0.15 pointer/scroll/TV/Stop smoke.
   Correction installation preserved the verified-empty app record state.
-- [ ] N4: review daily-use lifecycle and packaging after combined functionality.
+- [ ] N4: approve and deliver the prepared daily-use lifecycle/packaging plan;
+  see the readiness section above. Existing combined reliability gaps remain open.
 - [ ] Before broader distribution, verify screen-reader/font-scale/layout behavior;
   current native alternative controls have not received a complete device audit.
 

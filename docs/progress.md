@@ -1,16 +1,65 @@
 # Project Progress
 
+## N4 Nord Home-return remedy verified (2026-10-29)
+
+The reported0.21 Home-return disconnect was reproduced. OnePlus Hans froze the
+app about30seconds after Home despite a started foreground service, then unfroze
+it on return; TV control failed at CONTROL_EXCHANGE and teardown completed.
+The installed APK still matches reviewed source6abbc23 exactly. After the owner
+explicitly approved enabling only Open TV’s Allow background activity setting
+(auto-launch Off), the same APK passed a second awake/unlocked Home interval:
+65seconds of service samples,114.480seconds between logged Home/return, no Hans
+freeze recorded, and owner pointer/TV/scroll control without Connect. Explicit
+Stop was then corroborated by native disconnect/unregister/teardown events and
+inactive foreground/started service state. No application code, timeout, trust,
+pairing or input-admission changes were needed. See the exact before/after
+[report](gates/n4-home-return-report.md). Lock,30-minute retention/expiry and
+battery/endurance acceptance remain pending; daily-use readiness is NOT READY.
+
+## N4 candidate software (2026-10-27)
+
+The approved lifecycle is implemented as0.21-daily-use-candidate; independent
+and complete Codex review findings are fixed and re-reviewed. Service-owned runtime, single normal Connect, independent visible-input
+epochs and a first-loss30-minute idle clock replace the diagnostic ownership/life
+only in the candidate. Visible control is uncapped; pairing remains bounded.
+Actual-source regressions caught and fixed revocation/deadline ordering before
+native readiness I/O.206unit tests and44native tests pass; one opt-in live
+projector diagnostic skips. Lint0errors/20warnings and both APK builds pass.
+The reviewed candidate from source `6abbc23` is installed on the Nord; both
+enrollment records stayed byte-identical and its process survived six seconds.
+The Activity was not observed resumed; owner connection/short Home-return testing
+is pending. [Candidate evidence](gates/n4-candidate-report.md)
+and [readiness](gates/n4-readiness.md) separate software/update proof from pending
+Nord lock/retention/recovery checks and endurance/battery acceptance. No public
+release or replacement Bluetooth cleanup proof is approved or claimed.
+
+## N4 daily-use preparation (2026-10-27)
+
+The owner selected idle background connections with input only while the remote
+is visible. The [N4 design](superpowers/specs/2026-10-27-nord-daily-use-design.md)
+and [delivery plan](superpowers/plans/2026-10-27-nord-daily-use.md) are approved
+by the owner2026-10-27 (“go ahead”): service-owned transports, independent visibility epochs, proposed
+30-minute hidden retention and no five-minute cap during visible control.
+Implementation has started with unchanged-policy service ownership extraction
+and the TLS fixture investigation; installed0.20 and its five-minute/pause-stop
+behavior remain unchanged. The
+[readiness matrix](gates/n4-readiness.md) records current baseline recovery/TLS
+evidence separately from the pending N4 artifact and background/endurance proof.
+GitHub PRs #8/#9 are now merged; fetched main12664b4 has the same source tree
+as preparation snapshotda568d4. No existing gate becomes PASS; lifecycle
+implementation follows the staged gates; no replacement cleanup proof was approved.
+
 ##0.20 owner acceptance and next work (2026-10-27)
 
 The owner reports testing0.20 and “everything works fine”, accepting its requested
 UI changes and normal-use smoke. This closes the0.20 UI acceptance item; it does
 not independently certify previously unresolved failure/revocation scenarios.
-Next priority is Bluetooth-loss cleanup/reconnect, whose actual native completion
-acknowledgments are still missing in the captured trial. Keep the barrier and
-current Force stop recovery until a reviewed completion policy is proven. The
-TLS close-read fixture order issue also remains open. Then complete remaining
-N3 reliability evidence, integrate draft PRs #8/#9 in base-first order and design
-N4 daily-use lifecycle/packaging. No merge or new lifecycle contract is approved
+The earlier0.13 Bluetooth-loss trial remains incomplete. A fresh0.20 trial now
+contains actual shutdown completion and owner explicit reconnect without Force
+stop; it does not erase the older missing-callback case. The TLS fixture issue
+is reproduced and corrected in9f5098c; production TLS is unchanged. Continue
+remaining reliability evidence and the approved N4 implementation. PRs #8/#9
+are now merged; the readiness proposal targets main. No merge or new lifecycle contract is approved
 by the acceptance report alone.
 
 ## Touchpad simplification and setup overlap (2026-10-27)

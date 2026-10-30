@@ -1,0 +1,48 @@
+package dev.opentvtouchpad.hidprobe;
+import java.util.*;
+class ActivityBase {
+    protected void onPause() {}
+    public void onWindowFocusChanged(boolean focused) {}
+}
+public class ActivityVisibilityHarness extends ActivityBase {
+    boolean resumed = true, closed, revoked, released, loss = true;
+    long inputEpoch = 7, attachment = 1;
+    Controller controller = new Controller();
+    final Handler handler = new Handler();
+    final Runnable refresh = () -> {};
+    static class Handler { void removeCallbacks(Runnable action) {} void post(Runnable action) {} }
+    static class Button { boolean enabled=true; void setEnabled(boolean value) { enabled=value; } }
+    static class Pad extends Button { void cancelGesture() {} }
+    static class Root { void cancelPendingInputEvents() {} }
+    static class Screen {
+        final Root root = new Root();
+        final java.util.Map<Integer,Button> tvButtons = java.util.Map.of(1,new Button());
+        final Button stop=new Button(),tvAddress=new Button(),tvSaveAddress=new Button(),tvPair=new Button(),
+            tvCode=new Button(),tvConfirm=new Button(),tvForget=new Button();
+        void setConnected(boolean value) { if(!value) throw new AssertionError("Loss must not claim a retained link disconnected"); }
+    }
+    final Button start=new Button(), visible=new Button(), confirm=new Button(), connect=new Button();
+    final java.util.List<Button> inputs=java.util.List.of(new Button());
+    final Pad touchpad=new Pad();
+    final Screen screen=new Screen();
+    class Controller { void foreground(long token, boolean shown) { if(!shown) revoked=true; } }
+    void syncUiState() { if(loss) revoked=true; }
+    void clearTvCode() { if(!revoked) throw new AssertionError("Revoke before view/IME cleanup"); }
+    void releaseBinding() { if(!revoked) throw new AssertionError("Revoke before unbinding"); released=true; }
+    void bindController() { throw new AssertionError("Loss must not rebind"); }
+    void render() { if(loss) throw new AssertionError("Loss callback fetched a native-health snapshot inline"); }
+__PAUSE_CONTROLS__
+__ON_PAUSE__
+__ON_FOCUS__
+    static void check(boolean value, String message) { if(!value) throw new AssertionError(message); }
+    public static void main(String[] args) {
+        for(int mode=0;mode<2;mode++) {
+            ActivityVisibilityHarness h=new ActivityVisibilityHarness();
+            if(mode==0) h.onPause(); else h.onWindowFocusChanged(false);
+            check(h.revoked && h.inputEpoch==0,"Loss revokes input before return");
+            check(!h.touchpad.enabled && !h.inputs.get(0).enabled && !h.screen.tvButtons.get(1).enabled,"Loss disables UI input locally");
+            check(h.released && h.controller == null && h.attachment == 0,"Loss releases the Activity binding so native service teardown can finish while hidden");
+            check(h.screen.stop.enabled,"Safety Stop remains available for the retained link");
+        }
+    }
+}

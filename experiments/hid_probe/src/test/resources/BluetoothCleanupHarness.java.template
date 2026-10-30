@@ -4,6 +4,13 @@ import static dev.opentvtouchpad.hidprobe.NativeRunGate.Resource.*;
 import static dev.opentvtouchpad.hidprobe.ProbeTrace.Event.*;
 
 public class BluetoothCleanupHarness {
+    boolean connectOnRegister;
+    void connectSaved() {}
+    final InputVisibilityGate inputVisibility = new InputVisibilityGate();
+    final SessionLifetime lifetime = new SessionLifetime(() -> 0);
+    { inputVisibility.update(true); lifetime.beginSetup(); }
+    void setInputEligible(boolean eligible) { inputVisibility.update(eligible); }
+
     static class BluetoothDevice {
         static final int BOND_BONDED = 12;
         final String address;
@@ -69,7 +76,8 @@ public class BluetoothCleanupHarness {
     String terminalReason;
     boolean active() { return ownership.active(); }
     void clearTvCode() {}
-    void updateControls() {}
+    void cancelGesture() { touchpad.cancelGesture(); }
+    void setStatus(String message) { status.setText(message); }
     void finishGuard() { guardFinished=true; }
     void completePendingTvForget() {}
     String storageFailure() { return "storage failed"; }

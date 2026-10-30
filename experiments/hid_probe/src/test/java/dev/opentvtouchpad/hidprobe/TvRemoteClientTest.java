@@ -19,6 +19,7 @@ import static org.junit.Assert.*;
 
 public class TvRemoteClientTest {
     private final AtomicLong now = new AtomicLong(10000);
+    private final InputVisibilityGate visibility = new InputVisibilityGate();
     private final List<TvRemoteClient> clients = new ArrayList<>();
     private final List<FakeSocket> sockets = new ArrayList<>();
     private final List<Native> natives = new ArrayList<>();
@@ -27,20 +28,25 @@ public class TvRemoteClientTest {
     private final X509Certificate other = parse(CHILD_DER);
 
     @After public void stopAll() throws Exception {
+        for (FakeSocket socket : sockets) {
+            if (socket.closeGate != null) socket.closeGate.countDown();
+            if (socket.outputGate != null) socket.outputGate.countDown();
+            socket.failClose = false;
+        }
         for (TvRemoteClient client : clients) client.stop();
         for (Native io : natives) {
             if (io.identityGate != null) io.identityGate.countDown();
             if (io.socketGate != null) io.socketGate.countDown();
         }
-        for (FakeSocket socket : sockets) socket.close();
-        for (Events events : callbacks) await(() -> events.closed.get() == 1);
+        for (FakeSocket socket : sockets) { socket.releaseWrites(); socket.close(); }
+        for (Events events : callbacks) if (!events.expectNoClosure) await(() -> events.closed.get() == 1);
     }
 
     @Test public void controlRequiresHandshakeThenOnlyFixedCommandsAndOneAttempt() throws Exception {
         Native io = new Native(); Events events = new Events();
         FakeSocket socket = io.control();
         TvRemoteClient client = client(io, events);
-        assertFalse(client.submit(TvCommand.HOME));
+        assertFalse(client.submit(TvCommand.HOME, visibility.epoch()));
         client.connect(record());
         await(() -> socket.handshakes.get() == 1);
         assertFalse(client.ready()); assertEquals(0, events.connected.get());
@@ -49,7 +55,7 @@ public class TvRemoteClientTest {
         assertEquals(1, events.connected.get());
         assertEquals(6466, socket.port);
         assertArrayEquals(certificate.getEncoded(), io.pin.getEncoded());
-        assertTrue(client.submit(TvCommand.HOME));
+        assertTrue(client.submit(TvCommand.HOME, visibility.epoch()));
         await(() -> socket.messages().size() == 3);
         RemoteMessage message = TvControlProtocolTest.parse(socket.messages().get(2));
         assertEquals(3, message.getRemoteKeyInject().getKeyCodeValue());
@@ -57,7 +63,7 @@ public class TvRemoteClientTest {
         client.connect(record()); client.beginPair("10.0.0.2");
         assertEquals(1, io.identities.get());
         client.stop(); await(() -> events.closed.get() == 1);
-        assertFalse(client.ready()); assertFalse(client.submit(TvCommand.NETFLIX));
+        assertFalse(client.ready()); assertFalse(client.submit(TvCommand.NETFLIX, visibility.epoch()));
         assertEquals(0, events.failed.get()); assertNull(events.failureStage);
     }
 
@@ -116,35 +122,54 @@ public class TvRemoteClientTest {
         Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
         TvRemoteClient client = connected(io, events, socket);
         socket.blockWrites = true;
-        assertTrue(client.submit(TvCommand.HOME)); await(() -> socket.writeBlocked.get());
+        assertTrue(client.submit(TvCommand.HOME, visibility.epoch())); await(() -> socket.writeBlocked.get());
         client.stop(); await(() -> events.closed.get() == 1);
         assertTrue(socket.isClosed()); assertEquals(2, socket.messages().size());
         assertEquals(0, events.failed.get()); assertNull(events.failureStage);
     }
 
+    @Test public void stopReturnsBeforeSocketCloseAndReportsOnlyActualCompletion() throws Exception {
+        Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
+        TvRemoteClient client = connected(io, events, socket);
+        socket.closeGate = new CountDownLatch(1);
+        CountDownLatch returned = new CountDownLatch(1);
+        Thread caller = new Thread(() -> { client.stop(); returned.countDown(); });
+        caller.start();
+        try {
+            assertTrue("Stop must return while socket close is blocked", returned.await(300, TimeUnit.MILLISECONDS));
+            await(() -> socket.closeEntered.get());
+            assertFalse(client.ready()); assertEquals(0, events.closed.get());
+            assertFalse(socket.isClosed());
+        } finally {
+            socket.closeGate.countDown(); caller.join(3000);
+        }
+        await(() -> events.closed.get() == 1);
+        assertTrue(socket.isClosed());
+    }
+
     @Test public void writeWatchdogClosesWithoutWriterProgressAndCannotAffectAnotherOwner() throws Exception {
         Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
         TvRemoteClient client = connected(io, events, socket); socket.blockWrites = true;
-        client.submit(TvCommand.HOME); await(() -> socket.writeBlocked.get());
+        client.submit(TvCommand.HOME, visibility.epoch()); await(() -> socket.writeBlocked.get());
         now.addAndGet(2000); await(() -> events.closed.get() == 1);
         assertEquals(1, events.failed.get());
         Native next = new Native(); Events later = new Events(); FakeSocket fresh = next.control();
         TvRemoteClient newOwner = connected(next, later, fresh);
         client.stop(); now.addAndGet(2000);
-        assertTrue(newOwner.submit(TvCommand.BACK)); await(() -> fresh.messages().size() == 3);
+        assertTrue(newOwner.submit(TvCommand.BACK, visibility.epoch())); await(() -> fresh.messages().size() == 3);
         assertFalse(fresh.isClosed()); assertEquals(0, later.closed.get());
     }
 
     @Test public void queueIsOnePendingCommandAndTenPerSecondWithAgeCheck() throws Exception {
         Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
         TvRemoteClient client = connected(io, events, socket); socket.blockWrites = true;
-        assertTrue(client.submit(TvCommand.HOME)); await(() -> socket.writeBlocked.get());
-        assertFalse(client.submit(TvCommand.BACK));
-        now.addAndGet(100); assertTrue(client.submit(TvCommand.BACK));
-        now.addAndGet(100); assertFalse(client.submit(TvCommand.NETFLIX));
+        assertTrue(client.submit(TvCommand.HOME, visibility.epoch())); await(() -> socket.writeBlocked.get());
+        assertFalse(client.submit(TvCommand.BACK, visibility.epoch()));
+        now.addAndGet(100); assertTrue(client.submit(TvCommand.BACK, visibility.epoch()));
+        now.addAndGet(100); assertFalse(client.submit(TvCommand.NETFLIX, visibility.epoch()));
         now.addAndGet(151); socket.releaseWrites();
         await(() -> socket.messages().size() == 3);
-        now.addAndGet(100); await(() -> client.submit(TvCommand.UP));
+        now.addAndGet(100); await(() -> client.submit(TvCommand.UP, visibility.epoch()));
         await(() -> socket.messages().size() == 4);
         RemoteMessage last = TvControlProtocolTest.parse(socket.messages().get(3));
         assertEquals(19, last.getRemoteKeyInject().getKeyCodeValue());
@@ -153,7 +178,7 @@ public class TvRemoteClientTest {
     @Test public void eightRepliesBoundBacklogEvenWhenWriterIsBlocked() throws Exception {
         Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
         TvRemoteClient client = connected(io, events, socket); socket.blockWrites = true;
-        client.submit(TvCommand.HOME); await(() -> socket.writeBlocked.get());
+        client.submit(TvCommand.HOME, visibility.epoch()); await(() -> socket.writeBlocked.get());
         for (int i = 0; i < 9; i++) socket.feed(TvControlProtocolTest.ping(i));
         await(() -> events.closed.get() == 1);
         assertEquals(1, events.failed.get()); assertTrue(socket.isClosed());
@@ -171,10 +196,11 @@ public class TvRemoteClientTest {
 
     @Test public void deadlineIsCheckedAtSubmissionAndDispatchEvenWithoutUiTimer() throws Exception {
         Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
-        TvRemoteClient client = new TvRemoteClient(now::get, now.get()+1000, events, io); clients.add(client); callbacks.add(events);
+        visibility.update(true);
+        TvRemoteClient client = new TvRemoteClient(now::get, () -> 11000, visibility, events, io); clients.add(client); callbacks.add(events);
         client.connect(record()); socket.handshakeMessages(); await(client::ready);
         now.addAndGet(1000);
-        assertFalse(client.ready()); assertFalse(client.submit(TvCommand.HOME));
+        assertFalse(client.ready()); assertFalse(client.submit(TvCommand.HOME, visibility.epoch()));
         await(() -> events.closed.get() == 1); assertEquals(2, socket.messages().size());
     }
 
@@ -193,13 +219,13 @@ public class TvRemoteClientTest {
         FakeSocket control = io.control();
         TvRemoteClient client = client(io, events); client.beginPair("10.0.0.2");
         pairing.pairingMessages(); await(client::needsCode);
-        assertEquals(1, events.needCode.get()); assertFalse(client.submit(TvCommand.HOME));
+        assertEquals(1, events.needCode.get()); assertFalse(client.submit(TvCommand.HOME, visibility.epoch()));
         client.finishPair(code(certificate, other));
         pairing.feed(polo().setSecretAck(SecretAck.newBuilder().setSecret(com.google.protobuf.ByteString.copyFrom(new byte[32]))).build().toByteArray());
         control.handshakeMessages(); await(() -> events.record != null);
         assertTrue(pairing.isClosed()); assertEquals(6467, pairing.port); assertEquals(6466, control.port);
         assertTrue(io.pairClosedBeforeControl); assertTrue(client.ready());
-        assertFalse(client.submit(TvCommand.HOME)); assertEquals(0, events.connected.get());
+        assertFalse(client.submit(TvCommand.HOME, visibility.epoch())); assertEquals(0, events.connected.get());
         assertEquals(1, events.enrolled.get());
         assertArrayEquals(other.getEncoded(), events.record.peerCertificate());
         assertArrayEquals(fingerprint(), events.record.clientFingerprint());
@@ -312,7 +338,7 @@ public class TvRemoteClientTest {
         socket.blockWrites = true;
         TvRemoteClient client = client(io, events); client.connect(record()); socket.handshakeMessages();
         await(() -> socket.writeBlocked.get());
-        assertFalse(client.ready()); assertFalse(client.submit(TvCommand.HOME));
+        assertFalse(client.ready()); assertFalse(client.submit(TvCommand.HOME, visibility.epoch()));
         client.stop(); await(() -> events.closed.get() == 1);
         assertEquals(0, events.connected.get()); assertEquals(0, events.enrolled.get());
     }
@@ -357,7 +383,7 @@ public class TvRemoteClientTest {
             assertEquals("Failed control exchange must not connect", 0, events.connected.get());
             assertEquals("Failed control exchange must not enroll", 0, events.enrolled.get());
             assertNull(events.record); assertFalse(client.ready());
-            assertFalse(client.submit(TvCommand.HOME));
+            assertFalse(client.submit(TvCommand.HOME, visibility.epoch()));
         }
     }
 
@@ -378,7 +404,7 @@ public class TvRemoteClientTest {
             await(() -> events.closed.get() == 1);
             assertEquals(expected[mode], events.failureStage);
             assertEquals(1, events.failed.get()); assertNull(events.record);
-            assertFalse(client.ready()); assertFalse(client.submit(TvCommand.HOME));
+            assertFalse(client.ready()); assertFalse(client.submit(TvCommand.HOME, visibility.epoch()));
             client.stop(); // Cleanup cannot turn a recorded failure into an explicit Stop.
             assertEquals(expected[mode], events.failureStage);
         }
@@ -402,6 +428,223 @@ public class TvRemoteClientTest {
         assertEquals(1, events.failed.get()); assertEquals(0, events.connected.get());
     }
 
+    @Test public void revokedAndStaleEpochsNeverAuthorizeReadyTransport() throws Exception {
+        Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
+        TvRemoteClient client = connected(io, events, socket);
+        long old = visibility.epoch();
+        assertFalse(client.submit(TvCommand.HOME, 0));
+        assertFalse(client.submit(TvCommand.HOME, old + 1));
+        visibility.update(false); client.inputRevoked();
+        assertTrue(client.ready()); assertFalse(client.submit(TvCommand.HOME, old));
+        long fresh = visibility.update(true);
+        assertTrue(fresh > old); assertFalse(client.submit(TvCommand.HOME, old));
+        assertTrue(client.submit(TvCommand.BACK, fresh));
+        await(() -> socket.messages().size() == 3);
+        assertEquals(4, TvControlProtocolTest.parse(socket.messages().get(2)).getRemoteKeyInject().getKeyCodeValue());
+    }
+
+    @Test public void revokeDropsQueuedKeyBehindMaintenanceWithoutReplayingOnReturn() throws Exception {
+        queuedEpoch(false);
+    }
+
+    @Test public void writerRechecksStoredEpochEvenWithoutRevocationCallback() throws Exception {
+        queuedEpoch(true);
+    }
+
+    private void queuedEpoch(boolean omitCallback) throws Exception {
+        Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
+        TvRemoteClient client = connected(io, events, socket);
+        socket.blockWrites = true; socket.feed(TvControlProtocolTest.ping(41));
+        await(() -> socket.writeBlocked.get());
+        long old = visibility.epoch(); assertTrue(client.submit(TvCommand.HOME, old));
+        visibility.update(false);
+        if (!omitCallback) client.inputRevoked();
+        assertTrue(client.ready());
+        long fresh = visibility.update(true);
+        socket.releaseWrites(); await(() -> socket.flushes.get() == 3);
+        assertFalse(client.submit(TvCommand.HOME, old));
+        now.addAndGet(100);
+        await(() -> client.submit(TvCommand.BACK, fresh));
+        await(() -> socket.flushes.get() == 4);
+        assertEquals(4, socket.messages().size());
+        assertTrue(TvControlProtocolTest.parse(socket.messages().get(2)).hasRemotePingResponse());
+        assertEquals(4, TvControlProtocolTest.parse(socket.messages().get(3)).getRemoteKeyInject().getKeyCodeValue());
+        assertEquals(0, events.failed.get());
+    }
+
+    @Test public void healthyIdleAllowsMaintenanceOnlyAndReturnNeedsFreshEpoch() throws Exception {
+        Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
+        TvRemoteClient client = connected(io, events, socket);
+        long old = visibility.epoch(); visibility.update(false); client.inputRevoked();
+        for (int i = 0; i < 3; i++) {
+            now.addAndGet(20000); socket.feed(TvControlProtocolTest.ping(i));
+            int expected = 3 + i; await(() -> socket.flushes.get() == expected);
+            assertFalse(client.submit(TvCommand.HOME, old)); assertTrue(client.ready());
+        }
+        visibility.update(true);
+        assertFalse(client.submit(TvCommand.HOME, old));
+        assertTrue(client.submit(TvCommand.BACK, visibility.epoch()));
+        await(() -> socket.messages().size() == 6);
+        assertEquals(0, events.failed.get());
+    }
+
+    @Test public void revocationOfBlockedUserWriteReturnsBeforeSocketClose() throws Exception {
+        Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
+        TvRemoteClient client = connected(io, events, socket);
+        socket.blockWrites = true;
+        assertTrue(client.submit(TvCommand.HOME, visibility.epoch())); await(() -> socket.writeBlocked.get());
+        now.addAndGet(100); assertTrue(client.submit(TvCommand.BACK, visibility.epoch()));
+        socket.closeGate = new CountDownLatch(1);
+        visibility.update(false);
+        CountDownLatch returned = new CountDownLatch(1);
+        Thread caller = new Thread(() -> { client.inputRevoked(); returned.countDown(); });
+        caller.start();
+        try {
+            assertTrue("Revoke must not wait for socket/native I/O", returned.await(300, TimeUnit.MILLISECONDS));
+            await(() -> socket.closeEntered.get());
+            assertFalse(client.ready()); assertEquals(0, events.closed.get());
+            visibility.update(true); assertFalse(client.submit(TvCommand.UP, visibility.epoch()));
+        } finally { socket.closeGate.countDown(); caller.join(3000); }
+        await(() -> events.closed.get() == 1);
+        assertEquals(2, socket.messages().size()); assertEquals(1, events.failed.get());
+    }
+
+    @Test public void revocationBetweenNativePrefixAndPayloadClosesUncertainFrame() throws Exception {
+        Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
+        TvRemoteClient client = connected(io, events, socket);
+        int before = socket.outputSize(); socket.blockAfterPrefix = true;
+        assertTrue(client.submit(TvCommand.HOME, visibility.epoch())); await(() -> socket.prefixWritten.get());
+        assertEquals(before + 1, socket.outputSize());
+        visibility.update(false); client.inputRevoked();
+        await(() -> events.closed.get() == 1);
+        assertEquals(before + 1, socket.outputSize()); assertEquals(2, socket.messages().size());
+        assertFalse(client.ready()); assertEquals(1, events.failed.get());
+    }
+
+    @Test public void closedCallbackWaitsForActualWriterEvenAfterSocketCloses() throws Exception {
+        Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
+        TvRemoteClient client = connected(io, events, socket);
+        socket.blockWrites = true; socket.holdWriterAfterClose = true;
+        assertTrue(client.submit(TvCommand.HOME, visibility.epoch())); await(() -> socket.writeBlocked.get());
+        visibility.update(false); client.inputRevoked(); await(socket::isClosed);
+        assertEquals(0, events.closed.get());
+        now.addAndGet(3600000); assertEquals(0, events.closed.get());
+        socket.releaseWrites(); await(() -> events.closed.get() == 1);
+    }
+
+    @Test public void selectedButUnsentFrameRechecksEpochAtNativeWrite() throws Exception {
+        Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
+        TvRemoteClient client = connected(io, events, socket);
+        socket.outputGate = new CountDownLatch(1);
+        long old = visibility.epoch(); assertTrue(client.submit(TvCommand.HOME, old));
+        await(() -> socket.outputEntered.get());
+        visibility.update(false); client.inputRevoked();
+        assertTrue(client.ready()); visibility.update(true);
+        socket.outputGate.countDown();
+        socket.feed(TvControlProtocolTest.ping(42)); await(() -> socket.flushes.get() >= 3);
+        assertEquals(3, socket.messages().size());
+        assertTrue(TvControlProtocolTest.parse(socket.messages().get(2)).hasRemotePingResponse());
+        assertTrue(client.ready()); assertEquals(0, events.failed.get());
+    }
+
+    @Test public void epochLossDuringFinalFlushCannotEscapeUncertainFrameFence() throws Exception {
+        Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
+        TvRemoteClient client = connected(io, events, socket);
+        socket.duringFlush = () -> { visibility.update(false); visibility.update(true); };
+        assertTrue(client.submit(TvCommand.HOME, visibility.epoch()));
+        await(() -> socket.flushes.get() == 3);
+        await(() -> events.closed.get() == 1);
+        assertFalse(client.ready()); assertEquals(1, events.failed.get());
+        assertFalse(client.submit(TvCommand.BACK, visibility.epoch()));
+    }
+
+    @Test public void failedSocketCloseNeverReportsCleanupCompletion() throws Exception {
+        Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
+        TvRemoteClient client = connected(io, events, socket);
+        events.expectNoClosure = true; socket.failClose = true;
+        client.stop(); socket.raw(new byte[0], true);
+        await(() -> socket.closeAttempts.get() >= 2);
+        assertFalse(socket.isClosed()); assertEquals(0, events.closed.get());
+        assertFalse(client.ready());
+    }
+
+    @Test public void dynamicLifetimeExpiryIsCheckedWithoutUiTimer() throws Exception {
+        Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
+        AtomicLong deadline = new AtomicLong(Long.MAX_VALUE);
+        TvRemoteClient client = client(io, events, deadline::get);
+        client.connect(record()); socket.handshakeMessages(); await(client::ready);
+        deadline.set(now.get());
+        assertFalse(client.ready()); assertFalse(client.submit(TvCommand.HOME, visibility.epoch()));
+        await(() -> events.closed.get() == 1); assertEquals(2, socket.messages().size());
+    }
+
+    @Test public void activeControlCanOutliveSetupWhilePeerTrafficRemainsBounded() throws Exception {
+        Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
+        SessionLifetime lifetime = new SessionLifetime(now::get); lifetime.beginSetup();
+        TvRemoteClient client = client(io, events, lifetime::deadlineMillis);
+        client.connect(record()); socket.handshakeMessages(); await(client::ready);
+        assertTrue(lifetime.connected());
+        for (int i = 0; i < 16; i++) {
+            now.addAndGet(20000); socket.feed(TvControlProtocolTest.info()); drain(socket);
+            assertTrue(client.ready());
+        }
+        assertTrue(client.submit(TvCommand.HOME, visibility.epoch()));
+        await(() -> socket.messages().size() == 3); assertEquals(0, events.failed.get());
+    }
+
+    @Test public void renewingRetentionDoesNotRenewPeerLiveness() throws Exception {
+        Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
+        SessionLifetime lifetime = new SessionLifetime(now::get); lifetime.beginSetup();
+        TvRemoteClient client = client(io, events, lifetime::deadlineMillis);
+        client.connect(record()); socket.handshakeMessages(); await(client::ready); lifetime.connected();
+        visibility.update(false); client.inputRevoked(); lifetime.visibility(false);
+        now.addAndGet(29999); assertTrue(lifetime.visibility(true));
+        lifetime.visibility(false); now.incrementAndGet();
+        await(() -> events.closed.get() == 1);
+        assertEquals(1, events.failed.get()); assertFalse(client.ready());
+    }
+
+    @Test public void dynamicRetentionExtensionDoesNotRenewBlockedHandshake() throws Exception {
+        Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
+        AtomicLong deadline = new AtomicLong(310000); socket.blockHandshake = true;
+        TvRemoteClient client = client(io, events, deadline::get); client.connect(record());
+        await(() -> socket.handshakes.get() == 1);
+        now.addAndGet(11999); deadline.set(now.get() + 1800000); now.incrementAndGet();
+        await(() -> events.closed.get() == 1);
+        assertEquals(TvRemoteClient.Stage.CONTROL_TLS, events.failureStage);
+        assertEquals(0, events.connected.get());
+    }
+
+    @Test public void dynamicRetentionExtensionDoesNotRenewBlockedWrite() throws Exception {
+        Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
+        AtomicLong deadline = new AtomicLong(310000);
+        TvRemoteClient client = client(io, events, deadline::get);
+        client.connect(record()); socket.handshakeMessages(); await(client::ready);
+        socket.blockWrites = true;
+        assertTrue(client.submit(TvCommand.HOME, visibility.epoch())); await(() -> socket.writeBlocked.get());
+        now.addAndGet(1999); deadline.set(now.get() + 1800000); now.incrementAndGet();
+        await(() -> events.closed.get() == 1);
+        assertEquals(1, events.failed.get()); assertEquals(2, socket.messages().size());
+    }
+
+    @Test public void maintenanceCannotExtendFirstLossIdleDeadlineWithoutUiTimer() throws Exception {
+        Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
+        SessionLifetime lifetime = new SessionLifetime(now::get); lifetime.beginSetup();
+        TvRemoteClient client = client(io, events, lifetime::deadlineMillis);
+        client.connect(record()); socket.handshakeMessages(); await(client::ready); assertTrue(lifetime.connected());
+        visibility.update(false); client.inputRevoked(); assertTrue(lifetime.visibility(false));
+        for (int i = 0; i < 89; i++) {
+            now.addAndGet(20000); assertTrue(lifetime.visibility(false));
+            socket.feed(TvControlProtocolTest.ping(i));
+            int replies = 3 + i; await(() -> socket.flushes.get() == replies); drain(socket);
+            assertTrue(client.ready());
+        }
+        now.addAndGet(20000); // Last valid peer frame is only 20 seconds old; idle expiry wins.
+        assertFalse(client.ready()); assertFalse(lifetime.visibility(true));
+        await(() -> events.closed.get() == 1);
+        assertEquals(91, socket.messages().size()); assertEquals(1, events.failed.get());
+    }
+
     private static void drain(FakeSocket socket) throws Exception {
         // The next blocking read is observed only after the last frame was processed.
         int before;
@@ -410,7 +653,13 @@ public class TvRemoteClientTest {
     }
 
     private TvRemoteClient client(Native io, Events events) {
-        TvRemoteClient c = new TvRemoteClient(now::get, now.get()+300000, events, io); clients.add(c); callbacks.add(events); return c;
+        long until = now.get() + 300000;
+        return client(io, events, () -> until);
+    }
+    private TvRemoteClient client(Native io, Events events, java.util.function.LongSupplier deadline) {
+        visibility.update(true);
+        TvRemoteClient c = new TvRemoteClient(now::get, deadline, visibility, events, io);
+        clients.add(c); callbacks.add(events); return c;
     }
     private TvRemoteClient connected(Native io, Events events, FakeSocket socket) throws Exception {
         TvRemoteClient c = client(io, events); c.connect(record()); socket.handshakeMessages(); await(c::ready); return c;
@@ -448,6 +697,7 @@ public class TvRemoteClientTest {
         final AtomicInteger needCode=new AtomicInteger(), connected=new AtomicInteger(), enrolled=new AtomicInteger(), failed=new AtomicInteger(), closed=new AtomicInteger();
         volatile TvEnrollment.Record record;
         volatile TvRemoteClient.Stage failureStage;
+        boolean expectNoClosure;
         public void needCode() { needCode.incrementAndGet(); }
         public void connected() { connected.incrementAndGet(); }
         public void enrolled(TvEnrollment.Record value) { enrolled.incrementAndGet(); record=value; }
@@ -495,6 +745,8 @@ public class TvRemoteClientTest {
         final ArrayDeque<Integer> input=new ArrayDeque<>();
         final ByteArrayOutputStream output=new ByteArrayOutputStream();
         volatile boolean closed,blockConnect,blockHandshake,blockWrites,eof;
+        volatile boolean blockAfterPrefix, holdWriterAfterClose;
+        final AtomicBoolean prefixWritten = new AtomicBoolean();
         final AtomicInteger inputWaits = new AtomicInteger();
         volatile int port;
         FakeSocket(X509Certificate local,X509Certificate peer){this.local=local;this.peer=peer;}
@@ -508,7 +760,18 @@ public class TvRemoteClientTest {
             if(failHandshake)throw new SSLHandshakeException("SENSITIVE_TEST_DETAIL");
         }
         synchronized void pause()throws IOException{try{wait();}catch(InterruptedException e){throw new IOException(e);}}
-        public synchronized void close(){closed=true;notifyAll();}
+        volatile CountDownLatch closeGate, outputGate;
+        volatile Runnable duringFlush;
+        volatile boolean failClose;
+        final AtomicBoolean outputEntered = new AtomicBoolean();
+        final AtomicInteger closeAttempts = new AtomicInteger();
+        final AtomicBoolean closeEntered = new AtomicBoolean();
+        public void close(){
+            closeEntered.set(true); closeAttempts.incrementAndGet();
+            if (failClose) throw new IllegalStateException("Synthetic close failure");
+            if (closeGate != null) try { closeGate.await(); } catch (InterruptedException e) { throw new AssertionError(e); }
+            synchronized(this){closed=true;notifyAll();}
+        }
         public boolean isClosed(){return closed;}
         public void setSoTimeout(int timeout){}
         public InputStream getInputStream(){return new InputStream(){
@@ -516,17 +779,28 @@ public class TvRemoteClientTest {
                 if(closed)throw new SocketException();return input.isEmpty()?-1:input.remove();}}
             public int read(byte[] b,int off,int len)throws IOException{int first=read();if(first<0)return -1;b[off]=(byte)first;int n=1;synchronized(FakeSocket.this){while(n<len&&!input.isEmpty())b[off+n++]=(byte)(int)input.remove();}return n;}
         };}
-        public OutputStream getOutputStream(){return new OutputStream(){
+        public OutputStream getOutputStream() throws IOException {
+            if(outputGate!=null){
+                outputEntered.set(true);
+                try{outputGate.await();}catch(InterruptedException e){throw new IOException(e);}
+            }
+            return new OutputStream(){
             public void write(int b)throws IOException{write(new byte[]{(byte)b},0,1);}
             public void write(byte[] b,int off,int len)throws IOException{synchronized(FakeSocket.this){
-                while(blockWrites&&!closed){writeBlocked.set(true);pause();}if(closed)throw new SocketException();
+                while(blockWrites&&(!closed||holdWriterAfterClose)){writeBlocked.set(true);pause();}if(closed)throw new SocketException();
                 if(failWrite){outputFailed.set(!eof);throw new IOException("Synthetic output failure");}
-                output.write(b,off,len);
+                if(blockAfterPrefix){
+                    output.write(b,off,1);prefixWritten.set(true);
+                    while(blockAfterPrefix&&!closed)pause();
+                    if(closed)throw new SocketException();
+                    output.write(b,off+1,len-1);
+                }else output.write(b,off,len);
             }}
             public void flush()throws IOException{synchronized(FakeSocket.this){
                 if(closed)throw new SocketException();
                 if(failFlush){outputFailed.set(!eof);throw new IOException("Synthetic flush failure");}
                 flushes.incrementAndGet();
+                if(duringFlush!=null){Runnable action=duringFlush;duringFlush=null;action.run();}
             }}
         };}
         synchronized void releaseWrites(){blockWrites=false;notifyAll();}
@@ -543,6 +817,7 @@ public class TvRemoteClientTest {
             feed(polo().setOptions(Options.getDefaultInstance()).build().toByteArray());
             feed(polo().setConfigurationAck(ConfigurationAck.getDefaultInstance()).build().toByteArray());
         }
+        synchronized int outputSize(){return output.size();}
         synchronized List<byte[]> messages(){
             List<byte[]> frames=new ArrayList<>();ByteArrayInputStream bytes=new ByteArrayInputStream(output.toByteArray());
             try{while(bytes.available()>0)frames.add(TvWire.read(bytes));}catch(IOException ignored){}return frames;

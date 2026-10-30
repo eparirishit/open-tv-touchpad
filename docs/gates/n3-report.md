@@ -2,6 +2,36 @@
 
 Contract: [approved N3 design](../superpowers/specs/2026-10-25-nord-tv-controls-design.md).
 
+## Fresh0.20 Bluetooth loss/reconnect check (2026-10-27)
+
+Installed version20/0.20-diagnostic was reverified by reading its APK SHA256:
+`31c7bb4a0434bf1c25a251a59a90fd69f7642e7fb4d6e5dca895c262e401943c`.
+Source baseline is recorded ased26031 in the UI report (publication snapshot
+b956180 has the same app). Nord AC2001/API31 buildAC2001_11_F.24; the existing
+XGIMI Horizon XK03H firmware was not re-read in this trial. Both app pairings
+were retained; no update, reset or gesture injection was performed.
+
+The owner prepared a saved connection and reported ready after the requested
+Home/pointer check. A bounded Mac diagnostic used the existing authenticated
+Nord debug link to disable and restore only its Bluetooth. Actual adapter polls
+were ON → TURNING_OFF → BLE_TURNING_OFF → OFF → BLE_TURNING_ON → BLE_ON →
+TURNING_ON → ON. Both shell commands returned137; state observations independently
+establish their effects and restoration, rather than exit status being proof.
+
+The15-event current-run trace is contiguous: STOP10 at61944ms, selected
+DISCONNECTING11/12 at62045/62046ms, selected DISCONNECTED13 and UNREGISTERED14
+at62072ms, then TEARDOWN_COMPLETE15 at62106ms. Trace SHA256:
+`349509f4b5200fbb223f7e3fc9ad72521b2965862f339c53821bb893eb63be58`.
+Capture continued through restoration and eight further seconds; no new run or
+input-admission event appeared. All required acknowledgments arrived in this
+trial without weakening NativeRunGate. The owner confirmed that app input stayed disabled and the physical remote
+worked, then explicit Start/Connect restored Home, pointer movement and scrolling
+without Force stop or another pairing, followed by Stop.
+
+This is a successful native completion trace on0.20, not a code fix or proof that
+the prior0.13 missing-callback condition is impossible. Preserve the earlier
+failure below and require artifact-bound recovery proof for N4 changes.
+
 ## Diagnostic0.13 hardware follow-up — recovery still blocked
 
 On the same version13 artifact/source below, the owner confirmed explicit

@@ -2,6 +2,28 @@
 
 These instructions apply to the entire repository.
 
+## Approved Nord background-policy opt-in (2026-10-29)
+
+The owner explicitly approved enabling Allow background activity for Open TV only
+on the tested Nord after Hans froze its foreground-service process on Home.
+Leave Allow auto launch Off. This is an optional, reversible per-app system
+setting, not an app-requested/global battery exemption, wake lock, boot start or
+transport/security change. Document battery impact and test the unchanged APK.
+Follow the dated addition to the N4 design and `docs/gates/n4-home-return-report.md`.
+Retention/endurance and missing native-completion gates remain mandatory.
+
+## Approved N4 daily-use lifecycle (2026-10-27)
+
+The owner approved the N4 design and implementation plan with “go ahead”. Follow
+`docs/superpowers/specs/2026-10-27-nord-daily-use-design.md` and its plan. This
+supersedes the five-minute/pause-stop policy only through the staged, reviewed N4
+work: service-owned established links, visible/unlocked input epochs and30-minute
+idle retention. R1 first preserves existing behavior. Missing Bluetooth native
+completion and Nord retention/endurance evidence remain hard gates; approval
+includes no replacement cleanup proof, timeout bypass or automatic reconnection.
+Preserve application identity, both enrollments, backup restrictions and protected
+transports. Public release and other-device bridges remain outside this approval.
+
 ## Requested prototype UI refresh (2026-10-26)
 
 The owner supplied an HTML UI prototype and requested updating the Android app

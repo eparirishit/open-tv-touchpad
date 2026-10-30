@@ -297,7 +297,9 @@ public class TvTlsTest {
             socket.setSoTimeout(0); // The future can finish only by close, not a read timeout.
             Future<?> blocked = reader.submit(() -> {
                 readEntered.countDown();
-                assertThrows(IOException.class, () -> socket.getInputStream().read());
+                try { assertEquals("Closed TLS read must end at EOF", -1, socket.getInputStream().read()); }
+                catch (java.net.SocketTimeoutException timeout) { throw new AssertionError("TLS read timed out", timeout); }
+                catch (IOException closed) { /* Native close may finish the blocked read with EOF or an exception. */ }
             });
             assertTrue(readEntered.await(TIMEOUT, TimeUnit.MILLISECONDS));
             assertThrows(java.util.concurrent.TimeoutException.class,

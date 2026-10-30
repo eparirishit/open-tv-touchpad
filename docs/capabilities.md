@@ -1,5 +1,16 @@
 # Capabilities
 
+## Daily-use candidate — installed, hardware acceptance pending
+
+The owner selected retaining an idle connection when the Nord locks or switches
+apps, with input only while the remote is visible. The
+[approved N4 design](superpowers/specs/2026-10-27-nord-daily-use-design.md) targets a single
+saved Connect/Stop flow, 30-minute idle retention and healthy return without
+re-pairing; loss, Stop or expiry still require explicit Connect. These are implemented in the reviewed0.21 candidate, installed in place with
+both enrollments preserved. Owner0.21 saved Connect and short awake Home-return control passed after the
+approved Nord-only background setting; locked/long retention and endurance remain
+pending.0.20 is the preserved, previously accepted five-minute diagnostic. [Daily-use readiness](gates/n4-readiness.md) is NOT READY.
+
 ## Diagnostic0.20 — simplified Touchpad and readable setup
 
 Touchpad has one surface, four scroll controls and sensitivity below them. Buttons

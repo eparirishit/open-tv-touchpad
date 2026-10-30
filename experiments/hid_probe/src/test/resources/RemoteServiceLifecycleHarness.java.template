@@ -1,0 +1,59 @@
+package dev.opentvtouchpad.hidprobe;
+import static dev.opentvtouchpad.hidprobe.NativeRunGate.Resource.*;
+class ServiceBase { public void onDestroy() {} }
+public class RemoteServiceLifecycleHarness extends ServiceBase {
+    static final String STOP = "stop";
+    static final int START_NOT_STICKY = 2, STOP_FOREGROUND_REMOVE = 1;
+    static class Intent {
+        final String action;
+        Intent(String action) { this.action = action; }
+        String getAction() { return action; }
+    }
+    static class SystemClock {
+        static long now;
+        static long elapsedRealtime() { return now; }
+    }
+    static class Handler { void removeCallbacksAndMessages(Object token) {} }
+    final NativeRunGate gate = new NativeRunGate();
+    final NativeRunGate.Run owner = gate.start();
+    final Handler handler = new Handler();
+    final Runtime runtime = new Runtime();
+    class Runtime {
+        final Object receiver = new Object();
+        int stops;
+        boolean sessionAlive() { return SystemClock.now < deadline; }
+        void serviceStopped(String reason) { stops++; owner.stop(); }
+        void destroyed() { owner.stop(); owner.completed(SERVICE); }
+    }
+    boolean alive = true, receiverRegistered = true, selfStopped, foregroundStopped;
+    long deadline = 300000;
+    String terminalReason;
+    void stopSelf() { selfStopped = true; }
+    void stopForeground(int flags) { foregroundStopped = true; }
+    void unregisterReceiver(Object receiver) {}
+__METHODS__
+    static void check(boolean ok, String why) { if (!ok) throw new AssertionError(why); }
+    RemoteServiceLifecycleHarness() { owner.await(SERVICE); owner.await(PROFILE); owner.await(REGISTRATION); owner.await(TV); }
+    public static void main(String[] args) {
+        for (int mode = 0; mode < 5; mode++) {
+            RemoteServiceLifecycleHarness h = new RemoteServiceLifecycleHarness();
+            SystemClock.now = 299999;
+            check(h.isAlive() && h.owner.active(), "before fixed five-minute deadline");
+            if (mode == 0) { SystemClock.now = 300000; check(!h.isAlive(), "elapsed check catches deep sleep expiry"); }
+            if (mode == 1) check(h.onStartCommand(new Intent(STOP), 0, 1) == START_NOT_STICKY, "notification Stop is nonsticky");
+            if (mode == 2) h.onStartCommand(null, 0, 1);
+            if (mode == 3) h.onTaskRemoved(new Intent("task"));
+            if (mode == 4) h.onDestroy();
+            check(h.selfStopped && h.foregroundStopped && !h.owner.active(), "all terminal callers fence owner and stop service");
+            h.owner.completed(PROFILE); h.owner.completed(REGISTRATION); h.owner.completed(TV);
+            if (mode != 4) check(!h.gate.available(), "stopSelf/timeout is not actual service completion");
+            h.onDestroy();
+            check(h.gate.available(), "actual service destruction and all native completions release slot");
+        }
+        RemoteServiceLifecycleHarness failed = new RemoteServiceLifecycleHarness();
+        failed.owner.fail(); failed.onDestroy();
+        failed.owner.completed(PROFILE); failed.owner.completed(REGISTRATION); failed.owner.completed(TV);
+        check(!failed.gate.available(), "service destruction never clears failed native latch");
+        System.out.println("actual service deadline/notification/task/destruction/failed-latch scenarios passed");
+    }
+}

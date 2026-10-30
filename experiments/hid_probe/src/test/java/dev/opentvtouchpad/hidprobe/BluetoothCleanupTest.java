@@ -7,7 +7,7 @@ import java.nio.file.Path;
 import java.util.Comparator;
 import static org.junit.Assert.*;
 
-/** Runs the Activity's real cleanup callbacks with unavailable-proxy defaults. */
+/** Runs the runtime's real cleanup callbacks with unavailable-proxy defaults. */
 public class BluetoothCleanupTest {
     private static String method(String source, String signature) {
         int start = source.indexOf(signature);
@@ -26,7 +26,8 @@ public class BluetoothCleanupTest {
         Path module = Path.of("").toAbsolutePath();
         if (!Files.isDirectory(module.resolve("src/main/java"))) module = module.resolve("experiments/hid_probe");
         Path source = module.resolve("src/main/java/dev/opentvtouchpad/hidprobe");
-        String activity = new String(Files.readAllBytes(source.resolve("ProbeActivity.java")), java.nio.charset.StandardCharsets.UTF_8);
+        assertTrue("Service-owned runtime must exist", Files.isRegularFile(source.resolve("RemoteRuntime.java")));
+        String runtime = new String(Files.readAllBytes(source.resolve("RemoteRuntime.java")), java.nio.charset.StandardCharsets.UTF_8);
         String template;
         try (var input = getClass().getResourceAsStream("/BluetoothCleanupHarness.java.template")) {
             assertNotNull(input);
@@ -40,13 +41,13 @@ public class BluetoothCleanupTest {
             "        void connect(BluetoothDevice peer) {"
         };
         StringBuilder methods = new StringBuilder();
-        for (String signature : signatures) methods.append(method(activity, signature)).append('\n');
+        for (String signature : signatures) methods.append(method(runtime, signature)).append('\n');
         Path temporary = Files.createTempDirectory("nord-bluetooth-cleanup-");
         try {
             Path harness = temporary.resolve("BluetoothCleanupHarness.java");
             Files.write(harness, template.replace("__METHODS__", methods).getBytes(java.nio.charset.StandardCharsets.UTF_8));
             Process compiler = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin", "javac").toString(),
-                "-d", temporary.toString(), harness.toString(), source.resolve("NativeRunGate.java").toString(),
+                "-d", temporary.toString(), harness.toString(), source.resolve("NativeRunGate.java").toString(), source.resolve("InputVisibilityGate.java").toString(), source.resolve("SessionLifetime.java").toString(),
                 source.resolve("ProbeTrace.java").toString(), source.resolve("MouseReport.java").toString())
                 .redirectErrorStream(true).start();
             String output = new String(compiler.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);

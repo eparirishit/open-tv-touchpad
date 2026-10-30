@@ -111,10 +111,10 @@ public final class ProbeSession {
         return active(generation) && registered;
     }
 
-    /** Setup evidence survives covering the UI; a confirmed session does not. */
+    /** Established links may idle; unfinished connection and TV pairing remain attended. */
     public void foreground(long generation, boolean foreground) {
         if (!active(generation)) return;
-        if (!foreground && (confirmed || tvOperation)) {
+        if (!foreground && (tvPairing || (confirmed && !connected))) {
             stop();
             return;
         }
@@ -200,7 +200,11 @@ public final class ProbeSession {
     }
 
     public boolean canSend(long generation, String peer) {
-        return active(generation) && foreground && connected && neutral && peer != null && peer.equals(eligiblePeer())
+        return foreground && transportReady(generation, peer);
+    }
+
+    boolean transportReady(long generation, String peer) {
+        return active(generation) && connected && neutral && peer != null && peer.equals(eligiblePeer())
             && !tvPairing && tvEnrollment != TvEnrollment.State.UNUSABLE
             && (tvEnrollment == TvEnrollment.State.ABSENT || tvReady);
     }
