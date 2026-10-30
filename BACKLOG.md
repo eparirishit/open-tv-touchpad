@@ -7,7 +7,7 @@
 - [x] Owner approval of the written implementation design (“go ahead”).
 - [x] Implement the single guided flow, truthful resume/timers/cleanup and safe Manage/Reset.
 - [x] Complete independent review and native lifecycle/privacy/layout verification.
-- [ ] Reviewed stopped-device in-place update, preserving both enrollments.
+- [x] Reviewed stopped-device in-place update, preserving both enrollments.
 - [ ] Owner non-destructive Manage/saved Connect check; owner-prepared fresh wizard/reset trial.
 
 

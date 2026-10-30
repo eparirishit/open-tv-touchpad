@@ -15,10 +15,11 @@ Bluetooth re-pair requires manual removal of only the intended bond on both
 devices. Appearance is separate. The optional Nord battery tip opens this app's
 settings without changing anything automatically; auto-launch stays Off.
 
-The candidate is not installed on the Nord yet. Preserve both enrollments during
-a reviewed, stopped same-signer update. Start with non-destructive Manage and
-saved Connect checks; fresh wizard/reset hardware trials require owner-prepared
-test bonds. [Evidence and remaining checks](../../docs/gates/nord-setup-wizard-report.md).
+The reviewed candidate is installed on the stopped Nord, with actual signer
+continuity and both enrollment records unchanged before/after install and launch.
+The resumed Activity stayed stable for six seconds without an automatic connection.
+Owner non-destructive Manage and saved Connect checks are pending; fresh wizard/
+reset hardware trials require owner-prepared test bonds. [Evidence and remaining checks](../../docs/gates/nord-setup-wizard-report.md).
 The historical setup steps below describe their dated versions, not this wizard.
 
 ## Version0.21 daily-use candidate

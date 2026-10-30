@@ -68,10 +68,18 @@ hardware pairing/reset acceptance.
 
 ## Delivery and remaining owner checks
 
-The Nord remains on0.21. No physical-device connection, reset, unpair, install or
-input has occurred during this wizard implementation. Review must be clean before
-a stopped same-signer in-place update; compare both credential records byte for
-byte before/after install and launch. Do not uninstall or clear app storage.
+The reviewed0.22 was installed in place on the confirmed stopped Nord. Prechecks
+verified the intended Nord/Android12, version21, no connection service and both
+existing enrollment records. The candidate signer matched the actual installed
+APK. Both enrollment records and the optional address draft stayed byte-identical
+before/after installation and launch. The resumed Activity's process remained
+stable for six seconds; no foreground/started connection appeared automatically.
+
+The original ADB service reported a routing error despite a reachable debugging
+port. An isolated loopback-only ADB service connected successfully without
+restarting other debugging sessions. No device addresses or enrollment contents
+are included in evidence. No unpair, reset, data clear or projector input was
+injected. Do not uninstall or clear app storage for the pending owner checks.
 
 First verify non-destructive Manage, Appearance, saved Connect, Home, pointer,
 scroll and Stop without re-pairing. Full first-time wizard/mismatch/reset trials

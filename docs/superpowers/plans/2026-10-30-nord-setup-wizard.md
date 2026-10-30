@@ -128,10 +128,10 @@ capabilities, architecture, backlog, experiment README and new gate report.
   existing emulator only for native fixtures; no injected physical gate gestures.
 - [x] Complete independent whole-change and required Codex review relative to
   cc416a3 plus all untracked files/callers, using approved spec; scoped fix review.
-- [ ] Commit/push feature branch and create/attach draft PR; main not changed.
+- [x] Commit/push feature branch and create/attach draft PR; main not changed.
   PR11 is merged; its merge commit has the same tree as cc416a3. Target main and
   preserve published history.
-- [ ] If authorized Nord endpoint is unavailable, request only the current main
+- [x] If authorized Nord endpoint is unavailable, request only the current main
   Wireless debugging IP/port. No install before review and stopped proof. Verify
   exact APK, same signer and byte-identical enrollments across install/launch.
 - [ ] Owner test of non-destructive Manage/appearance/reconnect first; fresh wizard
