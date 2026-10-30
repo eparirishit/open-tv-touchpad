@@ -16,7 +16,9 @@
   b1d3256 plus verified permission correction62d0e6a.
 - [x] R2: candidate kernel/caller integration verified and re-reviewed; published
   in draft PR11 and installed0.21 with both enrollment records preserved.
-- [ ] R3: reviewed Nord lock/return, idle expiry and loss/revocation proofs.
+- [x] Diagnose0.21 short Home-return loss: owner-approved Open TV-only background
+  activity resolves observed Hans freeze; same APK passes return control and Stop.
+- [ ] R3: Nord lock/return, idle expiry and loss/revocation proofs remain.
 - [ ] R4: update continuity, endurance/battery observations and exact-artifact
   owner acceptance for private daily use. Public distribution remains deferred.
 

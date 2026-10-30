@@ -1,5 +1,14 @@
 # Architecture Status
 
+## Nord background-policy observation (2026-10-29)
+
+A started foreground service did not prevent OnePlus Hans from freezing0.21
+approximately30seconds after Home on the tested Nord. The owner approved the
+optional Open TV-only Allow background activity setting, with auto-launch Off;
+application ownership/input/trust/liveness/cleanup behavior is unchanged. See the
+[before/after trial](gates/n4-home-return-report.md). The short awake Home-return retest passed with the same APK; broader hardware
+acceptance remains pending. No wake lock or automatic exemption was added.
+
 ## N4 candidate implementation
 
 RemoteConnectionService owns one process RemoteRuntime and its native callbacks,

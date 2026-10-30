@@ -78,7 +78,19 @@ stayed stable for six seconds. The Activity was not observed resumed, and no
 foreground-run counter was available; no Start/Connect, pairing or input was
 injected. This proves the update checks, not successful on-device connection or
 background retention. The owner was asked to unlock/open manually and run a short
-foreground-control →30-second Home/return →Stop check; that result is pending.
+foreground-control →30-second Home/return →Stop check. On2026-10-29 the owner
+reported disconnect after approximately one minute on Nord Home. Installed APK
+hash still matches exactly. Owner text and read-only UI inspection agree on
+CONTROL_EXCHANGE failure, both channels stopped and native teardown completed.
+The process remained present and its connection service was absent; that prior
+trace expired. A fresh trial identified Hans freezing the app after30seconds
+on Home despite the foreground service. The owner approved enabling background
+activity for Open TV only, with auto-launch Off. The unchanged APK then passed
+the controlled awake Home-return test and owner pointer/TV/scroll control without
+Connect; explicit Stop was corroborated by disconnect/unregister/teardown and
+inactive foreground service. See [before/after evidence](n4-home-return-report.md).
+No executable source, enrollment, timeout or security behavior changed. Lock,
+long retention/expiry and battery/endurance remain open.
 
 ## Review corrections
 

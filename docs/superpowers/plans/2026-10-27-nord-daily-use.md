@@ -109,6 +109,8 @@ existing native UI/privacy/accessibility tests.
   owner Connect and remains unchecked here.
 - [ ] Prove short idle home/lock retention first; no hidden actions can reach TV.
   Return healthy without re-pairing; a new gesture works and no old input replays.
+  Short awake Home/return passed2026-10-29 with owner-approved Open TV-only
+  background activity; lock and longer intervals remain unchecked.
 - [ ] Prove30-minute idle/expiry via monotonic observations, visible use beyond
   five minutes, task swipe Stop and notification Stop while locked.
 - [ ] Test Bluetooth/Wi-Fi loss independently, explicit recovery without Force

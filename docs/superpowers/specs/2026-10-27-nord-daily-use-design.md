@@ -147,6 +147,22 @@ or an assertion that cleanup completed. Force stop/reopen remains the current
 explicit recovery instruction until a replacement is proven. Daily-use readiness
 is BLOCKED while ordinary Bluetooth interruption still needs that workaround.
 
+## Owner-approved Nord background-policy opt-in (2026-10-29)
+
+On the tested Nord/API31 build AC2001_11_F.24, system logs show OnePlus Hans
+freezing Open TV approximately30seconds after Home despite its started
+foreground service, with the screen awake. Return unfreezes the process and
+its expired TV-control channel fails at CONTROL_EXCHANGE. The owner explicitly
+approved enabling **Allow background activity** for Open TV only under App info
+→ Battery usage, leaving **Allow auto launch Off**, and repeating the same test.
+
+This optional/reversible system setting is the sole approved policy exception.
+Do not add an app-requested/global exemption, wake lock, boot start or automatic
+reconnection. Existing visible-input, trust, liveness and cleanup requirements
+remain. Background activity may increase battery use; exact-artifact Home-return,
+lock,30-minute retention/expiry and unplugged endurance still need evidence.
+See [trial report](../../gates/n4-home-return-report.md).
+
 ## Delivery and acceptance gates
 
 1. **R0 — trustworthy verification/recovery evidence.** Diagnose the full-suite

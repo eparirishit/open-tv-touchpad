@@ -28,6 +28,18 @@ notification offers only Open and Stop; it never sends projector input.
 No wake lock, screen-on rule or battery exemption is added. Android/OEM/network
 suspension may lose a connection; the app must stop input and require Connect.
 
+## Optional Nord background setting
+
+On the tested Nord/Android12, OnePlus Hans froze Open TV about30seconds after
+Home even with its foreground service. The owner approved this opt-in: long-press
+Open TV → App info → Battery usage → **Allow background activity On**. Leave
+**Allow auto launch Off** and foreground activity On. This affects only Open TV;
+it may increase battery use. Reverse it on the same page if desired.
+
+The application does not enable this automatically or request a global exemption.
+The [controlled trial](gates/n4-home-return-report.md) records the exact build and
+results; lock/long retention and battery/endurance are separate acceptance checks.
+
 ## First setup or deliberate re-enrollment
 
 Existing0.20 users should not unpair, uninstall or clear storage for this update.

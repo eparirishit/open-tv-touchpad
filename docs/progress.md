@@ -1,5 +1,21 @@
 # Project Progress
 
+## N4 Nord Home-return remedy verified (2026-10-29)
+
+The reported0.21 Home-return disconnect was reproduced. OnePlus Hans froze the
+app about30seconds after Home despite a started foreground service, then unfroze
+it on return; TV control failed at CONTROL_EXCHANGE and teardown completed.
+The installed APK still matches reviewed source6abbc23 exactly. After the owner
+explicitly approved enabling only Open TV’s Allow background activity setting
+(auto-launch Off), the same APK passed a second awake/unlocked Home interval:
+65seconds of service samples,114.480seconds between logged Home/return, no Hans
+freeze recorded, and owner pointer/TV/scroll control without Connect. Explicit
+Stop was then corroborated by native disconnect/unregister/teardown events and
+inactive foreground/started service state. No application code, timeout, trust,
+pairing or input-admission changes were needed. See the exact before/after
+[report](gates/n4-home-return-report.md). Lock,30-minute retention/expiry and
+battery/endurance acceptance remain pending; daily-use readiness is NOT READY.
+
 ## N4 candidate software (2026-10-27)
 
 The approved lifecycle is implemented as0.21-daily-use-candidate; independent
