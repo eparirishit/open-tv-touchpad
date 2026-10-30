@@ -1,5 +1,16 @@
 # Project Progress
 
+## Guided setup design (2026-10-30)
+
+The owner supplied a three-step native wizard prototype: Bluetooth → TV address
+→ Pair TV, with resumable overview, All set, Manage and confirmed per-item Reset.
+The [implementation design](superpowers/specs/2026-10-30-nord-setup-wizard-design.md)
+records the selected UX, real timers/progress/cleanup, existing native code entry
+and enrollment-preserving repair. An independent builder check found nothing
+important left before planning. This is a proposed design awaiting owner review;
+no application source, installed APK or pairings changed. N4 hardware/readiness
+gates remain as recorded below.
+
 ## N4 Nord Home-return remedy verified (2026-10-29)
 
 The reported0.21 Home-return disconnect was reproduced. OnePlus Hans froze the

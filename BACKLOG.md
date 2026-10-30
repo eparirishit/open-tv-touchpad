@@ -1,5 +1,14 @@
 # Backlog
 
+## Guided setup (proposed2026-10-30)
+
+- [x] Review the supplied wizard prototype and current native pairing flow.
+- [x] Write and builder-check the [design](docs/superpowers/specs/2026-10-30-nord-setup-wizard-design.md).
+- [ ] Owner approval of the written implementation design.
+- [ ] Implement the single guided flow, truthful resume/timers/cleanup and safe Manage/Reset.
+- [ ] Verify native lifecycle/privacy/layout and reviewed stopped-device update.
+
+
 ## N4 daily-use readiness preparation (2026-10-27)
 
 - [x] Record owner choice: idle background connection, visible-only input.
