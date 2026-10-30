@@ -94,8 +94,10 @@ public class RemoteScreenTest {
                 View decor=activity.getWindow().getDecorView();
                 assertTrue(decor.isAttachedToWindow());
                 assertFalse(activity.isFinishing());
-                Button display=findButton(decor,"Display");
-                assertNotNull(display);display.performClick();
+                try {
+                    var field=ProbeActivity.class.getDeclaredField("screen");field.setAccessible(true);
+                    ((RemoteScreen)field.get(activity)).showAppearance();
+                } catch (ReflectiveOperationException e) { throw new AssertionError(e); }
                 Button dark=findButton(decor,"Dark");
                 Button light=findButton(decor,"Light");
                 dark.performClick();
@@ -213,8 +215,7 @@ public class RemoteScreenTest {
             assertEquals("Netflix",screen.tvButtons.get(TvCommand.NETFLIX).getText().toString());
             for (boolean dark : new boolean[]{false,true}) {
                 screen.setDark(dark);
-                for (Button tab : new Button[]{screen.remoteTab,screen.padTab,screen.projectorTab,
-                        screen.tvTab,screen.displayTab,
+                for (Button tab : new Button[]{screen.remoteTab,screen.padTab,
                         screen.lightTheme,screen.darkTheme}) {
                     tab.performClick();
                     assertTrue("selection remains accessible",tab.isSelected());
@@ -240,7 +241,7 @@ public class RemoteScreenTest {
             RemoteScreen screen = new RemoteScreen(context(360,800,1f),(x,y)->fail("Status moved pointer"),()->fail("Status clicked"));
             assertNotNull("TV status has a leading indicator",screen.tvStatus.getCompoundDrawablesRelative()[0]);
             assertEquals(13f,screen.status.getTextSize()/screen.root.getResources().getDisplayMetrics().scaledDensity,0.1f);
-            screen.showSetup(true);
+            showWizard(screen,SetupState.Page.BT_START);
             assertTrue(hasText(screen.root,"1"));
             assertTrue(hasText(screen.root,"2"));
             assertTrue(hasText(screen.root,"3"));
@@ -341,8 +342,9 @@ public class RemoteScreenTest {
             assertNull("Redundant alternate mode removed",findButton(screen.root,"Buttons instead"));
             assertNull(findButton(screen.root,"Move left"));
             assertNull(findButton(screen.root,"Click once"));
-            assertEquals("Codes match on both screens. Save and connect",screen.confirm.getText().toString());
-            for (Button tab : new Button[]{screen.remoteTab,screen.padTab,screen.projectorTab,screen.tvTab,screen.displayTab})
+            showWizard(screen,SetupState.Page.BT_COMPARE);
+            assertEquals("Codes match on both screens. Save and connect",screen.setupView.primary.getText().toString());
+            for (Button tab : new Button[]{screen.remoteTab,screen.padTab})
                 assertTrue("Tab label is bold",tab.getTypeface().isBold());
             screen.showTouchpad(true);layout(screen,c,384,800);
             for(Button scroll:screen.scrollButtons.values())
@@ -359,7 +361,7 @@ public class RemoteScreenTest {
                 config.densityDpi=450;
                 Context c=new ContextThemeWrapper(base.createConfigurationContext(config),R.style.RemoteTheme);
                 RemoteScreen screen=new RemoteScreen(c,(x,y)->{},()->{});
-                screen.showSetup(true);screen.showSetupSection(0);layout(screen,c,width,width==800?360:800);
+                showWizard(screen,SetupState.Page.BT_START);layout(screen,c,width,width==800?360:800);
                 for(int number=1;number<=3;number++) {
                     TextView badge=findText(screen.root,Integer.toString(number));assertNotNull(badge);
                     ViewGroup row=(ViewGroup)badge.getParent();
@@ -387,7 +389,6 @@ public class RemoteScreenTest {
                 screen.setDark(dark);
                 screen.setConnected(true);
                 screen.status.setText("Synthetic connected header layout; no input admitted.");
-                screen.migrationNotice.setVisibility(View.GONE);
                 screen.showSetup(false);
                 layout(screen,c,size[0],size[1]);
                 for (Button control : screen.inputs) assertFalse("disabled before admission", control.isEnabled());
@@ -403,7 +404,7 @@ public class RemoteScreenTest {
                 }
                 assertFalse(screen.touchpad.isEnabled());
                 reachable(screen,screen.stop); reachable(screen,screen.setup);
-                assertEquals(View.GONE, screen.start.getVisibility()); reachable(screen,screen.connect);
+                assertFalse(visible(screen,screen.setupView.primary)); reachable(screen,screen.connect);
                 reachable(screen,screen.remoteTab); reachable(screen,screen.padTab);
                 {
                     screen.showSetup(false); layout(screen,c,size[0],size[1]);
@@ -413,20 +414,19 @@ public class RemoteScreenTest {
                 assertTrue(visible(screen,screen.touchpad));
                 assertFalse(visible(screen,screen.tvButtons.get(TvCommand.OK)));
                 for (Button control : screen.scrollButtons.values()) reachable(screen,control);
-                screen.showSetup(true); screen.showSetupSection(0); layout(screen,c,size[0],size[1]);
-                reachable(screen,screen.start); assertEquals(View.GONE, screen.connect.getVisibility());
-                reachable(screen,screen.visible); reachable(screen,screen.confirm); reachable(screen,screen.forget);
-                screen.showSetupSection(1); layout(screen,c,size[0],size[1]);
-                reachable(screen,screen.tvAddress); reachable(screen,screen.tvCode);
-                View container = (View)screen.tvAddress.getParent();
+                showWizard(screen,SetupState.Page.BT_START); layout(screen,c,size[0],size[1]);
+                reachable(screen,screen.setupView.primary); assertEquals(View.GONE, screen.connect.getVisibility());
+                reachable(screen,screen.setupView.secondary); reachable(screen,screen.setupView.back);
+                showWizard(screen,SetupState.Page.ADDRESS); layout(screen,c,size[0],size[1]);
+                reachable(screen,screen.setupView.address);
+                View container = (View)screen.setupView.address.getParent();
                 while (!(container instanceof ScrollView)) container = (View)container.getParent();
                 assertFalse("Content scrolls without a visible scrollbar",container.isVerticalScrollBarEnabled());
-                for (Button control : new Button[]{screen.tvSaveAddress,screen.tvPair,screen.tvConfirm,screen.tvForget}) {
-                    assertFalse("TV setup disabled before admission", control.isEnabled());
-                    reachable(screen,control);
-                }
+                reachable(screen,screen.setupView.primary);
+                showWizard(screen,SetupState.Page.TV_CODE); layout(screen,c,size[0],size[1]);
+                reachable(screen,screen.setupView.code); reachable(screen,screen.setupView.primary);
                 reachable(screen,screen.stop);
-                screen.showSetupSection(2); layout(screen,c,size[0],size[1]);
+                screen.showAppearance(); layout(screen,c,size[0],size[1]);
                 reachable(screen,screen.lightTheme); reachable(screen,screen.darkTheme);
                 screen.showSetup(false); layout(screen,c,size[0],size[1]);
                 assertFalse("switching pages must not authorize",screen.touchpad.isEnabled());
@@ -464,34 +464,34 @@ public class RemoteScreenTest {
         InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
             Context c = context(360,800,1f);
             RemoteScreen screen = new RemoteScreen(c,(x,y)->{},()->{});
-            assertFalse(screen.tvAddress.isEnabled());
-            assertFalse(screen.tvCode.isEnabled());
-            assertFalse(screen.tvCode.isSaveEnabled());
-            assertFalse(screen.tvCode.isSaveFromParentEnabled());
+            assertFalse(screen.setupView.address.isEnabled());
+            assertFalse(screen.setupView.code.isEnabled());
+            assertFalse(screen.setupView.code.isSaveEnabled());
+            assertFalse(screen.setupView.code.isSaveFromParentEnabled());
             assertEquals(View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS,
-                screen.tvCode.getImportantForAutofill());
-            assertNull(screen.tvCode.getAutofillHints());
-            assertFalse(screen.tvCode.getTransformationMethod() instanceof PasswordTransformationMethod);
-            assertTrue((screen.tvCode.getInputType() & InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS) != 0);
-            assertTrue((screen.tvCode.getImeOptions() & EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING) != 0);
-            assertTrue((screen.tvCode.getImeOptions() & EditorInfo.IME_FLAG_NO_EXTRACT_UI) != 0);
-            screen.showSetup(true);
-            screen.tvCode.setEnabled(true);
-            screen.tvCode.setId(View.generateViewId());
+                screen.setupView.code.getImportantForAutofill());
+            assertNull(screen.setupView.code.getAutofillHints());
+            assertFalse(screen.setupView.code.getTransformationMethod() instanceof PasswordTransformationMethod);
+            assertTrue((screen.setupView.code.getInputType() & InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS) != 0);
+            assertTrue((screen.setupView.code.getImeOptions() & EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING) != 0);
+            assertTrue((screen.setupView.code.getImeOptions() & EditorInfo.IME_FLAG_NO_EXTRACT_UI) != 0);
+            showWizard(screen,SetupState.Page.TV_CODE);
+            screen.setupView.code.setEnabled(true);
+            screen.setupView.code.setId(View.generateViewId());
             // Synthetic input only; never capture a pairing-field screenshot.
-            screen.tvCode.setText("0123456789abcdef");
-            assertEquals(6, screen.tvCode.length());
-            screen.tvCode.setText("");
-            screen.tvCode.getText().append("gGaB09");
-            assertEquals("aB09", screen.tvCode.getText().toString());
-            assertTrue("OTP characters are visible",screen.tvCode.getTransformationMethod() == null
-                || screen.tvCode.getText().toString().contentEquals(screen.tvCode.getTransformationMethod()
-                    .getTransformation(screen.tvCode.getText(),screen.tvCode)));
+            screen.setupView.code.setText("0123456789abcdef");
+            assertEquals(6, screen.setupView.code.length());
+            screen.setupView.code.setText("");
+            screen.setupView.code.getText().append("gGaB09");
+            assertEquals("aB09", screen.setupView.code.getText().toString());
+            assertTrue("OTP characters are visible",screen.setupView.code.getTransformationMethod() == null
+                || screen.setupView.code.getText().toString().contentEquals(screen.setupView.code.getTransformationMethod()
+                    .getTransformation(screen.setupView.code.getText(),screen.setupView.code)));
             SparseArray<Parcelable> saved = new SparseArray<>();
             screen.root.saveHierarchyState(saved);
-            assertNull(saved.get(screen.tvCode.getId()));
-            screen.tvAddress.setText("123.123.123.123456");
-            assertEquals(15,screen.tvAddress.length());
+            assertNull(saved.get(screen.setupView.code.getId()));
+            screen.setupView.address.setText("123.123.123.123456");
+            assertEquals(15,screen.setupView.address.length());
         });
     }
 
@@ -502,14 +502,14 @@ public class RemoteScreenTest {
                 float density = c.getResources().getDisplayMetrics().density;
                 RemoteScreen screen = new RemoteScreen(c,(x,y)->{},()->{});
                 screen.setConnected(true);
-                screen.showSetup(true); screen.showSetupSection(1);
+                showWizard(screen,SetupState.Page.TV_CODE);
                 int keyboard = Math.round(size[2] * density);
                 screen.root.dispatchApplyWindowInsets(new WindowInsets.Builder()
                     .setInsets(WindowInsets.Type.systemBars(),Insets.of(0,Math.round(24*density),0,Math.round(24*density)))
                     .setInsets(WindowInsets.Type.ime(),Insets.of(0,0,0,keyboard)).build());
                 layout(screen,c,size[0],size[1]);
                 reachable(screen,screen.stop);
-                reachable(screen,screen.tvCode); reachable(screen,screen.tvConfirm);
+                reachable(screen,screen.setupView.code); reachable(screen,screen.setupView.primary);
                 assertTrue(bounds(screen,screen.stop).bottom <= screen.root.getHeight() - keyboard);
                 assertTrue(screen.root.getPaddingBottom() >= keyboard);
             }
@@ -520,11 +520,11 @@ public class RemoteScreenTest {
         InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
             Context c=context(360,800,1f); AtomicInteger taps=new AtomicInteger();
             RemoteScreen screen=new RemoteScreen(c,(x,y)->fail("Navigation sent movement"),taps::incrementAndGet);
-            screen.tvAddress.setText("192.0.2.10");
-            screen.tvCode.setText("aB1234");
+            screen.setupView.address.setText("192.0.2.10");
+            screen.setupView.code.setText("");
             screen.status.setText("Native teardown is unconfirmed. Input disabled.");
             for (Button nav : new Button[]{screen.remoteTab,screen.padTab,screen.setup,
-                    screen.projectorTab,screen.tvTab,screen.displayTab,screen.lightTheme,screen.darkTheme}) {
+                    screen.lightTheme,screen.darkTheme}) {
                 screen.showTouchpad(true);layout(screen,c,360,800);
                 screen.touchpad.setEnabled(true);
                 long t=SystemClock.uptimeMillis();
@@ -537,8 +537,8 @@ public class RemoteScreenTest {
                 assertTrue("presentation cannot revoke/admit transport",screen.touchpad.isEnabled());
                 for (Button input:screen.inputs) assertFalse(input.isEnabled());
                 for (Button input:screen.tvButtons.values()) assertFalse(input.isEnabled());
-                assertEquals("192.0.2.10",screen.tvAddress.getText().toString());
-                assertEquals("aB1234",screen.tvCode.getText().toString());
+                assertEquals("192.0.2.10",screen.setupView.address.getText().toString());
+                assertEquals("",screen.setupView.code.getText().toString());
                 assertEquals("Native teardown is unconfirmed. Input disabled.",screen.status.getText().toString());
                 screen.touchpad.setEnabled(false);
             }
@@ -571,12 +571,17 @@ public class RemoteScreenTest {
                 screen.status.setText("Start a five-minute run, then connect your projector.");
                 screen.showSetup(true);
                 for(int page=0;page<3;page++) {
-                    screen.showSetupSection(page);layout(screen,c,390,844);
+                    showWizard(screen,new SetupState.Page[]{SetupState.Page.OVERVIEW,SetupState.Page.BT_START,SetupState.Page.MANAGE}[page]);layout(screen,c,390,844);
                     capture(screen,c,"prototype-setup-"+page+suffix);
                 }
             }
             screen.setDark(false);
         });
+    }
+
+    private void showWizard(RemoteScreen screen,SetupState.Page page) {
+        screen.showSetup(true);
+        screen.setupView.render(new SetupState.Snapshot(page,false,false,false,"","","",45000,false,true,1,false));
     }
 
     private boolean visible(RemoteScreen screen, View view) {

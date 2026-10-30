@@ -1,5 +1,28 @@
 # Nord remote — private N4 candidate
 
+## Version0.22 guided setup candidate
+
+Open Settings for the resumable overview. Start/Continue setup follows Bluetooth,
+the projector's private Wi-Fi IPv4 address, then Pair TV; the app handles the
+internal safe Stop/Start handoff. Compare Bluetooth numbers on both screens and
+enter the intended projector's six-character TV code only in the app. Saving an
+address does not test reachability. Setup never enables remote input.
+
+All set → Open remote → Connect starts normal use. If already configured,
+Review setup opens Manage; Change address preserves TV identity. Re-pair/Forget
+require per-item confirmation and are not routine network troubleshooting.
+Bluetooth re-pair requires manual removal of only the intended bond on both
+devices. Appearance is separate. The optional Nord battery tip opens this app's
+settings without changing anything automatically; auto-launch stays Off.
+
+The reviewed candidate is installed on the stopped Nord, with actual signer
+continuity and both enrollment records unchanged before/after install and launch.
+The resumed Activity stayed stable for six seconds without an automatic connection.
+The owner confirms Review setup, Appearance, saved Connect, Home, pointer,
+scrolling and Stop/teardown-completed checks pass without re-pairing. Fresh wizard/
+reset hardware trials still require owner-prepared test bonds. [Evidence and remaining checks](../../docs/gates/nord-setup-wizard-report.md).
+The historical setup steps below describe their dated versions, not this wizard.
+
 ## Version0.21 daily-use candidate
 
 The approved N4 lifecycle is implemented for private verification, with service-

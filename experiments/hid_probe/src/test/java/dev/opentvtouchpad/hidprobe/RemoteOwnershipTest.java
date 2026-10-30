@@ -29,7 +29,7 @@ public class RemoteOwnershipTest {
         String runtime = new String(Files.readAllBytes(source.resolve("RemoteRuntime.java")), java.nio.charset.StandardCharsets.UTF_8);
         StringBuilder methods = new StringBuilder();
         for (String signature : new String[] {"    private boolean attended() {", "    private void setInputEligible(boolean eligible) {",
-                "    private void refreshEligibility() {", "    private void deferVisibilityRefresh() {", "    void uiState(long token, boolean focused, boolean surfaceVisible) {", "    long attach() {", "    boolean attached(long token) {",
+                "    private void refreshEligibility() {", "    private void deferVisibilityRefresh() {", "    void uiState(long token, boolean focused, boolean surfaceVisible) {", "    long attach() {", "    long attach(java.util.concurrent.atomic.AtomicBoolean visit) {", "    boolean attached(long token) {",
                 "    void foreground(long token, boolean foreground) {", "    void detach(long token) {",
                 "    void destroyed() {", "    void serviceStopped(String reason) {", "    void connectionLost(long token) {"}) methods.append(method(runtime, signature)).append('\n');
         String template;

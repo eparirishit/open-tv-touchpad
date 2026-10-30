@@ -1,5 +1,30 @@
 # Architecture Status
 
+## Native guided setup ownership (2026-10-30)
+
+RemoteRuntime owns ephemeral SetupState snapshots and per-run setup intent.
+SetupScreen renders native controls and submits typed actions through the existing
+Activity/binder. Bluetooth setup uses the existing comparison/enrollment path and
+a temporary Bluetooth-only link even if TV trust is saved; it cannot promote to
+control. Normal Connect keeps the existing both-channel admission policy.
+
+A granted Android visibility result starts the capped monotonic countdown;
+TvRemoteClient exposes only its existing code deadline. Current attachment,
+intent, generation and a shared revocable UI-visit marker fence deferred actions.
+The marker owns cancellation only; Activity pause/focus loss revokes it even while
+unbound. Deliberate cleanup/rebind reuses only the same uninterrupted visit.
+NativeRunGate availability still
+requires actual resource completion, including service destruction. Closing,
+Recovery and Retry cannot bypass its failed latch. Pair TV prepares its own
+internal run only after explicit action and completed cleanup.
+
+SetupAddressStore uses the existing private IPv4 validator and AtomicFile disk
+pattern in no_backup/setup-address; only a validated non-authoritative draft is
+newly persisted. A usable enrolled locator takes precedence. Credential formats,
+Keystore, pins, transports, backup policy and command/report sets are unchanged.
+Appearance and optional own-app battery settings remain presentation/navigation;
+they do not grant input or automatically alter Android background policy.
+
 ## Nord background-policy observation (2026-10-29)
 
 A started foreground service did not prevent OnePlus Hans from freezing0.21

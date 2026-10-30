@@ -233,6 +233,19 @@ public class TvRemoteClientTest {
         client.stop(); await(() -> events.closed.get() == 1); assertEquals(1, io.identities.get());
     }
 
+    @Test public void codeCountdownUsesEntryAndOuterDeadlineWithoutRenewingIt() throws Exception {
+        Native io = new Native(); Events events = new Events(); FakeSocket pairing = io.pair();
+        AtomicLong outer = new AtomicLong(55000);
+        TvRemoteClient client = new TvRemoteClient(now::get, outer::get, visibility, events, io);
+        clients.add(client); callbacks.add(events);
+        assertEquals(0, client.codeDeadlineMillis());
+        client.beginPair("10.0.0.2"); pairing.pairingMessages(); await(client::needsCode);
+        assertEquals(55000, client.codeDeadlineMillis());
+        now.addAndGet(1000); assertEquals(55000, client.codeDeadlineMillis());
+        outer.set(16000); assertEquals(16000, client.codeDeadlineMillis());
+        client.stop(); await(() -> events.closed.get() == 1); assertEquals(0, client.codeDeadlineMillis());
+    }
+
     @Test public void wrongCodeTimeoutAndCancelledCodeCannotEnroll() throws Exception {
         Native io = new Native(); Events events = new Events(); FakeSocket pair = io.pair();
         TvRemoteClient client = client(io, events); client.beginPair("10.0.0.2"); pair.pairingMessages();

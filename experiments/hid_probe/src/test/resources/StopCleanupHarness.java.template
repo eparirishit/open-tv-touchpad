@@ -1,6 +1,12 @@
 package dev.opentvtouchpad.hidprobe;
 import java.util.List;
 public class StopCleanupHarness {
+    enum SetupIntent { NONE, BLUETOOTH, TV }
+    final SetupIntent setupIntent = SetupIntent.NONE;
+    SetupState.Page setupAfterCleanup, setupPage;
+    String setupMessage, setupDiagnostic;
+    boolean requestDiscoverable, discoveryRequested;
+
     final InputVisibilityGate inputVisibility = new InputVisibilityGate();
     final SessionLifetime lifetime = new SessionLifetime(() -> 0);
     { inputVisibility.update(true); lifetime.beginSetup(); }

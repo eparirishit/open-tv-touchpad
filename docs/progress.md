@@ -1,5 +1,29 @@
 # Project Progress
 
+## Guided setup implementation (2026-10-30)
+
+The approved native wizard replaces the repeated manual Start/Stop journey with
+Overview → Bluetooth → TV address → Pair TV → All set. Configuration determines
+resumable progress; normal saved Connect remains on Remote/Touchpad. Manage has
+confirmed per-item Re-pair/Forget, and Appearance remains separate. The runtime
+owns setup intent, actual discovery/code deadlines and cleanup-gated handoff.
+Setup never grants input, including its temporary Bluetooth verification link.
+The private address draft changes no credential format or trust rule.
+
+Version0.22-guided-setup-candidate passes software checks and final review on
+nord-guided-setup:218JVM tests,58native passes/one explicit live diagnostic skip,
+lint0errors/25warnings and both APK builds. The signer matches the prior candidate.
+The exact reviewed0.22 APK is now installed in place on the stopped Nord.
+Its signer matches the actual prior installation; both enrollment records and
+optional address draft stayed byte-identical across installation and launch.
+The Activity was resumed, its process stayed stable for six seconds, and no
+connection started automatically. The owner reports all non-destructive0.22
+Review setup/Appearance/saved Connect/Home/pointer/scroll/Stop checks passing,
+including the teardown-completed status, without re-pairing.
+See the [wizard evidence](gates/nord-setup-wizard-report.md). Native pairing/reset
+hardware acceptance and the existing N4 lock/retention/endurance gates remain
+pending. No daily-use or public-release certification is claimed.
+
 ## N4 Nord Home-return remedy verified (2026-10-29)
 
 The reported0.21 Home-return disconnect was reproduced. OnePlus Hans froze the
