@@ -115,3 +115,19 @@ disconnected. The default ADB server again reported no route to the reachable
 debugging port; a separate loopback ADB server connected. No unpair, reset, data
 clear, uninstall or projector input was performed. Hardware checks of the new
 behavior are pending the owner's test.
+
+## 0.24 delivery (2026-11-18)
+
+0.24-ok-long-press (versionCode 24) from source commit bd5fc72 was installed in
+place on the Nord; APK SHA-256 prefix 90984be2d8f266ef, signed with the same local
+debug key as the installed app. Adds OK long press (START_LONG/END_LONG with an
+800–1500ms TV-side hold and fail-closed release) on top of 0.23.
+
+Prechecks: the app showed "Stopped. Enrollment retained. Native teardown
+completed." with no foreground service. Both enrollment records and both
+preference files were byte-identical before install, after install and after
+launch (the touchpad preference differs from the 0.23 record only because the
+owner changed sensitivity in between). No foreground service started on launch.
+No unpair, reset, data clear, uninstall or projector input was performed.
+Pending owner hardware checks: long-press OK opens the projector's long-press
+action, and the XK03H releases a held OK when the control connection closes.
