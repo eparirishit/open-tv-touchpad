@@ -52,6 +52,17 @@ final class TvRemoteClient {
     private SSLSocket socket;
     private char[] code;
     private TvCommand pending;
+    private dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteDirection pendingDirection;
+    /*
+     * OK long press. QUEUED: START_LONG waits in the pending slot. SENT: START_LONG was handed to
+     * the writer, so the TV may hold OK until END_LONG is written. The release is written only
+     * under normal admission; if it cannot be, the connection closes instead (never a bypass).
+     */
+    private enum Hold { NONE, QUEUED, SENT }
+    static final long MIN_HOLD_MILLIS = 800, MAX_HOLD_MILLIS = 1500;
+    private Hold hold = Hold.NONE;
+    private boolean releaseRequested, releasePending;
+    private long holdEpoch, releaseAfter, holdUntil;
     private Frame inFlightUser;
     private long pendingAt, pendingEpoch, nextUserAt, phaseUntil, writeUntil, readAt;
     private long readCredit = 2000;
@@ -118,10 +129,40 @@ final class TvRemoteClient {
     }
 
     boolean submit(TvCommand command, long epoch) {
+        return queue(command, epoch, dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteDirection.SHORT);
+    }
+
+    /** Starts an OK long press; the TV holds OK for MIN_HOLD..MAX_HOLD after START_LONG is written. */
+    boolean startHold(TvCommand command, long epoch) {
+        if (command != TvCommand.OK) return false;
+        synchronized (gate) {
+            if (hold != Hold.NONE) return false;
+            if (!queue(command, epoch, dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteDirection.START_LONG)) return false;
+            long now = clock.getAsLong();
+            hold = Hold.QUEUED; holdEpoch = epoch; releaseRequested = false; releasePending = false;
+            releaseAfter = now + MIN_HOLD_MILLIS; holdUntil = now + MAX_HOLD_MILLIS;
+            return true;
+        }
+    }
+
+    /** Finger lifted or input ended: release once the minimum hold has elapsed. Idempotent. */
+    void endHold() {
+        synchronized (gate) {
+            if (hold == Hold.QUEUED) { pending = null; hold = Hold.NONE; }
+            else if (hold == Hold.SENT) releaseRequested = true;
+            gate.notifyAll();
+        }
+    }
+
+    boolean holding() { synchronized (gate) { return hold != Hold.NONE; } }
+
+    private boolean queue(TvCommand command, long epoch, dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteDirection direction) {
         synchronized (gate) {
             long now = clock.getAsLong();
-            if (command == null || !visibility.accepts(epoch) || !live() || !ready || pairing || pending != null || now < nextUserAt) return false;
+            if (command == null || !visibility.accepts(epoch) || !live() || !ready || pairing || pending != null
+                    || hold != Hold.NONE || now < nextUserAt) return false;
             pending = command;
+            pendingDirection = direction;
             pendingAt = now;
             pendingEpoch = epoch;
             nextUserAt = now + 100;
@@ -139,7 +180,9 @@ final class TvRemoteClient {
     void inputRevoked() {
         synchronized (gate) {
             pending = null;
-            if (inFlightUser != null) terminate(true);
+            if (hold == Hold.QUEUED) hold = Hold.NONE;
+            // A sent START_LONG cannot be released without admission; close instead of holding OK.
+            if (inFlightUser != null || hold == Hold.SENT) terminate(true);
             gate.notifyAll();
         }
     }
@@ -325,14 +368,26 @@ final class TvRemoteClient {
             while (true) {
                 Frame frame;
                 synchronized (gate) {
-                    while (!stopped && replies.isEmpty() && pending == null) gate.wait();
+                    while (!stopped && replies.isEmpty() && pending == null && !releasePending) gate.wait();
                     if (stopped) return;
                     requireLive();
                     if (!replies.isEmpty()) frame = replies.removeFirst();
-                    else {
+                    else if (releasePending) {
+                        releasePending = false;
+                        if (!visibility.accepts(holdEpoch)) throw new IOException("TV release without admission");
+                        frame = new Frame(socket, TvCommand.OK.message(
+                                dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteDirection.END_LONG).toByteArray(),
+                                true, clock.getAsLong(), holdEpoch);
+                        frame.release = true;
+                    } else {
                         TvCommand command = pending; pending = null;
-                        if (clock.getAsLong()-pendingAt > 250 || !visibility.accepts(pendingEpoch)) continue;
-                        frame = new Frame(socket, command.message().toByteArray(), true, pendingAt, pendingEpoch);
+                        boolean start = hold == Hold.QUEUED;
+                        if (clock.getAsLong()-pendingAt > 250 || !visibility.accepts(pendingEpoch)) {
+                            if (start) hold = Hold.NONE;
+                            continue;
+                        }
+                        frame = new Frame(socket, command.message(pendingDirection).toByteArray(), true, pendingAt, pendingEpoch);
+                        if (start) hold = Hold.SENT;
                     }
                     if (frame.socket != socket) throw new IOException("Stale TV writer");
                     writeUntil = clock.getAsLong()+2000;
@@ -375,6 +430,7 @@ final class TvRemoteClient {
                         if (frame.started && !visibility.accepts(frame.epoch)) terminate(true);
                         writeUntil = 0; frame.done = true;
                         if (inFlightUser == frame) inFlightUser = null;
+                        if (frame.release && !stopped) hold = Hold.NONE;
                         if (!frame.user) outstandingReplies--;
                         gate.notifyAll();
                     }
@@ -388,6 +444,7 @@ final class TvRemoteClient {
             if (!stopped) {
                 if (error) failureStage = stage;
                 stopped = true; failed = error; ready = false; needsCode = false; pending = null;
+                hold = Hold.NONE; releaseRequested = false; releasePending = false;
                 if (code != null) Arrays.fill(code, '\0'); code = null;
                 while (!replies.isEmpty()) { Arrays.fill(replies.removeFirst().bytes, (byte)0); outstandingReplies--; }
                 gate.notifyAll();
@@ -410,6 +467,14 @@ final class TvRemoteClient {
                 synchronized (gate) {
                     if (stopped) break;
                     expired = !live() || (writeUntil != 0 && clock.getAsLong() >= writeUntil);
+                    if (!expired && hold == Hold.SENT && !releasePending) {
+                        long now = clock.getAsLong();
+                        // Release on lift after the minimum hold, and always by the maximum hold.
+                        if (releaseRequested && now >= releaseAfter || now >= holdUntil) {
+                            releasePending = true; releaseRequested = false; holdUntil = Long.MAX_VALUE;
+                            gate.notifyAll();
+                        }
+                    }
                     if (!expired) gate.wait(20);
                 }
                 if (expired) terminate(true);
@@ -446,7 +511,7 @@ final class TvRemoteClient {
         final byte[] bytes;
         final boolean user;
         final long at, epoch;
-        boolean done, started;
+        boolean done, started, release;
         Frame(SSLSocket socket, byte[] bytes, boolean user, long at, long epoch) {
             this.socket=socket; this.bytes=bytes; this.user=user; this.at=at; this.epoch=epoch;
         }

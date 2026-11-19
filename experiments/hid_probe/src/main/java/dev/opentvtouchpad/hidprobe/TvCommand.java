@@ -8,12 +8,15 @@ enum TvCommand {
     VOLUME_UP(24), VOLUME_DOWN(25), PLAY_PAUSE(85), NETFLIX(-1);
     private final int key;
     TvCommand(int key) { this.key = key; }
-    RemoteMessage message() {
+    RemoteMessage message() { return message(RemoteDirection.SHORT); }
+
+    /** START_LONG/END_LONG exist only for the OK long press; TvRemoteClient guarantees the release. */
+    RemoteMessage message(RemoteDirection direction) {
         RemoteMessage.Builder message = RemoteMessage.newBuilder();
         if (this == NETFLIX) message.setRemoteAppLinkLaunchRequest(
             RemoteAppLinkLaunchRequest.newBuilder().setAppLink("nflx://www.netflix.com/browse"));
         else message.setRemoteKeyInject(RemoteKeyInject.newBuilder()
-            .setKeyCodeValue(key).setDirection(RemoteDirection.SHORT));
+            .setKeyCodeValue(key).setDirection(direction));
         return message.build();
     }
 }

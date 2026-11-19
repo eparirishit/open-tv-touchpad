@@ -2,6 +2,8 @@ package dev.opentvtouchpad.hidprobe;
 
 import dev.opentvtouchpad.hidprobe.wire.PoloProto.*;
 import dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteMessage;
+import dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteKeyInject;
+import dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteDirection;
 import java.io.*;
 import java.net.*;
 import java.security.*;
@@ -439,6 +441,107 @@ public class TvRemoteClientTest {
         await(() -> events.closed.get() == 1);
         assertEquals(TvRemoteClient.Stage.CONTROL_EXCHANGE, events.failureStage);
         assertEquals(1, events.failed.get()); assertEquals(0, events.connected.get());
+    }
+
+    private static RemoteKeyInject key(FakeSocket socket, int index) throws Exception {
+        return TvControlProtocolTest.parse(socket.messages().get(index)).getRemoteKeyInject();
+    }
+
+    @Test public void okLongPressHoldsAtLeastTheMinimumThenReleases() throws Exception {
+        Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
+        TvRemoteClient client = connected(io, events, socket);
+        assertTrue(client.startHold(TvCommand.OK, visibility.epoch()));
+        await(() -> socket.messages().size() == 3);
+        assertEquals(23, key(socket, 2).getKeyCodeValue());
+        assertEquals(RemoteDirection.START_LONG, key(socket, 2).getDirection());
+        client.endHold();
+        now.addAndGet(TvRemoteClient.MIN_HOLD_MILLIS - 1); Thread.sleep(80);
+        assertEquals("A lift before the minimum keeps OK held", 3, socket.messages().size());
+        now.addAndGet(1);
+        await(() -> socket.messages().size() == 4);
+        assertEquals(23, key(socket, 3).getKeyCodeValue());
+        assertEquals(RemoteDirection.END_LONG, key(socket, 3).getDirection());
+        await(() -> !client.holding());
+        assertTrue(client.ready());
+        assertTrue("Ordinary keys work after the release", client.submit(TvCommand.HOME, visibility.epoch()));
+        await(() -> socket.messages().size() == 5);
+        assertEquals(0, events.failed.get());
+    }
+
+    @Test public void okLongPressAutoReleasesAtTheMaximumWithoutALift() throws Exception {
+        Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
+        TvRemoteClient client = connected(io, events, socket);
+        assertTrue(client.startHold(TvCommand.OK, visibility.epoch()));
+        await(() -> socket.messages().size() == 3);
+        now.addAndGet(TvRemoteClient.MAX_HOLD_MILLIS - 1); Thread.sleep(80);
+        assertEquals(3, socket.messages().size());
+        now.addAndGet(1);
+        await(() -> socket.messages().size() == 4);
+        assertEquals(RemoteDirection.END_LONG, key(socket, 3).getDirection());
+        client.endHold(); Thread.sleep(80);
+        assertEquals("A later lift sends no second release", 4, socket.messages().size());
+    }
+
+    @Test public void onlyOkHoldsAndNothingElseIsSentWhileHeld() throws Exception {
+        Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
+        TvRemoteClient client = connected(io, events, socket);
+        assertFalse(client.startHold(TvCommand.HOME, visibility.epoch()));
+        assertFalse(client.startHold(TvCommand.OK, 0));
+        assertTrue(client.startHold(TvCommand.OK, visibility.epoch()));
+        await(() -> socket.messages().size() == 3);
+        now.addAndGet(200);
+        assertFalse(client.submit(TvCommand.BACK, visibility.epoch()));
+        assertFalse(client.startHold(TvCommand.OK, visibility.epoch()));
+        assertEquals(3, socket.messages().size());
+    }
+
+    @Test public void revokeWhileHeldClosesInsteadOfSendingAnUnadmittedRelease() throws Exception {
+        Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
+        TvRemoteClient client = connected(io, events, socket);
+        assertTrue(client.startHold(TvCommand.OK, visibility.epoch()));
+        await(() -> socket.messages().size() == 3);
+        visibility.update(false); client.inputRevoked();
+        await(socket::isClosed); await(() -> events.closed.get() == 1);
+        assertEquals("No release written without admission", 3, socket.messages().size());
+        assertEquals(1, events.failed.get()); assertFalse(client.ready()); assertFalse(client.holding());
+        client.endHold();
+        assertEquals(3, socket.messages().size());
+    }
+
+    @Test public void liftBeforeTheStartIsWrittenSendsNoHoldAtAll() throws Exception {
+        Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
+        TvRemoteClient client = connected(io, events, socket); socket.blockWrites = true;
+        assertTrue(client.submit(TvCommand.HOME, visibility.epoch())); await(() -> socket.writeBlocked.get());
+        now.addAndGet(100);
+        assertTrue(client.startHold(TvCommand.OK, visibility.epoch()));
+        client.endHold();
+        assertFalse(client.holding());
+        socket.releaseWrites();
+        await(() -> socket.messages().size() == 3);
+        now.addAndGet(TvRemoteClient.MAX_HOLD_MILLIS); Thread.sleep(80);
+        assertEquals("Only the earlier tap was written", 3, socket.messages().size());
+        assertEquals(3, key(socket, 2).getKeyCodeValue());
+    }
+
+    @Test public void stopWhileHeldClosesTheConnection() throws Exception {
+        Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
+        TvRemoteClient client = connected(io, events, socket);
+        assertTrue(client.startHold(TvCommand.OK, visibility.epoch()));
+        await(() -> socket.messages().size() == 3);
+        client.stop(); await(() -> events.closed.get() == 1);
+        assertTrue(socket.isClosed()); assertFalse(client.holding());
+        assertEquals(0, events.failed.get());
+    }
+
+    @Test public void failedReleaseWriteClosesTheConnection() throws Exception {
+        Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
+        TvRemoteClient client = connected(io, events, socket);
+        assertTrue(client.startHold(TvCommand.OK, visibility.epoch()));
+        await(() -> socket.messages().size() == 3);
+        socket.failWrite = true;
+        now.addAndGet(TvRemoteClient.MAX_HOLD_MILLIS);
+        await(socket::isClosed); await(() -> events.closed.get() == 1);
+        assertEquals(1, events.failed.get()); assertFalse(client.holding());
     }
 
     @Test public void revokedAndStaleEpochsNeverAuthorizeReadyTransport() throws Exception {
