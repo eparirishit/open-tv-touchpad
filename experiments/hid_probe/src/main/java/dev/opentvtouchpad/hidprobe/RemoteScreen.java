@@ -51,7 +51,8 @@ public final class RemoteScreen {
     private final LinearLayout statusCard;
     private final LinearLayout header, footer;
     private final Button appearanceBack;
-    private final TextView connection, brand, sensitivityLabel;
+    private final TextView connection, brand, sensitivityLabel, sensitivityValue;
+    private final View controlsDivider;
     private final List<TextView> labels = new ArrayList<>();
     private final List<Button> controls = new ArrayList<>();
     private final List<Button> navigation = new ArrayList<>();
@@ -161,6 +162,8 @@ public final class RemoteScreen {
             control.setEnabled(false);
             tvButtons.put(command, control);
         }
+        for (TvCommand command : new TvCommand[]{TvCommand.BACK, TvCommand.HOME, TvCommand.NETFLIX,
+                TvCommand.VOLUME_DOWN, TvCommand.PLAY_PAUSE, TvCommand.VOLUME_UP}) large(tvButtons.get(command));
         addRow(remotePage, tvButtons.get(TvCommand.BACK), tvButtons.get(TvCommand.HOME), tvButtons.get(TvCommand.NETFLIX));
         Dpad dpad = new Dpad();
         cards.add(dpad);
@@ -192,18 +195,38 @@ public final class RemoteScreen {
                 case LEFT -> R.drawable.ui_scroll_left;
                 case RIGHT -> R.drawable.ui_scroll_right;
             };
-            Button control = iconButton(label, icon);
+            Button control = large(iconButton(label, icon));
             scrollButtons.put(direction, control);
             inputs.add(control);
         }
-        add(padPage, text("Scroll", 16));
-        addRow(padPage, scrollButtons.get(MouseReport.Direction.UP), scrollButtons.get(MouseReport.Direction.DOWN),
+        // One controls card in the app's card style: scroll on top, sensitivity below.
+        LinearLayout controls = column();
+        controls.setPadding(dp(16), dp(14), dp(16), dp(2));
+        cards.add(controls);
+        LinearLayout.LayoutParams controlsSize = new LinearLayout.LayoutParams(-1, -2);
+        controlsSize.topMargin = dp(12);
+        padPage.addView(controls, controlsSize);
+        add(controls, section("Scroll"));
+        addRow(controls, scrollButtons.get(MouseReport.Direction.UP), scrollButtons.get(MouseReport.Direction.DOWN),
                 scrollButtons.get(MouseReport.Direction.LEFT), scrollButtons.get(MouseReport.Direction.RIGHT));
-        sensitivityLabel = text("Touchpad sensitivity", 14);
-        add(padPage, sensitivityLabel);
+        controlsDivider = new View(context);
+        add(controls, controlsDivider);
+        controlsDivider.getLayoutParams().height = dp(1);
+        LinearLayout speedHeader = new LinearLayout(context);
+        speedHeader.setGravity(Gravity.CENTER_VERTICAL);
+        sensitivityLabel = section("Touchpad sensitivity");
+        speedHeader.addView(sensitivityLabel, new LinearLayout.LayoutParams(0, -2, 1));
+        sensitivityValue = text("1.00×", 13);
+        sensitivityValue.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        sensitivityValue.setPadding(dp(10), dp(4), dp(10), dp(4));
+        // The slider announces its own value; the chip is the visual copy of it.
+        sensitivityValue.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        speedHeader.addView(sensitivityValue, new LinearLayout.LayoutParams(-2, -2));
+        controls.addView(speedHeader, new LinearLayout.LayoutParams(-1, -2));
         sensitivity = new SeekBar(context);
         sensitivity.setMax(6);
         sensitivity.setMinHeight(dp(48));
+        sensitivity.setPadding(dp(10), 0, dp(10), 0);
         sensitivity.setContentDescription("Touchpad sensitivity");
         android.content.SharedPreferences touchpadPreferences = context.getSharedPreferences("touchpad-preferences", Context.MODE_PRIVATE);
         Object storedSpeed = touchpadPreferences.getAll().get("sensitivity-step");
@@ -222,7 +245,14 @@ public final class RemoteScreen {
             @Override public void onStartTrackingTouch(SeekBar bar) { touchpad.cancelGesture(); }
             @Override public void onStopTrackingTouch(SeekBar bar) { }
         });
-        add(padPage, sensitivity);
+        controls.addView(sensitivity, new LinearLayout.LayoutParams(-1, -2));
+        LinearLayout captions = new LinearLayout(context);
+        TextView slower = text("Slower", 12), faster = text("Faster", 12);
+        faster.setGravity(Gravity.END);
+        captions.addView(slower, new LinearLayout.LayoutParams(0, -2, 1));
+        captions.addView(faster, new LinearLayout.LayoutParams(0, -2, 1));
+        captions.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
+        add(controls, captions);
 
         setupPage = column();
         root.addView(setupPage, new LinearLayout.LayoutParams(-1, 0, 1));
@@ -334,7 +364,7 @@ public final class RemoteScreen {
         double gain = 0.5 + step * 0.25;
         touchpad.setSensitivity(gain);
         String value = String.format(java.util.Locale.ROOT, "%.2f×", gain);
-        sensitivityLabel.setText("Touchpad sensitivity · " + value);
+        sensitivityValue.setText(value);
         sensitivity.setStateDescription(value);
     }
 
@@ -456,6 +486,10 @@ public final class RemoteScreen {
         status.setBackground(shape(color("#EEF2F7", "#20262D"), Color.TRANSPARENT, 12));
         sensitivity.setProgressTintList(ColorStateList.valueOf(color("#2F6FEB", "#6AA8FF")));
         sensitivity.setThumbTintList(ColorStateList.valueOf(color("#2F6FEB", "#6AA8FF")));
+        sensitivity.setProgressBackgroundTintList(ColorStateList.valueOf(color("#C9CFD6", "#3A414A")));
+        sensitivityValue.setTextColor(color("#1B3E8A", "#9CC3FF"));
+        sensitivityValue.setBackground(shape(color("#E8F0FE", "#16233B"), Color.TRANSPARENT, 12));
+        controlsDivider.setBackgroundColor(color("#E1E4E8", "#2C323A"));
         for (View card : cards) card.setBackground(shape(color("#FFFFFF", "#181B1F"), color("#E1E4E8", "#2C323A"), card instanceof Dpad ? 1000 : 24));
         for (View track : tracks) track.setBackground(shape(color("#E9ECF0", "#181B1F"), Color.TRANSPARENT, 28));
         for (Button button : controls) styleButton(button);
@@ -578,6 +612,23 @@ public final class RemoteScreen {
 
     private Button iconButton(String label, int resource) { return configureButton(new IconButton(resource), label); }
 
+    /** Main remote rows and scroll controls use a larger 56dp target with a 26dp icon. */
+    private Button large(Button button) {
+        if (button instanceof IconButton icon) { icon.target = 56; icon.iconSize = 26; }
+        button.setMinHeight(dp(56));
+        button.setMinimumHeight(dp(56));
+        return button;
+    }
+
+    /** Small uppercase heading, matching the Setup section labels. */
+    private TextView section(String label) {
+        TextView section = text(label, 12);
+        section.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        section.setLetterSpacing(0.08f);
+        section.setAllCaps(true);
+        return section;
+    }
+
     private Button configureButton(Button button, String label) {
         button.setText(label);
         button.setContentDescription(label);
@@ -645,16 +696,17 @@ public final class RemoteScreen {
     private final class IconButton extends Button {
         private final Drawable icon;
         private final int resource;
+        int target = 48, iconSize = 24;
         IconButton(int resource) {
             super(context);
             this.resource = resource;
             icon = context.getDrawable(resource).mutate();
         }
         @Override protected void onMeasure(int widthSpec, int heightSpec) {
-            setMeasuredDimension(resolveSize(dp(48), widthSpec), resolveSize(dp(48), heightSpec));
+            setMeasuredDimension(resolveSize(dp(target), widthSpec), resolveSize(dp(target), heightSpec));
         }
         @Override protected void onDraw(Canvas canvas) {
-            int size = dp(24);
+            int size = dp(iconSize);
             int left = (getWidth() - size) / 2;
             int top = (getHeight() - size) / 2;
             icon.setBounds(left, top, left + size, top + size);

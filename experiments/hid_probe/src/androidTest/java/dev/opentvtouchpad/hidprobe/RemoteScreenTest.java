@@ -223,6 +223,25 @@ public class RemoteScreenTest {
         });
     }
 
+    @Test public void remoteRowsAndScrollUseLargerTargets() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            Context c=context(390,844,1f); float density=c.getResources().getDisplayMetrics().density;
+            RemoteScreen screen=new RemoteScreen(c,(x,y)->{},()->{});
+            layout(screen,c,390,844);
+            for (TvCommand command : new TvCommand[]{TvCommand.BACK,TvCommand.HOME,TvCommand.NETFLIX,
+                    TvCommand.VOLUME_DOWN,TvCommand.PLAY_PAUSE,TvCommand.VOLUME_UP})
+                assertTrue(command+" is 56dp",screen.tvButtons.get(command).getHeight()>=(int)(56*density));
+            screen.showTouchpad(true); layout(screen,c,390,844);
+            for (Button scroll : screen.scrollButtons.values()) {
+                assertTrue("Scroll is 56dp",scroll.getHeight()>=(int)(56*density));
+                reachable(screen,scroll);
+            }
+            assertTrue("Slider is visible",visible(screen,screen.sensitivity));
+            String value=String.format(java.util.Locale.ROOT,"%.2f×",0.5+screen.sensitivity.getProgress()*0.25);
+            assertNotNull("Sensitivity chip shows the slider value",findText(screen.root,value));
+        });
+    }
+
     @Test public void headerAndDpadMatchRequestedStyleWithoutEnablingInput() {
         InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
             RemoteScreen screen = new RemoteScreen(context(360,800,1f),(x,y)->{},()->{});

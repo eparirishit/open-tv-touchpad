@@ -295,3 +295,13 @@ still queued when the finger lifts is dropped, so no hold reaches the TV.
 Hardware check pending: confirm the XK03H releases a held key when the control
 connection closes. Arrows keep hold-to-repeat; other keys stay single presses.
 Shipped as 0.24.
+
+## Touchpad controls card and larger buttons (2026-11-18)
+
+Owner request. Scroll and touchpad sensitivity move into one card in the app's
+card style below the pad: an uppercase "Scroll" section label with the four scroll
+buttons, a divider, then a "Touchpad sensitivity" label with the current value in
+a blue chip, the unchanged 0.5×–2× slider and "Slower"/"Faster" captions. The
+slider keeps its accessible name and value; the chip and captions are visual only.
+The Back/Home/Netflix row, the volume/play row and the scroll buttons grow from
+48dp to 56dp with 26dp icons. Presentation only. Shipped as 0.25.
