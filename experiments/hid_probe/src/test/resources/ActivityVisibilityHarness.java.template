@@ -24,6 +24,9 @@ public class ActivityVisibilityHarness extends ActivityBase {
         void setConnected(boolean value) { if(!value) throw new AssertionError("Loss must not claim a retained link disconnected"); }
     }
     static class SetupView { boolean enabled=true; void pauseControls() { enabled=false; } }
+    static class KeyRepeat { boolean held=true; void stop() { held=false; } }
+    final KeyRepeat keyRepeat=new KeyRepeat();
+    boolean suppressTvClick=true;
     final Button start=new Button(), visible=new Button(), confirm=new Button(), connect=new Button();
     final java.util.List<Button> inputs=java.util.List.of(new Button());
     final Pad touchpad=new Pad();
@@ -48,6 +51,7 @@ __ON_FOCUS__
             check(!h.touchpad.enabled && !h.inputs.get(0).enabled && !h.screen.tvButtons.get(1).enabled && !h.screen.setupView.enabled,"Loss disables UI input locally");
             check(h.released && h.controller == null && h.attachment == 0,"Loss releases the Activity binding so native service teardown can finish while hidden");
             check(h.screen.stop.enabled,"Safety Stop remains available for the retained link");
+            check(!h.keyRepeat.held && !h.suppressTvClick,"Loss stops any D-pad hold before return");
         }
     }
 }

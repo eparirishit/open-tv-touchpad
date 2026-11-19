@@ -258,3 +258,20 @@ like other navigation. Every new connection starts collapsed. Any loss of
 connection expands the card automatically, so failure, recovery and permission
 text is never hidden. Stop stays in the header. Presentation only: no admission,
 transport or lifecycle change. Shipped as 0.23-design-alignment.
+
+## Larger controls and D-pad hold-to-repeat (2026-11-18)
+
+Owner request. The Remote and Touchpad pages fill the height left under the status
+card, so collapsing the card (or a tall phone) grows the D-pad (up to 340dp, still
+a circle) and the touchpad. Neither ever drops below the earlier 240dp; short or
+landscape screens keep the scrolling layout.
+
+Holding a D-pad arrow repeats it: first repeat after 400ms, then every 150ms, at
+most 200 repeats per hold. Each repeat is an ordinary complete SHORT key press
+through the existing admission, epoch, 100ms spacing and freshness checks, so
+nothing is ever held down on the TV. Repeats stop on release, slide-off, cancel,
+page change, disabled controls, pause or focus loss; a release after repeats adds
+no extra press. OK, Home, Back, volume, play/pause and Netflix stay single presses.
+A true long press (Remote v2 START_LONG/END_LONG, e.g. long-press OK for a context
+menu) is not implemented: a lost END_LONG could leave a key held on the TV, so it
+needs its own design, release guarantees and XK03H testing.
