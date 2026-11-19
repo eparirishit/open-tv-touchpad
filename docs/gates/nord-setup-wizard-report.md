@@ -134,3 +134,13 @@ action, and the XK03H releases a held OK when the control connection closes.
 
 Owner hardware check (2026-11-18): long-press OK works on the projector with 0.24.
 The release-on-disconnect behaviour (switching apps mid-hold) has not been reported.
+
+## 0.25 delivery (2026-11-18)
+
+0.25-touchpad-controls (versionCode 25) from source commit a19e977 was installed in
+place on the Nord; APK SHA-256 prefix dd4cc0b402962a2f, signed with the same local
+debug key. Adds the touchpad controls card and 56dp remote/scroll buttons on top
+of 0.24. Prechecks: app stopped with native teardown completed and no foreground
+service. Both enrollment records and both preference files were byte-identical
+before install, after install and after launch; no service started on launch. No
+unpair, reset, data clear, uninstall or projector input was performed.
