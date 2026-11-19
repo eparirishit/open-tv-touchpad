@@ -13,19 +13,19 @@ before implementation.
 - [ ] Define the Android distribution path. The phone app is an opt-in debug
   module with release builds disabled. Plan signing and upgrades around the
   existing pilot so testers retain their saved projector and settings.
-- [ ] Agree on the first iOS scope. A direct Wi-Fi remote can start with
-  on-screen-code pairing, reconnect, D-pad, Home/Back, volume, playback and a
-  Netflix shortcut. Prototype with SwiftUI, Network framework and Keychain.
-  Verify pairing and peer validation on a real iPhone and this Horizon before
-  building the complete remote UI.
+- [ ] Prove a protected iPhone-to-Horizon pointer path before building the
+  complete iOS UI. The first usable iPhone build must open Netflix, select a
+  profile, move the pointer, click a title, and scroll in both directions
+  without relying on the Nord. Verify that input stops when control ends or the
+  connection drops. Apple gives third-party iOS apps no supported way to
+  publish a [Bluetooth HID over GATT service](https://developer.apple.com/forums/thread/858265).
+- [ ] Add the iOS TV controls alongside the verified pointer path. Prototype
+  the Wi-Fi remote with SwiftUI, Network framework and Keychain. Verify
+  on-screen-code pairing, peer validation, reconnect, D-pad, Home/Back, volume,
+  playback and the Netflix shortcut on a real iPhone and this Horizon.
 - [ ] Share command fixtures and acceptance cases between Android and iOS.
   Include wrong-code and wrong-peer rejection, reconnect, and input cancellation
   when a controller leaves the foreground.
-- [ ] Evaluate an authenticated pointer path for iOS. The Android pilot uses a
-  Bluetooth HID Device profile. Apple gives third-party iOS apps no supported
-  way to publish a [Bluetooth HID over GATT service](https://developer.apple.com/forums/thread/858265).
-  Verify pointer, click, scroll and release on the Horizon before claiming
-  Netflix browsing support on iOS.
 - [ ] Finish the browser hub's device and certificate checks if browser access
   becomes a priority. Track them separately from native mobile delivery.
 

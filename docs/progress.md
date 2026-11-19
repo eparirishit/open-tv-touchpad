@@ -14,8 +14,29 @@ The browser hub has enrollment and controller UI code. Projector input remains
 disabled until its protected transport and browser trust checks pass.
 [Transport status](gates/h1a-report.md) · [Browser status](gates/h1b-report.md)
 
-iOS and wider Android support are proposed in the
+The first usable iPhone build must support browsing Netflix with a touchpad.
+A protected pointer path still needs verification on the Horizon. See the
 [mobile roadmap](../BACKLOG.md#proposed-mobile-roadmap).
+
+## Android 0.25 stability follow-up (2026-11-19)
+
+Two regression tests reproduced an early OK release after a slow write and a
+duplicate release when the finger lifted while automatic release was writing.
+The timer now starts after the START_LONG write finishes. One END_LONG remains
+pending until its write finishes. Losing input admission during a hold still
+closes the connection.
+
+Source `c434f12`, debug APK SHA-256
+`0a74fd44e7085756de88fa16174e42c2029d3e52ef3c55cd30328cb84deca576`.
+236 unit tests and 62 Android 12 emulator tests passed, including both new
+regressions in the unit suite. The opt-in projector diagnostic was skipped.
+Both APKs built and lint reported zero errors.
+
+The Nord was unavailable over ADB, so this build has not been installed on it.
+Verify normal OK hold and release on the Horizon, then leave the app during a
+hold and verify the projector releases the key. Follow with lock and return,
+connection loss and explicit reconnect, and Stop with observed native teardown.
+The [daily-use readiness checklist](gates/n4-readiness.md) still applies.
 
 ## Guided setup implementation (2026-10-30)
 
