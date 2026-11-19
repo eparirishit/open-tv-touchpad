@@ -39,7 +39,6 @@ public final class ProbeActivity extends Activity {
     private RemoteScreen screen;
     private TouchpadView touchpad;
     private KeyRepeat keyRepeat;
-    private boolean suppressTvClick;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -59,24 +58,8 @@ public final class ProbeActivity extends Activity {
         }, this::tvCommand);
         for (TvCommand command : TvCommand.values()) {
             Button button = screen.tvButtons.get(command);
-            bind(button, () -> {
-                // A hold that already repeated must not add one more press on release.
-                if (suppressTvClick) { suppressTvClick = false; return; }
-                tvCommand(command);
-            });
-            button.setOnTouchListener((view, event) -> {
-                switch (event.getActionMasked()) {
-                    case MotionEvent.ACTION_DOWN -> {
-                        touchpad.cancelGesture();
-                        suppressTvClick = false;
-                        keyRepeat.press(command, () -> view.isPressed() && view.isEnabled() && view.isShown());
-                    }
-                    case MotionEvent.ACTION_UP -> suppressTvClick = keyRepeat.release();
-                    case MotionEvent.ACTION_CANCEL -> { keyRepeat.stop(); suppressTvClick = false; }
-                    default -> { }
-                }
-                return false;
-            });
+            bind(button, () -> { if (!keyRepeat.consumeClick()) tvCommand(command); });
+            keyRepeat.attach(button, command, touchpad::cancelGesture);
         }
         for (MouseReport.Direction direction : MouseReport.Direction.values()) {
             Button control = screen.scrollButtons.get(direction);
@@ -297,7 +280,6 @@ public final class ProbeActivity extends Activity {
     private void pauseControls() {
         inputEpoch = 0;
         keyRepeat.stop();
-        suppressTvClick = false;
         connect.setEnabled(false);
         for (Button button : inputs) button.setEnabled(false);
         touchpad.setEnabled(false);
