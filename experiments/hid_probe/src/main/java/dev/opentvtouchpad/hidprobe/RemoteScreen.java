@@ -33,7 +33,7 @@ public final class RemoteScreen {
 
     public final LinearLayout root;
     public final TextView status;
-    public final Button connect, stop, setup;
+    public final Button connect, stop, setup, statusSummary;
     public final SetupScreen setupView;
     public final Button remoteTab, padTab;
     public final Button lightTheme, darkTheme;
@@ -57,7 +57,7 @@ public final class RemoteScreen {
     private final List<Button> navigation = new ArrayList<>();
     private final List<View> cards = new ArrayList<>();
     private final List<View> tracks = new ArrayList<>();
-    private boolean showingSetup, showingTouchpad, dark, connected, tvConnected, imeVisible;
+    private boolean showingSetup, showingTouchpad, dark, connected, tvConnected, imeVisible, statusExpanded, statusPainted;
     private boolean showingAppearance;
 
     public RemoteScreen(Context context, BiConsumer<Integer, Integer> move, Runnable tap) {
@@ -95,6 +95,13 @@ public final class RemoteScreen {
         statusCard.setPadding(dp(16), dp(14), dp(16), dp(2));
         cards.add(statusCard);
         add(content, statusCard);
+        // Shown only while the run is fully connected; it collapses the card to this one row.
+        statusSummary = button("Connected");
+        statusSummary.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
+        statusSummary.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        statusSummary.setTextSize(14);
+        statusSummary.setPadding(0, dp(4), 0, dp(4));
+        add(statusCard, statusSummary);
         connection = text("Mouse: disconnected", 14);
         connection.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         connection.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
@@ -263,6 +270,7 @@ public final class RemoteScreen {
         for (Button input : inputs) input.setEnabled(false);
         connect.setEnabled(false);
         bindNavigation(setup, () -> showSetup(!showingSetup));
+        bindNavigation(statusSummary, () -> { statusExpanded = !statusExpanded; updateStatusCard(); });
         bindNavigation(remoteTab, () -> showTouchpad(false));
         bindNavigation(padTab, () -> showTouchpad(true));
         bindNavigation(appearanceBack, () -> showAppearance(false));
@@ -327,27 +335,67 @@ public final class RemoteScreen {
     }
 
     public void setTvConnected(boolean connected) {
+        // The Activity re-renders up to ten times a second; repaint only on a real change.
+        if (statusPainted && connected == tvConnected) return;
         tvConnected = connected;
-        tvStatus.setTextColor(color("#14171A", "#F2F4F6"));
-        statusDot(tvStatus, connected ? color("#1F8A4C", "#4ADE80") : color("#C27803", "#F4C675"));
+        paintStatus();
     }
 
-    private void statusDot(TextView label, int fill) {
+    public void setConnected(boolean connected) {
+        if (statusPainted && connected == this.connected) return;
+        // Each new connection starts collapsed; any loss expands the card again.
+        if (connected != this.connected) statusExpanded = false;
+        this.connected = connected;
+        paintStatus();
+    }
+
+    /** Applies connection state and the current palette to the header and status card. */
+    private void paintStatus() {
+        statusPainted = true;
+        stop.setVisibility(connected ? View.VISIBLE : View.GONE);
+        updateHeader();
+        int text = color("#14171A", "#F2F4F6");
+        int ready = color("#1F8A4C", "#4ADE80");
+        connection.setText(connected ? "Mouse: connected" : "Mouse: disconnected");
+        connection.setTextColor(text);
+        statusDot(connection, dot(connected ? ready : color("#8A929C", "#7C858F")), null);
+        tvStatus.setTextColor(text);
+        statusDot(tvStatus, dot(tvConnected ? ready : color("#C27803", "#F4C675")), null);
+        updateStatusCard();
+    }
+
+    /**
+     * A fully connected run collapses the card to one summary row; the owner may expand it.
+     * Any loss of connection expands it again, so failures and recovery text are never hidden.
+     */
+    private void updateStatusCard() {
+        boolean collapsed = connected && !statusExpanded;
+        statusSummary.setVisibility(connected ? View.VISIBLE : View.GONE);
+        statusSummary.setText(tvConnected ? "Mouse and TV connected" : "Mouse connected");
+        statusSummary.setContentDescription(statusSummary.getText() + (collapsed ? ". Show details" : ". Hide details"));
+        statusSummary.setStateDescription(collapsed ? "Collapsed" : "Expanded");
+        int details = collapsed ? View.GONE : View.VISIBLE;
+        for (View detail : new View[]{connection, tvStatus, status}) detail.setVisibility(details);
+        connect.setVisibility(collapsed || showingSetup ? View.GONE : View.VISIBLE);
+        Drawable chevron = context.getDrawable(collapsed ? R.drawable.ui_down : R.drawable.ui_up).mutate();
+        chevron.setBounds(0, 0, dp(20), dp(20));
+        // A colour filter survives TextView re-applying its (empty) compound tint list.
+        chevron.setColorFilter(new android.graphics.PorterDuffColorFilter(color("#5B636D", "#9AA3AD"),
+                android.graphics.PorterDuff.Mode.SRC_IN));
+        statusDot(statusSummary, dot(color("#1F8A4C", "#4ADE80")), chevron);
+    }
+
+    private GradientDrawable dot(int fill) {
         GradientDrawable dot = new GradientDrawable();
         dot.setShape(GradientDrawable.OVAL);
         dot.setColor(fill);
         dot.setBounds(0, 0, dp(9), dp(9));
-        label.setCompoundDrawablesRelative(dot, null, null, null);
-        label.setCompoundDrawablePadding(dp(7));
+        return dot;
     }
 
-    public void setConnected(boolean connected) {
-        this.connected = connected;
-        stop.setVisibility(connected ? View.VISIBLE : View.GONE);
-        updateHeader();
-        connection.setText(connected ? "Mouse: connected" : "Mouse: disconnected");
-        connection.setTextColor(color("#14171A", "#F2F4F6"));
-        statusDot(connection, connected ? color("#1F8A4C", "#4ADE80") : color("#8A929C", "#7C858F"));
+    private void statusDot(TextView label, Drawable dot, Drawable end) {
+        label.setCompoundDrawablesRelative(dot, null, end, null);
+        label.setCompoundDrawablePadding(dp(7));
     }
 
     private void updateFooter() {
@@ -378,7 +426,7 @@ public final class RemoteScreen {
         select(setup, showingSetup);
         select(remoteTab, !showingSetup && !showingTouchpad);
         select(padTab, !showingSetup && showingTouchpad);
-        connect.setVisibility(showingSetup ? View.GONE : View.VISIBLE);
+        updateStatusCard();
     }
 
     private void select(Button button, boolean selected) {
@@ -412,8 +460,7 @@ public final class RemoteScreen {
                 color("#DCE0E5", "#2C323A"), color("#5B636D", "#9AA3AD"));
         select(lightTheme, !dark);
         select(darkTheme, dark);
-        setConnected(connected);
-        setTvConnected(tvConnected);
+        paintStatus();
         applySystemBars();
     }
 
@@ -475,6 +522,11 @@ public final class RemoteScreen {
             foreground = text;
             border = fill;
         }
+        if (button == statusSummary) {
+            fill = Color.TRANSPARENT;
+            foreground = text;
+            border = Color.TRANSPARENT;
+        }
         boolean roundBack = button == appearanceBack;
         if (roundBack) {
             fill = surface;
@@ -490,7 +542,8 @@ public final class RemoteScreen {
         background.addState(BUTTON_STATES[3], shape(fill, border, radius));
         button.setBackground(background);
         button.setTextColor(new ColorStateList(BUTTON_STATES, new int[]{color("#6B737C", "#6F7882"), direction ? accent : ok ? foreground : text, foreground, foreground}));
-        button.setCompoundDrawableTintList(button.getTextColors());
+        // The status summary keeps its green dot; its chevron is tinted when painted.
+        button.setCompoundDrawableTintList(button == statusSummary ? null : button.getTextColors());
     }
 
     private int color(String light, String night) { return Color.parseColor(dark ? night : light); }

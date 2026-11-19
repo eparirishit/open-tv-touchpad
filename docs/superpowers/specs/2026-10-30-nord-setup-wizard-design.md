@@ -246,3 +246,15 @@ green-checked claims); theme choices keep the owner's no-border-highlight rule;
 no Close button, Stop only while connected, and no Buttons-instead mode, per the
 earlier owner follow-ups; saved items say "Saved; live connection not checked"
 rather than "Paired"; no example numbers, addresses or icons that claim state.
+
+## Collapsed status card (2026-11-18)
+
+Owner request. While the run is fully connected (Bluetooth ready and, when TV
+controls are enrolled, the TV channel ready), the Remote/Touchpad status card
+collapses to one summary row: green dot, "Mouse and TV connected" or "Mouse
+connected", and a chevron. Tapping it shows or hides the details; it is a named,
+48dp control with Collapsed/Expanded state and cancels pending touchpad gestures
+like other navigation. Every new connection starts collapsed. Any loss of
+connection expands the card automatically, so failure, recovery and permission
+text is never hidden. Stop stays in the header. Presentation only: no admission,
+transport or lifecycle change. Shipped as 0.23-design-alignment.

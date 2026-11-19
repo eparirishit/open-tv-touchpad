@@ -156,6 +156,48 @@ public class RemoteScreenTest {
         });
     }
 
+    @Test public void statusCardCollapsesOnlyWhileConnectedAndReopensOnLoss() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            Context c=context(390,844,1f); AtomicInteger taps=new AtomicInteger();
+            RemoteScreen screen=new RemoteScreen(c,(x,y)->fail("Status toggle sent movement"),taps::incrementAndGet);
+            layout(screen,c,390,844);
+            assertFalse("No summary while disconnected",visible(screen,screen.statusSummary));
+            assertTrue(visible(screen,screen.status)); assertTrue(visible(screen,screen.connect));
+            screen.setConnected(true); screen.setTvConnected(true); layout(screen,c,390,844);
+            assertTrue(visible(screen,screen.statusSummary));
+            assertEquals("Mouse and TV connected",screen.statusSummary.getText().toString());
+            assertEquals("Collapsed",screen.statusSummary.getStateDescription().toString());
+            assertFalse("Details hidden once connected",visible(screen,screen.status));
+            assertFalse(visible(screen,screen.tvStatus)); assertFalse(visible(screen,screen.connect));
+            reachable(screen,screen.statusSummary);
+            screen.touchpad.setEnabled(true);
+            long t=SystemClock.uptimeMillis();
+            MotionEvent down=MotionEvent.obtain(t,t,MotionEvent.ACTION_DOWN,20,20,0);
+            screen.touchpad.onTouchEvent(down); down.recycle();
+            screen.statusSummary.performClick();
+            MotionEvent up=MotionEvent.obtain(t,t+30,MotionEvent.ACTION_UP,20,20,0);
+            screen.touchpad.onTouchEvent(up); up.recycle();
+            assertEquals("Toggling details cannot leave a pending tap",0,taps.get());
+            layout(screen,c,390,844);
+            assertEquals("Expanded",screen.statusSummary.getStateDescription().toString());
+            assertTrue(visible(screen,screen.status)); assertTrue(visible(screen,screen.tvStatus));
+            screen.setDark(true); layout(screen,c,390,844);
+            assertTrue("Theme change keeps the owner's choice",visible(screen,screen.status));
+            screen.setTvConnected(false); screen.setConnected(false); layout(screen,c,390,844);
+            assertFalse(visible(screen,screen.statusSummary));
+            assertTrue("Loss always shows the full status",visible(screen,screen.status));
+            assertTrue(visible(screen,screen.tvStatus)); assertTrue(visible(screen,screen.connect));
+            screen.setConnected(true); layout(screen,c,390,844);
+            assertEquals("Mouse connected",screen.statusSummary.getText().toString());
+            assertFalse("A new connection starts collapsed",visible(screen,screen.status));
+            for (boolean pad : new boolean[]{true,false}) {
+                screen.showTouchpad(pad); layout(screen,c,390,844);
+                assertFalse("Switching tabs keeps the card collapsed",visible(screen,screen.connect));
+                assertFalse(visible(screen,screen.status));
+            }
+        });
+    }
+
     @Test public void headerAndDpadMatchRequestedStyleWithoutEnablingInput() {
         InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
             RemoteScreen screen = new RemoteScreen(context(360,800,1f),(x,y)->{},()->{});
@@ -406,7 +448,11 @@ public class RemoteScreenTest {
                 }
                 assertFalse(screen.touchpad.isEnabled());
                 reachable(screen,screen.stop); reachable(screen,screen.setup);
-                assertFalse(visible(screen,screen.setupView.primary)); reachable(screen,screen.connect);
+                assertFalse(visible(screen,screen.setupView.primary));
+                // Connected collapses the card; the expanded card must still fit every size.
+                reachable(screen,screen.statusSummary);
+                screen.statusSummary.performClick(); layout(screen,c,size[0],size[1]);
+                reachable(screen,screen.connect);
                 reachable(screen,screen.remoteTab); reachable(screen,screen.padTab);
                 {
                     screen.showSetup(false); layout(screen,c,size[0],size[1]);
