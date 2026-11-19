@@ -95,3 +95,23 @@ recovery with accurate copy. Never treat a fixture result as a hardware PASS.
 N4 lock/return,30-minute retention/expiry, loss/recovery and endurance/battery gates
 remain as recorded in [daily-use readiness](n4-readiness.md). No public release
 or daily-use readiness is claimed by this candidate.
+
+## 0.23 delivery (2026-11-18)
+
+0.23-design-alignment (versionCode 23) from source commit aa1d0d7 was installed in
+place on the Nord (Android 12); APK SHA-256 prefix d17f88410f9b0b76. The design
+alignment, collapsible status card, larger D-pad/touchpad and D-pad hold-to-repeat
+are included. An earlier 0.23 build from before the last two commits had already
+been installed; both share versionCode 23, so compare APK hashes, not versions.
+
+Prechecks: the app showed "Stopped. Enrollment retained. Native teardown
+completed." and no foreground connection service was running. The candidate was
+explicitly signed with the same local debug key as the installed APK, after a
+worktree build had produced a different signer; Android would have rejected that
+build as an update. Both enrollment records and the two preference files were
+byte-identical (SHA-256) before install, after install and after launch. After
+launch no foreground service started and the app showed the saved projector as
+disconnected. The default ADB server again reported no route to the reachable
+debugging port; a separate loopback ADB server connected. No unpair, reset, data
+clear, uninstall or projector input was performed. Hardware checks of the new
+behavior are pending the owner's test.
