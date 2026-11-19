@@ -364,7 +364,7 @@ accessibility gate only.
 
 These later checks are not implied to fail or pass.
 
-## Not Implemented
+## Features absent from the original projector-side build
 
 - PWA or browser controller.
 - Local HTTPS/WSS gateway, discovery, certificates, pairing, authenticated

@@ -1,43 +1,47 @@
 # Open TV Touchpad
 
-## Browser-only hub development
+Open TV controls an Android TV projector from a phone. The Android pilot pairs
+directly over Wi-Fi for TV buttons and uses Bluetooth for the pointer, clicks,
+and scrolling needed by mobile Netflix. The pilot has been tested on a OnePlus
+Nord and XGIMI Horizon. See the [current status](docs/progress.md#current-status)
+and [mobile roadmap](BACKLOG.md#proposed-mobile-roadmap).
 
-The local-only PWA hub is being implemented with native owner approval and
-certificate trust. **The product has no projector backend until a protected link
-passes verification.** See [setup and recovery](docs/setup-hub.md), the
-[accepted hub design](docs/superpowers/specs/2026-10-24-local-pwa-hub-design.md),
-and [H1A transport status](docs/gates/h1a-report.md). The native H0 experiment
-remains a separate functional proof.
+## Android phone pilot
 
-## Unified remote proof (H0)
+The phone app lives in `experiments/hid_probe`. Use JDK 17 and Android SDK 36
+to run the pilot's opt-in Gradle tasks.
 
-The user approved a separate local-hub experiment on 2026-10-24: one Mac
-window combines Android TV remote buttons with scrcpy UHID mouse input. **H0 PASS
-is scoped to the local Mac functional proof.** The user has confirmed
-visible pointer movement, UHID profile/title selection, both scroll axes, dragging,
-Stop/reconnect and playback/pause/resume. The earlier broad controls PASS is preserved,
-but its Netflix shortcut claim was contradicted by a later logged launch failure.
-The corrected shortcut now passed a separate live retest: Netflix opens and both
-channels stay connected. Next is new hub trust/PWA design and its acceptance gate,
-not network implementation. Abrupt link/power loss and active-drag interruption
-remain untested production reliability limitations; PWA and Windows are not certified.
-The earlier
-accessibility gates remain failed/stopped. This experiment is not the PWA or
-a released remote app. See [the proof runbook](experiments/hub_remote/README.md)
-and [its hardware evidence](docs/gates/h0-report.md).
+```sh
+./gradlew -PhidProbe=true :experiments:hid_probe:testDebugUnitTest :experiments:hid_probe:assembleDebug
+```
 
-## Original Android gate
+See the [pilot runbook](experiments/hid_probe/README.md#build-and-local-checks)
+and [installation evidence](docs/gates/nord-setup-wizard-report.md).
+Updates on an enrolled phone require the existing signing key.
 
-Open TV Touchpad is an Android TV hardware-gate project. This repository
-contains the M0/M0.1 Android gate baseline and the isolated H0 Mac experiment.
-The Android release contains no product networking, web or input behavior.
+## Browser hub and Mac experiment
 
-The certified XGIMI Horizon XK03H run recorded an M0 `FAIL`: cursor movement
-worked, but accessibility-dispatched taps did not activate a Netflix profile
-tile. The approved architecture therefore stops before M1. See
-`docs/progress.md` and `docs/gates/m0-report.md`.
+The browser hub in `hub/` and `web/` implements local HTTPS enrollment and
+the remote UI. Projector input remains disabled pending the
+[protected transport](docs/gates/h1a-report.md) and
+[real-browser trust](docs/gates/h1b-report.md) checks.
+See [browser hub setup](docs/setup-hub.md).
 
-## Build
+The [Mac remote experiment](experiments/hub_remote/README.md) verified
+Netflix pointer and TV button behavior using a separate test setup.
+Its [hardware report](docs/gates/h0-report.md) records the transport
+and failure cases still needing verification.
+
+## Original projector-side test
+
+The `android/app` module contains the M0/M0.1 accessibility tests that run
+on Android TV. Its release build excludes the test controller.
+
+On the XGIMI Horizon XK03H, the controller moved the cursor and failed to
+activate a Netflix profile tile. This route is blocked before M1.
+See the [M0 hardware report](docs/gates/m0-report.md).
+
+### Build the hardware test
 
 The reproducible baseline requires JDK 17 and Android SDK 36. With `JAVA_HOME`,
 `ANDROID_HOME`, and `GRADLE_USER_HOME` configured, run:
@@ -53,7 +57,7 @@ That build command does not perform hardware verification. The completed
 certified-device result is recorded in `docs/gates/m0-report.md` and
 `docs/gates/m0-checklist.md`.
 
-## M0 Controller
+### Run the M0 controller
 
 Open the launcher activity, choose **Open accessibility settings and assign
 shortcut**, enable the gesture-only service, and assign the system

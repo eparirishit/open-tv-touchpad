@@ -1,5 +1,22 @@
 # Project Progress
 
+## Current status
+
+As of November 19, 2026, the Android phone pilot on `main` is
+**0.25-touchpad-controls**. The Nord installation preserved its two enrollments
+and both preference files. Long-press OK worked on the Horizon in the 0.24
+hardware trial. Held-key release on disconnect and the existing lock, reconnect,
+and endurance checks still need hardware evidence.
+[Delivery report](gates/nord-setup-wizard-report.md#025-delivery-2026-11-18)
+· [Daily-use readiness](gates/n4-readiness.md)
+
+The browser hub has enrollment and controller UI code. Projector input remains
+disabled until its protected transport and browser trust checks pass.
+[Transport status](gates/h1a-report.md) · [Browser status](gates/h1b-report.md)
+
+iOS and wider Android support are proposed in the
+[mobile roadmap](../BACKLOG.md#proposed-mobile-roadmap).
+
 ## Guided setup implementation (2026-10-30)
 
 The approved native wizard replaces the repeated manual Start/Stop journey with
@@ -531,16 +548,14 @@ and authorized browser-only H1B implementation. H1A remains NOT PASSED; no
 plaintext product exception is authorized. The accepted design supersedes the
 earlier proposed-status descriptions below for this hub work only.
 
-## Current Status
+## Original hub proposal (historical)
 
 The user selected local-only phone/laptop access with per-device certificate trust,
 no account and no VPN. The [hub design](superpowers/specs/2026-10-24-local-pwa-hub-design.md)
-and [seven-stage plan](superpowers/plans/2026-10-24-local-pwa-hub.md) are drafted.
-Builder/security findings have explicit lifecycle and recovery rules. D1 remains
-an owner decision: require proven protected projector transport, or explicitly
-accept the existing unencrypted ADB hop for a trusted-LAN beta. Local HTTPS does
-not resolve that hop. No product listener, trust installation or product backend
-has been added. H1A/H1B/H2/H3 have not passed.
+and [seven-stage plan](superpowers/plans/2026-10-24-local-pwa-hub.md) described
+two projector transport options. The owner later selected protected transport.
+The [H1A report](gates/h1a-report.md) records that decision and the remaining
+transport evidence.
 
 On 2026-10-24 the user approved a separate unified-remote hub proof (H0).
 The isolated native Mac window has passed the scoped H0 functional proof.
