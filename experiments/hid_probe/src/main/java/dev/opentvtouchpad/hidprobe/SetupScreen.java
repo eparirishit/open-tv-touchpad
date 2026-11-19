@@ -143,10 +143,9 @@ public final class SetupScreen {
                 || snapshot.remainingMillis()<=0) clearCode();
         if (changed || generationChanged || configurationChanged || !snapshot.enabled()) dismissConfirmation();
         state=snapshot; paused=false;
-        if (changed || configurationChanged
-                || snapshot.page()==SetupState.Page.TV_ERROR && !previous.diagnostic().equals(snapshot.diagnostic())) {
-            buildPage(); scroll.scrollTo(0,0);
-        }
+        boolean rebuilt=changed || configurationChanged
+                || snapshot.page()==SetupState.Page.TV_ERROR && !previous.diagnostic().equals(snapshot.diagnostic());
+        if (rebuilt) { buildPage(); scroll.scrollTo(0,0); }
         if (changed && snapshot.page()==SetupState.Page.ADDRESS) address.setText(snapshot.address());
         message.setText(snapshot.message().isEmpty() ? defaultMessage() : snapshot.message());
         message.setVisibility(message.length()==0 ? View.GONE : View.VISIBLE);
@@ -165,7 +164,9 @@ public final class SetupScreen {
             if(ring.windowMillis==0 && snapshot.remainingMillis()>0) ring.windowMillis=Math.min(120000,snapshot.remainingMillis());
             ring.remaining=snapshot.remainingMillis();ring.invalidate();
         }
-        updateControls(); applyPalette(dark);
+        // Countdown ticks re-render up to ten times a second; restyle only when the page's views change.
+        // Enabled/disabled appearance comes from state lists, and theme changes call applyPalette directly.
+        updateControls(); if (rebuilt) applyPalette(dark);
     }
 
     public void pauseControls() {
