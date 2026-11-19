@@ -55,7 +55,7 @@ public final class ProbeActivity extends Activity {
         keyRepeat = new KeyRepeat(new KeyRepeat.Scheduler() {
             @Override public void post(Runnable task, long delayMillis) { handler.postDelayed(task, delayMillis); }
             @Override public void cancel(Runnable task) { handler.removeCallbacks(task); }
-        }, this::tvCommand);
+        }, this::tvCommand, this::tvHoldStart, this::tvHoldEnd);
         for (TvCommand command : TvCommand.values()) {
             Button button = screen.tvButtons.get(command);
             bind(button, () -> { if (!keyRepeat.consumeClick()) tvCommand(command); });
@@ -265,6 +265,17 @@ public final class ProbeActivity extends Activity {
         if (controller != null) controller.scroll(attachment, inputEpoch, direction);
         render();
     }
+    private void tvHoldStart(TvCommand command) {
+        touchpad.cancelGesture();
+        if (controller != null) controller.tvHoldStart(attachment, inputEpoch, command);
+        render();
+    }
+
+    /** Called on every end path, including pause and focus loss, so the TV never keeps OK held. */
+    private void tvHoldEnd() {
+        if (controller != null) controller.tvHoldEnd();
+    }
+
     private void tvCommand(TvCommand command) {
         touchpad.cancelGesture();
         if (controller != null) controller.tvCommand(attachment, inputEpoch, command);
