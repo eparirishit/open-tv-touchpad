@@ -29,12 +29,16 @@ public final class RemoteConnectionService extends Service {
 
     public final class LocalBinder extends Binder {
         long attach() { return runtime.attach(); }
+        long attach(java.util.concurrent.atomic.AtomicBoolean visit) { return runtime.attach(visit); }
         void foreground(long token, boolean foreground) { runtime.foreground(token, foreground); }
         void uiState(long token, boolean focused, boolean surfaceVisible) { runtime.uiState(token, focused, surfaceVisible); }
         void detach(long token) { runtime.detach(token); }
         void connectionLost(long token) { runtime.connectionLost(token); }
         RemoteRuntime.Snapshot snapshot(long token) { return runtime.snapshot(token); }
         boolean request(long token, RemoteRuntime.Request request, String value) { return runtime.request(token, request, value); }
+        void setupAction(long token, SetupState.Action action, String value) { runtime.setupAction(token, action, value); }
+        boolean takeDiscoverabilityRequest(long token, long generation) { return runtime.takeDiscoverabilityRequest(token, generation); }
+        void discoveryResult(long token, long generation, int seconds) { runtime.discoveryResult(token, generation, seconds); }
         boolean makeVisible(long token) { return runtime.makeVisible(token); }
         void move(long token, long epoch, int dx, int dy) { runtime.move(token, epoch, dx, dy); }
         void click(long token, long epoch) { runtime.click(token, epoch); }

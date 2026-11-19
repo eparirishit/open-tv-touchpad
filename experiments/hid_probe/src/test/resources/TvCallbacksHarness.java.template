@@ -1,6 +1,12 @@
 package dev.opentvtouchpad.hidprobe;
 import static dev.opentvtouchpad.hidprobe.NativeRunGate.Resource.TV;
 public class TvCallbacksHarness {
+    enum SetupIntent { NONE, BLUETOOTH, TV }
+    final SetupIntent setupIntent = SetupIntent.NONE;
+    SetupState.Page setupAfterCleanup, setupPage;
+    String setupMessage, setupDiagnostic;
+    boolean requestDiscoverable, discoveryRequested;
+
     static class SystemClock { static long elapsedRealtime() { return 0; } }
     static class TvRemoteClient {
         enum Stage { IDENTITY, PAIRING_CONNECT, PAIRING_TLS, SESSION_VALIDATION, PAIRING_EXCHANGE, CODE, CONTROL_CONNECT, CONTROL_TLS, CONTROL_EXCHANGE }
@@ -42,6 +48,7 @@ public class TvCallbacksHarness {
     boolean active() { return ownership.active() && alive; }
     void setStatus(String message) { status.setText(message); }
     void cleanupProgress() {}
+    void closeSetup(SetupState.Page page, String message) { throw new AssertionError("normal run entered setup"); }
     void connect(Object peer) { connects++; }
     void stop(String message) { status.setText(message); stopping = true; stops++; ownership.stop(); }
 __CALLBACK_METHOD__
@@ -52,6 +59,8 @@ __CALLBACK_METHOD__
         class Run { NativeRunGate.Run ownership; }
         Run run;
         boolean pendingTvForget;
+        SetupState.Page setupAfterCleanup;
+        String setupMessage;
         Recreated(NativeRunGate gate) { NATIVE_RUNS = gate; }
         void clearTvCode() {}
         void stop(String message) {}

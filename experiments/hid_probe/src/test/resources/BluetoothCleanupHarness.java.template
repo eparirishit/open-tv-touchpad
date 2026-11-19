@@ -4,8 +4,16 @@ import static dev.opentvtouchpad.hidprobe.NativeRunGate.Resource.*;
 import static dev.opentvtouchpad.hidprobe.ProbeTrace.Event.*;
 
 public class BluetoothCleanupHarness {
+    enum SetupIntent { NONE, BLUETOOTH, TV }
+    final SetupIntent setupIntent = SetupIntent.NONE;
+    SetupState.Page setupAfterCleanup, setupPage;
+    String setupMessage, setupDiagnostic;
+    boolean requestDiscoverable, discoveryRequested;
+
     boolean connectOnRegister;
     void connectSaved() {}
+    void setupRegistered(long generation) { throw new AssertionError("normal run entered setup"); }
+    void bluetoothSetupConnected(long generation) { throw new AssertionError("normal run entered setup"); }
     final InputVisibilityGate inputVisibility = new InputVisibilityGate();
     final SessionLifetime lifetime = new SessionLifetime(() -> 0);
     { inputVisibility.update(true); lifetime.beginSetup(); }

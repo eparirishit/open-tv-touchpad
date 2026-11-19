@@ -44,7 +44,7 @@ public class RemoteConnectionServiceTest {
             screenField.setAccessible(true);
             RemoteScreen screen = (RemoteScreen) screenField.get(activity);
             String expected = granted ? (screen.inputSurfaceVisible() ? "Permission granted. Tap Connect."
-                : "Permission granted. Tap Start setup.") : "Nearby devices permission is required.";
+                : "Permission granted. Continue setup.") : "Nearby devices permission is required.";
             assertEquals(expected, result[0]);
             Thread.sleep(200);
             instrumentation.runOnMainSync(() -> assertEquals(result[0], label.getText().toString()));

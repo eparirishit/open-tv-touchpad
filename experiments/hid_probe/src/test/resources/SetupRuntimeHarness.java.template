@@ -1,0 +1,135 @@
+package dev.opentvtouchpad.hidprobe;
+import static dev.opentvtouchpad.hidprobe.NativeRunGate.Resource.*;
+public class SetupRuntimeHarness {
+    enum SetupIntent { NONE, BLUETOOTH, TV }
+    final NativeRunGate NATIVE_RUNS = new NativeRunGate();
+    long now=1000, attachment=1;
+    SetupRuntimeHarness(){SystemClock.clock=now;}
+    boolean visible=true, surfaceVisible, serviceDestroyed;
+    SetupIntent pendingSetupIntent=SetupIntent.NONE;
+    long pendingSetupGeneration;
+    java.util.concurrent.atomic.AtomicBoolean setupVisit = new java.util.concurrent.atomic.AtomicBoolean(true), pendingSetupVisit;
+    final SessionLifetime lifetime=new SessionLifetime(() -> now);
+    SetupState.Page setupPage=SetupState.Page.BT_START, setupAfterCleanup;
+    Run run;
+    int pairRequests, stops, savedConnects, starts;
+    String savedPeer;
+    final InputVisibilityGate inputVisibility = new InputVisibilityGate();
+    class Session {
+        String savedPeer(){return savedPeer;}
+        boolean running=true;
+        void foreground(long generation,boolean value) {}
+        boolean active(long generation){return running;}
+        boolean canConfirm(long generation){return false;}
+    }
+    final Session session = new Session();
+    static class Service {void scheduleDeadline(){}}
+    final Service connectionService = new Service();
+    String status;
+    String setupMessage, setupDiagnostic="";
+    boolean pendingTvForget;
+    class Run {
+        final long generation=1;
+        final NativeRunGate.Run ownership=NATIVE_RUNS.start();
+        SetupIntent setupIntent;
+        boolean requestDiscoverable, discoveryRequested, stopping, connecting;
+        Object candidate;
+        boolean transportReady(){return true;}
+        long discoverableUntil;
+        Run(SetupIntent kind){setupIntent=kind;lifetime.beginSetup();ownership.await(SERVICE);ownership.await(REGISTRATION);}
+        boolean active(){return ownership.active()&&!stopping;}
+    }
+    boolean attended(){return visible;}
+    boolean attached(long token){return token==attachment;}
+    void setStatus(String value){status=value;}
+    void stop(String reason){stops++;status=reason;run.stopping=true;run.ownership.stop();lifetime.end();}
+    void connectSaved(){savedConnects++;}
+    void requestStart(boolean control,SetupIntent intent){run=new Run(intent);starts++;}
+    SetupState.Snapshot wizardSnapshot(){return new SetupState.Snapshot(setupPage,savedPeer!=null,true,false,setupAddress(),"","",0,false,true,run==null?0:run.generation,false);}
+    static class TvEnrollment {
+        enum State {ABSENT,VALID,UNUSABLE}
+        State mode=State.ABSENT;
+        boolean clearSucceeds=true;
+        int forgets;
+        State state(){return mode;}
+        boolean forget(){forgets++;mode=clearSucceeds?State.ABSENT:State.UNUSABLE;return clearSucceeds;}
+        static boolean validAddress(String value){return true;}
+    }
+    final TvEnrollment tvEnrollment = new TvEnrollment();
+    String setupAddress(){return "192.168.1.50";}
+    void pairTv(String address){check(address.equals("192.168.1.50"),"use saved validated locator");pairRequests++;}
+    void clearTvCode(){}
+    void cancelGesture(){}
+    void setInputEligible(boolean value){check(!value,"setup must never grant input");inputVisibility.update(value);}
+    static class SystemClock { static long elapsedRealtime(){return clock;} static long clock=1000; }
+__METHODS__
+    static void check(boolean ok,String message){if(!ok)throw new AssertionError(message);}
+    void scenarios(){
+        run=new Run(SetupIntent.BLUETOOTH);setupRegistered(1);
+        check(setupPage==SetupState.Page.BT_WAIT&&run.requestDiscoverable,"registration requests visibility once");
+        check(!takeDiscoverabilityRequest(2,1)&&!takeDiscoverabilityRequest(1,2),"stale UI/run cannot launch dialog");
+        visible=false;check(!takeDiscoverabilityRequest(1,1),"hidden UI cannot launch dialog");
+        visible=true;check(takeDiscoverabilityRequest(1,1),"current explicit intent requests dialog");
+        check(!takeDiscoverabilityRequest(1,1),"re-render cannot launch dialog twice");
+        setupRegistered(1);check(!run.requestDiscoverable,"duplicate registration cannot renew the dialog");
+        discoveryResult(1,2,120);check(run.discoverableUntil==0,"stale discovery result ignored");
+        discoveryResult(1,1,999);check(run.discoverableUntil==121000,"OS grant capped120s");
+        now=2000;SystemClock.clock=2000;bluetoothSetupConnected(2);check(stops==0,"stale connection cannot advance setup");
+        bluetoothSetupConnected(1);check(stops==1&&setupPage==SetupState.Page.BT_CLOSING,"connection starts closing not next native run");
+        advanceSetupCleanup();check(setupPage==SetupState.Page.BT_CLOSING,"cleanup cannot advance from timer/UI alone");
+        run.ownership.completed(REGISTRATION);advanceSetupCleanup();check(setupPage==SetupState.Page.BT_CLOSING,"service completion still required");
+        run.ownership.completed(SERVICE);advanceSetupCleanup();check(setupPage==SetupState.Page.BT_DONE,"only actual cleanup advances");
+        check(pairRequests==0,"safe completion never auto-starts TV pairing");
+    }
+    void visibility() {
+        run = new Run(SetupIntent.BLUETOOTH); setupPage=SetupState.Page.BT_WAIT;
+        refreshEligibility();
+        check(!lifetime.control() && inputVisibility.epoch()==0,"even ready setup transport cannot become control");
+        visible=false; run.discoveryRequested=true; refreshEligibility();
+        check(stops==0 && inputVisibility.epoch()==0,"precomparison Android dialog permits no input");
+        visible=true; run.discoverableUntil=2000; now=2000;SystemClock.clock=2000;
+        refreshEligibility();check(stops==1 && setupAfterCleanup==SetupState.Page.BT_START,"real discoverability expires without new action");
+    }
+    public static void main(String[] args){
+        new SetupRuntimeHarness().visibility();
+        SetupRuntimeHarness preparing=new SetupRuntimeHarness();preparing.run=preparing.new Run(SetupIntent.BLUETOOTH);preparing.visible=false;
+        preparing.refreshEligibility();check(preparing.stops==1,"departure before registration must cancel preparation");
+        preparing.setupRegistered(1);check(!preparing.run.requestDiscoverable,"late registration cannot reopen abandoned visibility");
+        SetupRuntimeHarness reset=new SetupRuntimeHarness();reset.pendingTvForget=true;reset.setupAfterCleanup=SetupState.Page.TV_START;reset.tvEnrollment.clearSucceeds=false;
+        reset.completePendingTvForget();reset.advanceSetupCleanup();
+        check(reset.setupPage==SetupState.Page.MANAGE&&reset.setupMessage.contains("unconfirmed")&&reset.tvEnrollment.mode==TvEnrollment.State.UNUSABLE,"revocation failure exposes Manage retry and retains failed latch");
+        SetupRuntimeHarness departed=new SetupRuntimeHarness();departed.run=departed.new Run(SetupIntent.TV);departed.surfaceVisible=true;
+        departed.refreshEligibility();check(departed.stops==1,"leaving Setup must cancel current TV pairing while still attended");
+        SetupRuntimeHarness saved=new SetupRuntimeHarness();saved.savedPeer="saved";saved.startWizardRun(SetupIntent.BLUETOOTH);
+        check(saved.starts==1&&saved.setupPage!=SetupState.Page.BT_DONE,"saved selector alone cannot pass a failed link test");
+        saved.setupRegistered(1);check(saved.savedConnects==1&&!saved.run.requestDiscoverable,"retry uses saved link without new comparison/discovery");
+        SetupRuntimeHarness handoff=new SetupRuntimeHarness();handoff.savedPeer="saved";handoff.run=handoff.new Run(SetupIntent.NONE);
+        handoff.startWizardRun(SetupIntent.TV);check(handoff.stops==1&&handoff.starts==0,"occupied native owner must close first");
+        handoff.run.ownership.completed(REGISTRATION);handoff.advanceSetupCleanup();check(handoff.starts==0,"no continuation before service completion");
+        handoff.run.ownership.completed(SERVICE);handoff.serviceDestroyed=true;handoff.advanceSetupCleanup();
+        check(handoff.starts==0,"service destruction waits for a current eligible UI rebind");
+        handoff.serviceDestroyed=false;handoff.advanceSetupCleanup();check(handoff.starts==1&&handoff.run.setupIntent==SetupIntent.TV,"one explicit Pair action continues after actual cleanup");
+        handoff.advanceSetupCleanup();check(handoff.starts==1,"continuation consumed once");
+        SetupRuntimeHarness abandoned=new SetupRuntimeHarness();abandoned.savedPeer="saved";abandoned.run=abandoned.new Run(SetupIntent.NONE);
+        abandoned.startWizardRun(SetupIntent.TV);abandoned.run.ownership.completed(REGISTRATION);abandoned.run.ownership.completed(SERVICE);
+        abandoned.serviceDestroyed=true;
+        abandoned.setupVisit.set(false); // Actual Activity loss revokes the shared visit even with a null/stale binder.
+        abandoned.setupVisit=new java.util.concurrent.atomic.AtomicBoolean(true);abandoned.serviceDestroyed=false;
+        abandoned.advanceSetupCleanup();check(abandoned.starts==0&&abandoned.pendingSetupIntent==SetupIntent.NONE,"new UI visit cannot revive a pairing action abandoned while unbound");
+        SetupRuntimeHarness tv=new SetupRuntimeHarness(); tv.run=tv.new Run(SetupIntent.TV);tv.visible=false;
+        tv.refreshEligibility();check(tv.stops==1&&tv.inputVisibility.epoch()==0,"TV pairing loss stops before any input");
+        SetupRuntimeHarness expired=new SetupRuntimeHarness(); expired.run=expired.new Run(SetupIntent.BLUETOOTH);expired.now=301000;
+        expired.refreshEligibility();check(expired.stops==1,"setup ceiling stops independently of screen countdown");
+        new SetupRuntimeHarness().scenarios();
+        SetupRuntimeHarness h=new SetupRuntimeHarness();h.run=h.new Run(SetupIntent.TV);
+        h.setupRegistered(2);check(h.pairRequests==0,"old registration cannot start TV pairing");
+        h.visible=false;h.setupRegistered(1);check(h.pairRequests==0,"hidden registration cannot start TV pairing");
+        h.visible=true;h.setupRegistered(1);check(h.pairRequests==1,"current attended Pair TV intent continues after registration");
+        h=new SetupRuntimeHarness();h.run=h.new Run(SetupIntent.BLUETOOTH);h.setupRegistered(1);
+        h.takeDiscoverabilityRequest(1,1);h.discoveryResult(1,1,0);
+        check(h.stops==1&&h.run.discoverableUntil==0,"denied discovery does not start a countdown");
+        h=new SetupRuntimeHarness();h.run=h.new Run(SetupIntent.BLUETOOTH);h.bluetoothSetupConnected(1);
+        h.run.ownership.fail();h.run.ownership.completed(REGISTRATION);h.run.ownership.completed(SERVICE);h.advanceSetupCleanup();
+        check(h.setupPage!=SetupState.Page.BT_DONE,"failed native proof cannot become Done");
+    }
+}

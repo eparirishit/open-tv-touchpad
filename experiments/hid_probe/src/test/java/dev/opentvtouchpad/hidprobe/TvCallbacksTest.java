@@ -34,7 +34,7 @@ public class TvCallbacksTest {
                 .replace("__FORGET_METHODS__", runtime.substring(forgetBegin, forgetEnd))
                 .getBytes(java.nio.charset.StandardCharsets.UTF_8));
             Process compiler = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin", "javac").toString(),
-                "-d", temporary.toString(), harness.toString(), source.resolve("NativeRunGate.java").toString())
+                "-d", temporary.toString(), harness.toString(), source.resolve("SetupState.java").toString(), source.resolve("NativeRunGate.java").toString())
                 .redirectErrorStream(true).start();
             String diagnostic = new String(compiler.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
             assertEquals(diagnostic, 0, compiler.waitFor());

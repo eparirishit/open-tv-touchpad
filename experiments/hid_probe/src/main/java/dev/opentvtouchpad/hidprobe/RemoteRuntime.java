@@ -32,6 +32,13 @@ final class RemoteRuntime {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable visibilityRefresh = this::refreshEligibility;
     private final ProbeSession session;
+    private final SetupAddressStore setupAddressStore;
+    private enum SetupIntent { NONE, BLUETOOTH, TV }
+    private SetupIntent pendingSetupIntent = SetupIntent.NONE;
+    private long pendingSetupGeneration;
+    private java.util.concurrent.atomic.AtomicBoolean setupVisit, pendingSetupVisit;
+    private SetupState.Page setupPage = SetupState.Page.OVERVIEW, setupAfterCleanup;
+    private String setupMessage = "", setupDiagnostic = "";
     private BluetoothAdapter adapter;
     private Run run;
     private boolean resumed, focused, surfaceVisible, pendingTvForget, serviceDestroyed, windowStarted;
@@ -46,7 +53,7 @@ final class RemoteRuntime {
             boolean start, boolean visible, boolean confirm, boolean connect, boolean ready,
             boolean tvAddressEnabled, boolean tvPair, boolean tvCode, boolean tvForget,
             boolean tvReady, boolean tvConnected, String tvStatus, long codeRevision,
-            long gestureRevision, boolean releaseBinding, boolean destroyed, long inputEpoch, boolean connected) {}
+            long gestureRevision, boolean releaseBinding, boolean destroyed, long inputEpoch, boolean connected, SetupState.Snapshot wizard) {}
 
     static RemoteRuntime forService(RemoteConnectionService service) {
         // Late native completion and failure latches belong to this process's sole runtime.
@@ -62,6 +69,7 @@ final class RemoteRuntime {
         if (enrollment == null) enrollment = new EnrollmentStore(new AtomicEnrollmentFile(service.getNoBackupFilesDir()));
         if (tvEnrollment == null) tvEnrollment = new TvEnrollment(new TvEnrollmentFile(service.getNoBackupFilesDir()), tvIdentity());
         session = new ProbeSession(enrollment);
+        setupAddressStore = new SetupAddressStore(new SetupAddressFile(service.getNoBackupFilesDir()));
         status = enrollment.failed() ? storageFailure() : savedStatus();
     }
 
@@ -90,7 +98,7 @@ final class RemoteRuntime {
         long current = inputVisibility.update(eligible);
         if (!eligible) {
             if (lifetime.control()) lifetime.visibility(false);
-            else if (run != null && !run.stopping && run.connecting) {
+            else if (run != null && !run.stopping && run.connecting && run.setupIntent == SetupIntent.NONE) {
                 // Cancel even before the first input epoch; a quick return must not revive this run.
                 run.connectOnRegister = false;
                 session.stop();
@@ -112,6 +120,7 @@ final class RemoteRuntime {
             return;
         }
         if (!lifetime.alive()) { stop("Session window expired. Both channels stopped."); return; }
+        if (run.setupIntent != SetupIntent.NONE) { refreshSetupEligibility(); return; }
         boolean visible = attended();
         boolean eligible = visible && surfaceVisible;
         if (!eligible) setInputEligible(false);
@@ -139,10 +148,13 @@ final class RemoteRuntime {
         handler.post(visibilityRefresh);
     }
 
-    long attach() {
+    long attach() { return attach(new java.util.concurrent.atomic.AtomicBoolean(true)); }
+
+    long attach(java.util.concurrent.atomic.AtomicBoolean visit) {
         if (attachment != 0) foreground(attachment, false);
         attachment = Math.incrementExact(nextAttachment);
         nextAttachment = attachment;
+        setupVisit = java.util.Objects.requireNonNull(visit);
         resumed = focused = surfaceVisible = false;
         setInputEligible(false);
         return attachment;
@@ -157,6 +169,7 @@ final class RemoteRuntime {
         boolean wasResumed = resumed;
         resumed = foreground;
         if (!foreground) {
+            pendingSetupIntent = SetupIntent.NONE;
             focused = false;
             setInputEligible(false);
             clearTvCode(); cancelGesture();
@@ -170,6 +183,7 @@ final class RemoteRuntime {
         if (!attached(token)) return;
         this.focused = focused;
         this.surfaceVisible = surfaceVisible;
+        if (surfaceVisible) pendingSetupIntent = SetupIntent.NONE;
         if (!focused || !surfaceVisible) setInputEligible(false);
         if (!focused) {
             clearTvCode(); cancelGesture();
@@ -284,7 +298,7 @@ final class RemoteRuntime {
             attached && resumed && !pendingTvForget,
             ready && run.tvMode == TvEnrollment.State.VALID && run.tv != null,
             tvConnected, tvStatus, codeRevision, gestureRevision, windowStarted && run != null && run.stopping, serviceDestroyed,
-            attached ? inputVisibility.epoch() : 0, connected);
+            attached ? inputVisibility.epoch() : 0, connected, wizardSnapshot());
     }
 
     long deadlineMillis() { return lifetime.deadlineMillis(); }
@@ -321,6 +335,10 @@ final class RemoteRuntime {
     }
 
     private void requestStart(boolean controlAttempt) {
+        requestStart(controlAttempt, SetupIntent.NONE);
+    }
+
+    private void requestStart(boolean controlAttempt, SetupIntent setupIntent) {
         if (!resumed || enrollment.failed() || pendingTvForget) return;
         if (tvEnrollment.state() == TvEnrollment.State.UNUSABLE) {
             setStatus("TV enrollment is unusable. Forget TV controls successfully before another run.");
@@ -352,11 +370,233 @@ final class RemoteRuntime {
         if (ownership == null) return;
         lifetime.beginSetup();
         setInputEligible(false);
-        run = new Run(ownership, session.start(tvEnrollment.state()));
+        run = new Run(ownership, session.start(setupIntent == SetupIntent.BLUETOOTH ? TvEnrollment.State.ABSENT : tvEnrollment.state()), setupIntent);
         run.connecting = controlAttempt;
         session.foreground(run.generation, attended());
         setStatus("Starting connection…");
         run.begin();
+    }
+
+    private String setupAddress() {
+        if (tvEnrollment.state() == TvEnrollment.State.VALID && tvEnrollment.record() != null)
+            return tvEnrollment.record().address();
+        String saved = setupAddressStore.address();
+        return saved == null ? "" : saved;
+    }
+
+    private SetupState.Snapshot wizardSnapshot() {
+        advanceSetupCleanup();
+        boolean bluetooth = session.savedPeer() != null && !enrollment.failed();
+        boolean address = TvEnrollment.validAddress(setupAddress());
+        boolean tvPaired = tvEnrollment.state() == TvEnrollment.State.VALID;
+        long remaining = 0, generation = run == null ? 0 : run.generation;
+        boolean discovery = false;
+        if (run != null && run.active()) {
+            if (run.setupIntent == SetupIntent.BLUETOOTH) {
+                if (session.canConfirm(run.generation) && setupPage == SetupState.Page.BT_WAIT)
+                    setupPage = SetupState.Page.BT_COMPARE;
+                if (setupPage == SetupState.Page.BT_WAIT && run.discoverableUntil > 0)
+                    remaining = Math.max(0, Math.min(run.discoverableUntil, lifetime.deadlineMillis()) - SystemClock.elapsedRealtime());
+                discovery = run.requestDiscoverable;
+            } else if (run.setupIntent == SetupIntent.TV && run.tv != null && run.tv.needsCode()) {
+                setupPage = SetupState.Page.TV_CODE;
+                remaining = Math.max(0, run.tv.codeDeadlineMillis() - SystemClock.elapsedRealtime());
+            }
+        }
+        boolean closing = setupAfterCleanup != null;
+        SetupState.Page page = closing && run != null && run.teardownUnconfirmed ? SetupState.Page.RECOVERY : setupPage;
+        boolean enabled = attended() && !surfaceVisible && !closing;
+        if (page == SetupState.Page.BT_COMPARE)
+            enabled &= run != null && session.canConfirm(run.generation);
+        if (page == SetupState.Page.ADDRESS || page == SetupState.Page.BT_START || page == SetupState.Page.TV_START)
+            enabled &= NATIVE_RUNS.available();
+        if (page == SetupState.Page.TV_CODE)
+            enabled &= run != null && run.tv != null && run.tv.needsCode();
+        if (enrollment.failed() || tvEnrollment.state() == TvEnrollment.State.UNUSABLE) {
+            if (page != SetupState.Page.MANAGE && page != SetupState.Page.OVERVIEW) enabled = false;
+        }
+        String message = page == SetupState.Page.RECOVERY ? status : setupMessage;
+        if (page == SetupState.Page.OVERVIEW && (enrollment.failed() || tvEnrollment.state() == TvEnrollment.State.UNUSABLE))
+            message = "Saved setup could not be verified. Review setup before changing or resetting the affected item.";
+        return new SetupState.Snapshot(page, bluetooth, address, tvPaired, setupAddress(), message,
+            setupDiagnostic, remaining, closing || setupPage == SetupState.Page.TV_CONNECTING,
+            enabled, generation, discovery);
+    }
+
+    void setupAction(long token, SetupState.Action action, String value) {
+        if (!attached(token)) return;
+        pendingSetupIntent = SetupIntent.NONE;
+        if (action == SetupState.Action.CANCEL || action == SetupState.Action.BACK) {
+            clearTvCode(); cancelGesture();
+            if (run != null && run.setupIntent != SetupIntent.NONE && !run.stopping)
+                closeSetup(SetupState.Page.OVERVIEW, "Setup cancelled. Saved pairings retained.");
+            else if (setupAfterCleanup != null) setupAfterCleanup = SetupState.Page.OVERVIEW;
+            else setupPage = SetupState.Page.OVERVIEW;
+            return;
+        }
+        if (!attended() || surfaceVisible || setupAfterCleanup != null) return;
+        try {
+            switch (action) {
+                case START, NEXT -> {
+                    SetupState.Snapshot state = wizardSnapshot();
+                    SetupState.Page target = enrollment.failed() || tvEnrollment.state() == TvEnrollment.State.UNUSABLE
+                        ? SetupState.Page.MANAGE : state.complete() ? SetupState.Page.DONE : state.firstMissing();
+                    setupMessage = ""; setupDiagnostic = "";
+                    if (NATIVE_RUNS.available()) setupPage = target;
+                    else closeSetup(target, "Closing the connection safely before continuing setup.");
+                }
+                case MANAGE -> setupPage = SetupState.Page.MANAGE;
+                case OPEN_REMOTE -> setupPage = SetupState.Page.OVERVIEW;
+                case BT_PAIR -> startWizardRun(SetupIntent.BLUETOOTH);
+                case BT_CONFIRM -> confirmAndConnect();
+                case BT_MISMATCH -> closeSetup(SetupState.Page.BT_START,
+                    "Pairing cancelled. If you already accepted the system prompt, remove only this test bond on both devices before trying again.");
+                case SAVE_ADDRESS -> {
+                    if (!NATIVE_RUNS.available()) { closeSetup(SetupState.Page.ADDRESS, "Closing the connection before changing its address."); break; }
+                    if (!TvEnrollment.validAddress(value)) { setupMessage = "Enter the projector’s private Wi-Fi IPv4 address, with no port or spaces."; break; }
+                    if (tvEnrollment.state() == TvEnrollment.State.UNUSABLE) { setupMessage = "TV pairing could not be verified. Review the TV controls item before changing it."; break; }
+                    if (tvEnrollment.state() == TvEnrollment.State.VALID) {
+                        if (!tvEnrollment.changeLocator(value)) { setupMessage = "Address could not be saved. TV enrollment is unavailable; review TV controls."; break; }
+                        setupAddressStore.save(value);
+                    } else if (!setupAddressStore.save(value)) { setupMessage = "Address could not be saved. Try saving it again."; break; }
+                    setupPage = tvEnrollment.state() == TvEnrollment.State.VALID ? SetupState.Page.MANAGE : SetupState.Page.TV_START;
+                    setupMessage = "Address saved. Saving does not test the connection.";
+                }
+                case PAIR_TV, RETRY -> startWizardRun(SetupIntent.TV);
+                case CONFIRM_TV -> { if (value != null && value.matches("[0-9A-Fa-f]{6}")) confirmTvCode(value); }
+                case CHANGE_ADDRESS -> {
+                    if (NATIVE_RUNS.available()) setupPage = SetupState.Page.ADDRESS;
+                    else closeSetup(SetupState.Page.ADDRESS, "Closing the connection before changing its address.");
+                }
+                case FORGET_BT, REPAIR_BT -> {
+                    setupPage = SetupState.Page.CLOSING;
+                    setupAfterCleanup = action == SetupState.Action.REPAIR_BT ? SetupState.Page.BT_START : SetupState.Page.MANAGE;
+                    forget();
+                    setupMessage = enrollment.failed() ? "Bluetooth setup could not be cleared. Retry Reset successfully before pairing." :
+                        "Bluetooth app setup cleared. Remove the old bond on both devices before a fresh comparison. TV pairing is kept.";
+                    advanceSetupCleanup();
+                }
+                case FORGET_TV, REPAIR_TV -> {
+                    String address = setupAddress();
+                    if (TvEnrollment.validAddress(address)) setupAddressStore.save(address);
+                    setupPage = SetupState.Page.CLOSING;
+                    setupAfterCleanup = action == SetupState.Action.REPAIR_TV ? SetupState.Page.TV_START : SetupState.Page.MANAGE;
+                    setupMessage = "Closing and clearing this app’s TV pairing. Bluetooth pairing is kept.";
+                    forgetTv();
+                    advanceSetupCleanup();
+                }
+                default -> { }
+            }
+        } catch (SecurityException | IllegalStateException | IllegalArgumentException failure) {
+            closeSetup(SetupState.Page.OVERVIEW, "Setup operation failed. Check Bluetooth and Nearby devices permission.");
+        }
+    }
+
+    private void startWizardRun(SetupIntent intent) {
+        if (!NATIVE_RUNS.available()) {
+            if (run == null || !run.ownership.owns()) return;
+            pendingSetupIntent = intent;
+            pendingSetupVisit = setupVisit;
+            pendingSetupGeneration = run.generation;
+            closeSetup(intent == SetupIntent.BLUETOOTH ? SetupState.Page.BT_START : SetupState.Page.TV_START,
+                "Closing the previous connection safely before pairing…");
+            return;
+        }
+        if (intent == SetupIntent.TV && (session.savedPeer() == null || !TvEnrollment.validAddress(setupAddress()))) {
+            setupPage = wizardSnapshot().firstMissing(); return;
+        }
+        if (intent == SetupIntent.TV && tvEnrollment.state() != TvEnrollment.State.ABSENT) {
+            setupPage = SetupState.Page.MANAGE; setupMessage = "TV setup already exists or requires review. Re-pair replaces it only after confirmation."; return;
+        }
+        setupDiagnostic = "";
+        setupMessage = intent == SetupIntent.BLUETOOTH ? "Preparing the phone for Bluetooth pairing…" : "Requesting a code from the projector…";
+        setupPage = intent == SetupIntent.BLUETOOTH ? SetupState.Page.BT_WAIT : SetupState.Page.TV_CONNECTING;
+        requestStart(false, intent);
+        if (run == null || !run.active() || run.setupIntent != intent) {
+            setupPage = intent == SetupIntent.BLUETOOTH ? SetupState.Page.BT_START : SetupState.Page.TV_ERROR;
+            setupMessage = status;
+        }
+    }
+
+    private void closeSetup(SetupState.Page target, String message) {
+        setupAfterCleanup = target;
+        setupPage = SetupState.Page.CLOSING;
+        setupMessage = message;
+        if (run != null) { run.requestDiscoverable = false; run.discoveryRequested = false; }
+        stop(message);
+        advanceSetupCleanup();
+    }
+
+    private void advanceSetupCleanup() {
+        if (setupAfterCleanup == null || !NATIVE_RUNS.available() || pendingTvForget) return;
+        if (pendingSetupIntent != SetupIntent.NONE && (pendingSetupVisit == null
+                || !pendingSetupVisit.get() || setupVisit != pendingSetupVisit)) pendingSetupIntent = SetupIntent.NONE;
+        if (pendingSetupIntent != SetupIntent.NONE) {
+            if (serviceDestroyed || !attended() || surfaceVisible) return;
+            SetupIntent next = pendingSetupIntent;
+            pendingSetupIntent = SetupIntent.NONE;
+            if (run != null && run.generation == pendingSetupGeneration) {
+                setupAfterCleanup = null;
+                startWizardRun(next);
+                return;
+            }
+        }
+        setupPage = setupAfterCleanup;
+        setupAfterCleanup = null;
+        if (setupPage == SetupState.Page.BT_DONE) setupMessage = "Bluetooth paired. The link closed safely.";
+        if (setupPage == SetupState.Page.DONE) setupMessage = "Setup saved. Open the remote and tap Connect when you want to use it.";
+    }
+
+    private void setupRegistered(long generation) {
+        if (run == null || run.generation != generation || !run.active() || !attended() || surfaceVisible) return;
+        if (run.setupIntent == SetupIntent.BLUETOOTH) {
+            if (session.savedPeer() != null) { connectSaved(); return; }
+            if (run.requestDiscoverable || run.discoveryRequested || run.discoverableUntil > 0) return;
+            setupPage = SetupState.Page.BT_WAIT;
+            run.requestDiscoverable = true;
+            setupMessage = "Approve Android’s visibility request, then choose this phone from the projector.";
+        } else if (run.setupIntent == SetupIntent.TV) pairTv(setupAddress());
+    }
+
+    boolean takeDiscoverabilityRequest(long token, long generation) {
+        if (!attached(token) || !attended() || surfaceVisible || run == null || run.generation != generation
+                || !run.active() || run.setupIntent != SetupIntent.BLUETOOTH || !run.requestDiscoverable) return false;
+        run.requestDiscoverable = false;
+        run.discoveryRequested = true;
+        return true;
+    }
+
+    void discoveryResult(long token, long generation, int grantedSeconds) {
+        if (!attached(token) || !attended() || surfaceVisible || run == null || run.generation != generation
+                || !run.active() || run.setupIntent != SetupIntent.BLUETOOTH || !run.discoveryRequested) return;
+        run.discoveryRequested = false;
+        if (grantedSeconds <= 0) { closeSetup(SetupState.Page.BT_START, "Visibility was not approved. Start pairing to try again."); return; }
+        run.discoverableUntil = Math.min(lifetime.deadlineMillis(), SystemClock.elapsedRealtime() + Math.min(120, grantedSeconds) * 1000L);
+        setupMessage = "Select this phone from the projector’s Bluetooth list, then compare the numbers on both screens.";
+    }
+
+    private void bluetoothSetupConnected(long generation) {
+        if (run == null || run.generation != generation || !run.active() || run.setupIntent != SetupIntent.BLUETOOTH) return;
+        setupPage = SetupState.Page.BT_CLOSING;
+        setupAfterCleanup = SetupState.Page.BT_DONE;
+        setupMessage = "Bluetooth saved. Closing the link safely…";
+        stop(setupMessage);
+    }
+
+    private void refreshSetupEligibility() {
+        setInputEligible(false);
+        if (surfaceVisible) { pendingSetupIntent = SetupIntent.NONE; stop("Setup closed. Saved pairings retained; retry explicitly."); return; }
+        session.foreground(run.generation, attended());
+        if (!session.active(run.generation)) { stop("Setup left the foreground. Saved pairings retained."); return; }
+        if (run.setupIntent == SetupIntent.TV && !attended()) { stop("TV pairing left the foreground. Code cleared."); return; }
+        if (run.setupIntent == SetupIntent.BLUETOOTH && !attended() && !run.discoveryRequested && run.discoverableUntil == 0) {
+            run.requestDiscoverable = false;
+            stop("Setup left the foreground before visibility was requested."); return;
+        }
+        if (run.setupIntent == SetupIntent.BLUETOOTH && setupPage == SetupState.Page.BT_WAIT
+                && run.discoverableUntil > 0 && SystemClock.elapsedRealtime() >= run.discoverableUntil && run.candidate == null)
+            closeSetup(SetupState.Page.BT_START, "Visibility window expired. Start pairing to try again.");
+        if (connectionService != null) connectionService.scheduleDeadline();
     }
 
     private boolean canAttempt() {
@@ -456,8 +696,13 @@ final class RemoteRuntime {
         if (!pendingTvForget || !NATIVE_RUNS.available()) return;
         pendingTvForget = false;
         boolean cleared = tvEnrollment.forget();
-        setStatus(cleared ? "TV controls forgotten. Bluetooth enrollment is retained."
-            : "TV removal is unconfirmed. Input blocked; retry Forget TV controls successfully.");
+        String message = cleared ? "TV controls forgotten. Bluetooth enrollment is retained."
+            : "TV removal is unconfirmed. Input blocked; retry Forget TV controls successfully.";
+        setStatus(message);
+        if (setupAfterCleanup != null) {
+            setupMessage = message;
+            if (!cleared) setupAfterCleanup = SetupState.Page.MANAGE;
+        }
     }
 
     private void tvCommand(TvCommand command, long epoch) {
@@ -514,7 +759,10 @@ final class RemoteRuntime {
     private final class Run {
         final NativeRunGate.Run ownership;
         final long generation;
-        final TvEnrollment.State tvMode = tvEnrollment.state();
+        final TvEnrollment.State tvMode;
+        final SetupIntent setupIntent;
+        boolean requestDiscoverable, discoveryRequested, teardownUnconfirmed;
+        long discoverableUntil;
         TvRemoteClient tv;
         final ProbeTrace trace = new ProbeTrace(SystemClock.elapsedRealtime());
         BluetoothHidDevice hid;
@@ -537,14 +785,17 @@ final class RemoteRuntime {
         void teardownTimedOut() {
             if (ownership.owns() && stopping) {
                 trace(TEARDOWN_DEADLINE);
+                teardownUnconfirmed = true;
                 setStatus(terminalReason + " Native teardown is unconfirmed. Input disabled. "
                     + "Force stop Open TV in Android settings, then reopen before connecting again.");
             }
         }
 
-        Run(NativeRunGate.Run ownership, long generation) {
+        Run(NativeRunGate.Run ownership, long generation, SetupIntent setupIntent) {
             this.ownership = ownership;
             this.generation = generation;
+            this.setupIntent = setupIntent;
+            tvMode = setupIntent == SetupIntent.BLUETOOTH ? TvEnrollment.State.ABSENT : tvEnrollment.state();
             registrationDeadline = () -> {
                 if (ownership.owns()) trace(REGISTRATION_DEADLINE);
                 stop("Registration timed out.");
@@ -660,6 +911,7 @@ final class RemoteRuntime {
                 }
                 setStatus(session.savedPeer() == null ? "HID registered. Make visible, then pair from the XGIMI."
                     : "Saved projector — disconnected. Tap Connect.");
+                if (setupIntent != SetupIntent.NONE) { setupRegistered(generation); return; }
                 if (connectOnRegister) { connectOnRegister = false; connectSaved(); }
             }
 
@@ -706,6 +958,7 @@ final class RemoteRuntime {
                             stop("Neutral report failed. No input enabled.");
                             return;
                         }
+                        if (setupIntent == SetupIntent.BLUETOOTH) { bluetoothSetupConnected(generation); return; }
                         setStatus(tvMode == TvEnrollment.State.VALID
                             ? "Mouse and TV connected. Both controls are ready."
                             : "Mouse connected. TV controls are not paired.");
@@ -777,11 +1030,25 @@ final class RemoteRuntime {
                         stop("TV enrollment could not be saved. Forget TV controls before retrying.");
                         return;
                     }
+                    if (setupIntent == SetupIntent.TV) {
+                        setupAfterCleanup = SetupState.Page.DONE;
+                        setupPage = SetupState.Page.TV_CLOSING;
+                        setupMessage = "TV controls paired. Closing safely…";
+                    }
                     stop("TV controls paired. Open Remote and tap Connect.");
                 }); }
                 public void failed(TvRemoteClient.Stage stage) { handler.post(() -> {
-                    if (ownership.owns() && !stopping)
-                        stop("TV connection or pairing failed at " + stage.name() + ". Both channels stopped.");
+                    if (!ownership.owns() || stopping) return;
+                    if (setupIntent == SetupIntent.TV) {
+                        setupDiagnostic = stage.name();
+                        String explanation = switch (stage) {
+                            case PAIRING_CONNECT, CONTROL_CONNECT -> "Can’t reach the projector. Check its own address and Wi-Fi network. Bluetooth pairing is kept.";
+                            case PAIRING_TLS, SESSION_VALIDATION, CONTROL_TLS, IDENTITY -> "TV identity or secure connection could not be verified. Don’t reset pairing to fix a network problem.";
+                            case CODE -> "Code entry did not finish. Request a new code and check the intended projector. Bluetooth pairing is kept.";
+                            default -> "TV pairing did not finish. Try again after cleanup; Bluetooth pairing is kept.";
+                        };
+                        closeSetup(SetupState.Page.TV_ERROR, explanation);
+                    } else stop("TV connection or pairing failed at " + stage.name() + ". Both channels stopped.");
                 }); }
                 public void closed() { handler.post(() -> {
                     if (!ownership.owns()) return;
@@ -833,6 +1100,13 @@ final class RemoteRuntime {
 
         void stop(String message) {
             if (!ownership.owns() || stopping) return;
+            if (setupIntent != SetupIntent.NONE && setupAfterCleanup == null) {
+                setupAfterCleanup = setupIntent == SetupIntent.BLUETOOTH ? SetupState.Page.BT_START : SetupState.Page.TV_ERROR;
+                setupPage = setupIntent == SetupIntent.BLUETOOTH ? SetupState.Page.BT_CLOSING : SetupState.Page.TV_CLOSING;
+                setupMessage = message;
+            }
+            requestDiscoverable = false;
+            discoveryRequested = false;
             setInputEligible(false);
             lifetime.end();
             cancelGesture();

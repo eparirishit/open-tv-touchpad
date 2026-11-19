@@ -5,6 +5,7 @@ class ActivityBase {
     public void onWindowFocusChanged(boolean focused) {}
 }
 public class ActivityVisibilityHarness extends ActivityBase {
+    final java.util.concurrent.atomic.AtomicBoolean setupVisit = new java.util.concurrent.atomic.AtomicBoolean(true);
     boolean resumed = true, closed, revoked, released, loss = true;
     long inputEpoch = 7, attachment = 1;
     Controller controller = new Controller();
@@ -16,11 +17,13 @@ public class ActivityVisibilityHarness extends ActivityBase {
     static class Root { void cancelPendingInputEvents() {} }
     static class Screen {
         final Root root = new Root();
+        final SetupView setupView = new SetupView();
         final java.util.Map<Integer,Button> tvButtons = java.util.Map.of(1,new Button());
         final Button stop=new Button(),tvAddress=new Button(),tvSaveAddress=new Button(),tvPair=new Button(),
             tvCode=new Button(),tvConfirm=new Button(),tvForget=new Button();
         void setConnected(boolean value) { if(!value) throw new AssertionError("Loss must not claim a retained link disconnected"); }
     }
+    static class SetupView { boolean enabled=true; void pauseControls() { enabled=false; } }
     final Button start=new Button(), visible=new Button(), confirm=new Button(), connect=new Button();
     final java.util.List<Button> inputs=java.util.List.of(new Button());
     final Pad touchpad=new Pad();
@@ -36,11 +39,13 @@ __ON_PAUSE__
 __ON_FOCUS__
     static void check(boolean value, String message) { if(!value) throw new AssertionError(message); }
     public static void main(String[] args) {
+        ActivityVisibilityHarness unbound=new ActivityVisibilityHarness();unbound.controller=null;unbound.revoked=true;
+        unbound.onPause();check(!unbound.setupVisit.get(),"UI pause must revoke setup continuation with no binder");
         for(int mode=0;mode<2;mode++) {
             ActivityVisibilityHarness h=new ActivityVisibilityHarness();
             if(mode==0) h.onPause(); else h.onWindowFocusChanged(false);
             check(h.revoked && h.inputEpoch==0,"Loss revokes input before return");
-            check(!h.touchpad.enabled && !h.inputs.get(0).enabled && !h.screen.tvButtons.get(1).enabled,"Loss disables UI input locally");
+            check(!h.touchpad.enabled && !h.inputs.get(0).enabled && !h.screen.tvButtons.get(1).enabled && !h.screen.setupView.enabled,"Loss disables UI input locally");
             check(h.released && h.controller == null && h.attachment == 0,"Loss releases the Activity binding so native service teardown can finish while hidden");
             check(h.screen.stop.enabled,"Safety Stop remains available for the retained link");
         }

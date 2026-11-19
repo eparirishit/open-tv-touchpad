@@ -1,5 +1,17 @@
 # Backlog
 
+## Guided setup (approved2026-10-30)
+
+- [x] Review the supplied wizard prototype and current native pairing flow.
+- [x] Write and builder-check the [design](docs/superpowers/specs/2026-10-30-nord-setup-wizard-design.md).
+- [x] Owner approval of the written implementation design (“go ahead”).
+- [x] Implement the single guided flow, truthful resume/timers/cleanup and safe Manage/Reset.
+- [x] Complete independent review and native lifecycle/privacy/layout verification.
+- [x] Reviewed stopped-device in-place update, preserving both enrollments.
+- [x] Owner non-destructive Review setup/Appearance/saved Connect/Home/pointer/scroll/Stop checks.
+- [ ] Owner-prepared fresh wizard, mismatch and per-item reset trials.
+
+
 ## N4 daily-use readiness preparation (2026-10-27)
 
 - [x] Record owner choice: idle background connection, visible-only input.

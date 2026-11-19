@@ -41,7 +41,7 @@ public class NativeStopTest {
                 .replace("__PENDING_LINK__", runtime.substring(pendingBegin, pendingEnd)).getBytes(StandardCharsets.UTF_8));
             Process compiler = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin", "javac").toString(),
                 "-d", temporary.toString(),
-                harness.toString(), source.resolve("InputSubmission.java").toString(),
+                harness.toString(), source.resolve("SetupState.java").toString(), source.resolve("InputSubmission.java").toString(),
                 source.resolve("TouchpadGesture.java").toString(), source.resolve("NativeRunGate.java").toString(), source.resolve("InputVisibilityGate.java").toString(), source.resolve("SessionLifetime.java").toString(),
                 source.resolve("MouseReport.java").toString(), source.resolve("ScrollInput.java").toString())
                 .redirectErrorStream(true).start();
