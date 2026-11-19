@@ -49,7 +49,8 @@ public final class RemoteScreen {
     private final ScrollView scroll;
     private final LinearLayout remotePage, padPage, setupPage, displayPage;
     private final LinearLayout statusCard;
-    private final LinearLayout footer;
+    private final LinearLayout header, footer;
+    private final Button appearanceBack;
     private final TextView connection, brand, sensitivityLabel;
     private final List<TextView> labels = new ArrayList<>();
     private final List<Button> controls = new ArrayList<>();
@@ -66,7 +67,7 @@ public final class RemoteScreen {
         int padding = dp(12);
         root.setPadding(padding, padding, padding, padding);
 
-        LinearLayout header = new LinearLayout(context);
+        header = new LinearLayout(context);
         header.setGravity(Gravity.CENTER_VERTICAL);
         brand = text("Open TV", 22);
         brand.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
@@ -218,9 +219,19 @@ public final class RemoteScreen {
         setupPage.addView(setupView.root, new LinearLayout.LayoutParams(-1, -1));
         displayPage = column();
         add(content, displayPage);
-        Button appearanceBack = button("Back to setup");
-        add(displayPage, appearanceBack);
-        add(displayPage, text("Display", 20));
+        // Same round back control and "Setup" row as the wizard header.
+        appearanceBack = iconButton("Back to setup", R.drawable.ui_left);
+        ((IconButton) appearanceBack).icon.setAutoMirrored(true);
+        LinearLayout displayHeader = new LinearLayout(context);
+        displayHeader.setGravity(Gravity.CENTER_VERTICAL);
+        displayHeader.addView(appearanceBack, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        TextView displayHeading = text("Setup", 17);
+        displayHeading.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        LinearLayout.LayoutParams headingSize = new LinearLayout.LayoutParams(0, -2, 1);
+        headingSize.setMarginStart(dp(12));
+        displayHeader.addView(displayHeading, headingSize);
+        add(displayPage, displayHeader);
+        add(displayPage, text("Display", 22));
         add(displayPage, text("Choose how the app looks. It applies to every screen.", 14));
         lightTheme = button("Light");
         darkTheme = button("Dark");
@@ -333,6 +344,7 @@ public final class RemoteScreen {
     public void setConnected(boolean connected) {
         this.connected = connected;
         stop.setVisibility(connected ? View.VISIBLE : View.GONE);
+        updateHeader();
         connection.setText(connected ? "Mouse: connected" : "Mouse: disconnected");
         connection.setTextColor(color("#14171A", "#F2F4F6"));
         statusDot(connection, connected ? color("#1F8A4C", "#4ADE80") : color("#8A929C", "#7C858F"));
@@ -342,15 +354,26 @@ public final class RemoteScreen {
         footer.setVisibility(showingSetup || imeVisible ? View.GONE : View.VISIBLE);
     }
 
+    /**
+     * Setup pages carry their own back/title row, so the app header there keeps only a
+     * connected Stop. Settings leaves Setup through that row or Back, never by disappearing Stop.
+     */
+    private void updateHeader() {
+        if (header == null) return;
+        brand.setText(showingSetup ? "" : "Open TV");
+        setup.setVisibility(showingSetup ? View.GONE : View.VISIBLE);
+        header.setVisibility(showingSetup && !connected ? View.GONE : View.VISIBLE);
+    }
+
     private void updatePages() {
         updateFooter();
+        updateHeader();
         remotePage.setVisibility(!showingSetup && !showingTouchpad ? View.VISIBLE : View.GONE);
         padPage.setVisibility(!showingSetup && showingTouchpad ? View.VISIBLE : View.GONE);
         setupPage.setVisibility(showingSetup && !showingAppearance ? View.VISIBLE : View.GONE);
         scroll.setVisibility(!showingSetup || showingAppearance ? View.VISIBLE : View.GONE);
         statusCard.setVisibility(showingSetup ? View.GONE : View.VISIBLE);
         displayPage.setVisibility(showingSetup && showingAppearance ? View.VISIBLE : View.GONE);
-        brand.setText(showingSetup ? "Setup" : "Open TV");
         setup.setContentDescription(showingSetup ? (showingTouchpad ? "Show touchpad" : "Show remote") : "Show setup");
         select(setup, showingSetup);
         select(remoteTab, !showingSetup && !showingTouchpad);
@@ -444,11 +467,27 @@ public final class RemoteScreen {
             foreground = button.isSelected() ? text : color("#5B636D", "#9AA3AD");
             border = Color.TRANSPARENT;
         }
+        // Prototype Display choices are cards. The owner's no-border-highlight rule for tabs
+        // still applies, so selection is a tinted fill with a matching edge.
+        boolean theme = button == lightTheme || button == darkTheme;
+        if (theme) {
+            fill = button.isSelected() ? color("#E8F0FE", "#16233B") : surface;
+            foreground = text;
+            border = fill;
+        }
+        boolean roundBack = button == appearanceBack;
+        if (roundBack) {
+            fill = surface;
+            foreground = text;
+            border = color("#E1E4E8", "#2C323A");
+        }
+        int radius = theme ? 16 : 100;
+        boolean quietFocus = nav && !roundBack;
         StateListDrawable background = new StateListDrawable();
-        background.addState(BUTTON_STATES[0], shape(direction ? fill : ok ? color("#DCE8FF", "#233B60") : color("#E9ECF0", "#181B1F"), border, 100));
-        background.addState(BUTTON_STATES[1], shape(direction || ok ? fill : color("#DCE8FF", "#2C4160"), direction || nav ? Color.TRANSPARENT : accent, 100));
-        background.addState(BUTTON_STATES[2], shape(nav ? color("#DCE8FF", "#2C4160") : fill, nav ? Color.TRANSPARENT : accent, direction ? 8 : 100));
-        background.addState(BUTTON_STATES[3], shape(fill, border, 100));
+        background.addState(BUTTON_STATES[0], shape(direction ? fill : ok ? color("#DCE8FF", "#233B60") : color("#E9ECF0", "#181B1F"), border, radius));
+        background.addState(BUTTON_STATES[1], shape(direction || ok ? fill : color("#DCE8FF", "#2C4160"), direction || quietFocus ? Color.TRANSPARENT : accent, radius));
+        background.addState(BUTTON_STATES[2], shape(quietFocus ? color("#DCE8FF", "#2C4160") : fill, quietFocus ? Color.TRANSPARENT : accent, direction ? 8 : radius));
+        background.addState(BUTTON_STATES[3], shape(fill, border, radius));
         button.setBackground(background);
         button.setTextColor(new ColorStateList(BUTTON_STATES, new int[]{color("#6B737C", "#6F7882"), direction ? accent : ok ? foreground : text, foreground, foreground}));
         button.setCompoundDrawableTintList(button.getTextColors());
@@ -556,6 +595,7 @@ public final class RemoteScreen {
             int left = (getWidth() - size) / 2;
             int top = (getHeight() - size) / 2;
             icon.setBounds(left, top, left + size, top + size);
+            icon.setLayoutDirection(getLayoutDirection());
             if (resource == R.drawable.ui_netflix) icon.setAlpha(isEnabled() ? 255 : 90);
             else icon.setTint(getCurrentTextColor());
             icon.draw(canvas);

@@ -53,7 +53,9 @@ public class RemoteScreenTest {
 
     private void reachable(RemoteScreen screen, TextView button) {
         assertTrue("page visible: " + button.getText(), visible(screen,button));
-        assertTrue(button.getText().length() > 0 || button.getHint() != null);
+        // Icon-only controls (the round Setup back) are labelled by their accessible name.
+        assertTrue(button.getText().length() > 0 || button.getHint() != null
+            || button.getContentDescription() != null && button.getContentDescription().length() > 0);
         float density = button.getResources().getDisplayMetrics().density;
         assertTrue("48dp target: " + button.getText(), button.getHeight() >= (int)(48 * density));
         assertTrue("48dp width: " + button.getText(), button.getWidth() >= (int)(48 * density));
@@ -570,8 +572,11 @@ public class RemoteScreenTest {
                 screen.setConnected(false);screen.setTvConnected(false);screen.tvStatus.setText("TV: not paired");
                 screen.status.setText("Start a five-minute run, then connect your projector.");
                 screen.showSetup(true);
-                for(int page=0;page<3;page++) {
-                    showWizard(screen,new SetupState.Page[]{SetupState.Page.OVERVIEW,SetupState.Page.BT_START,SetupState.Page.MANAGE}[page]);layout(screen,c,390,844);
+                SetupState.Page[] pages={SetupState.Page.OVERVIEW,SetupState.Page.BT_START,SetupState.Page.MANAGE,
+                        SetupState.Page.BT_WAIT,SetupState.Page.BT_COMPARE,SetupState.Page.TV_CODE,
+                        SetupState.Page.TV_ERROR,SetupState.Page.DONE};
+                for(int page=0;page<pages.length;page++) {
+                    showWizard(screen,pages[page]);layout(screen,c,390,844);
                     capture(screen,c,"prototype-setup-"+page+suffix);
                 }
             }

@@ -279,7 +279,8 @@ public class SetupScreenTest {
                     assertEquals(i,sent.size());
                     controls[i].performClick();
                     sheet=sheet(screen);
-                    find(sheet,controls[i].getText().toString()).performClick();
+                    // Compact row labels ("Re-pair") confirm with the item's full accessible name.
+                    find(sheet,controls[i].getContentDescription().toString()).performClick();
                     assertEquals(expected[i],sent.get(i));
                 }
                 screen.forgetTv.performClick();

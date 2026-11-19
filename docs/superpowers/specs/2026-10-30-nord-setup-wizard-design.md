@@ -229,3 +229,20 @@ reachable. No screenshot capture of real pairing fields.
 The existing N4 lock,30-minute retention/expiry, loss/recovery, endurance and
 battery gates remain open. Wizard completion is not daily-use or public-release
 certification. No new lifecycle exemption or weaker trust is authorized.
+
+## Design-file alignment (2026-11-18)
+
+The owner asked to bring the native UI in line with `Open TV Setup Flow.html` and
+`Open TV Android App.html`. Presentation only; no state, transport, trust or
+lifecycle change. Setup now uses the prototype's single header row (round back
+control, "Setup", step position), aligned stepper labels, circular number badges,
+tinted info/warning/safe notes, text-only secondary actions, a grouped Manage and
+All set list with inline Re-pair/Change, the countdown inside the Bluetooth ring
+and a bar under the TV code. The app header hides on Setup unless a connected
+Stop must stay reachable. Display uses the same back row and card-shaped choices.
+
+Kept on purpose where the design files differ: Have ready stays a plain list (not
+green-checked claims); theme choices keep the owner's no-border-highlight rule;
+no Close button, Stop only while connected, and no Buttons-instead mode, per the
+earlier owner follow-ups; saved items say "Saved; live connection not checked"
+rather than "Paired"; no example numbers, addresses or icons that claim state.
