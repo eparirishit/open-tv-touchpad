@@ -23,6 +23,7 @@ final class KeyRepeat {
     private final Scheduler scheduler;
     private final Consumer<TvCommand> send;
     private TvCommand held;
+    private boolean suppressClick;
     private BooleanSupplier stillHeld = () -> false;
     private int repeats;
 
@@ -63,7 +64,36 @@ final class KeyRepeat {
         return repeated;
     }
 
+    /**
+     * Installs the hold listener on one TV button. {@code onDown} runs first on every touch.
+     * The button's normal click must call {@link #consumeClick()} before sending its press.
+     */
+    void attach(android.view.View button, TvCommand command, Runnable onDown) {
+        Objects.requireNonNull(onDown);
+        button.setOnTouchListener((view, event) -> {
+            switch (event.getActionMasked()) {
+                case android.view.MotionEvent.ACTION_DOWN -> {
+                    onDown.run();
+                    suppressClick = false;
+                    press(command, () -> view.isPressed() && view.isEnabled() && view.isShown());
+                }
+                case android.view.MotionEvent.ACTION_UP -> suppressClick = release();
+                case android.view.MotionEvent.ACTION_CANCEL -> stop();
+                default -> { }
+            }
+            return false;
+        });
+    }
+
+    /** True once for the click that ends a hold which already repeated; that click sends nothing. */
+    boolean consumeClick() {
+        boolean suppressed = suppressClick;
+        suppressClick = false;
+        return suppressed;
+    }
+
     void stop() {
+        suppressClick = false;
         held = null;
         stillHeld = () -> false;
         scheduler.cancel(tick);
