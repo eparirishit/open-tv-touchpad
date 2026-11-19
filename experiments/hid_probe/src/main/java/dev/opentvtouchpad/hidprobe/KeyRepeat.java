@@ -5,9 +5,10 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 /**
- * Hold-to-repeat for the D-pad arrows. Each repeat is an ordinary complete SHORT press sent
- * through the normal admission path, so nothing is ever held down on the TV: releasing,
- * sliding off, losing focus or losing admission simply stops further presses.
+ * D-pad holds. Arrows repeat: each repeat is an ordinary complete SHORT press through normal
+ * admission, so nothing is held on the TV. OK long-presses: after LONG_PRESS_MILLIS it asks the
+ * TV client to start a hold once, and every end path (lift, cancel, stop) asks it to release;
+ * the client bounds the TV-side hold and closes the connection if a release cannot be sent.
  */
 final class KeyRepeat {
     interface Scheduler {
@@ -19,11 +20,13 @@ final class KeyRepeat {
     static final long INTERVAL_MILLIS = 150;
     /** Bounds one hold to about 30 seconds of repeats. */
     static final int MAX_REPEATS = 200;
+    static final long LONG_PRESS_MILLIS = 500;
 
     private final Scheduler scheduler;
-    private final Consumer<TvCommand> send;
+    private final Consumer<TvCommand> send, holdStart;
+    private final Runnable holdEnd;
     private TvCommand held;
-    private boolean suppressClick;
+    private boolean suppressClick, longStarted;
     private BooleanSupplier stillHeld = () -> false;
     private int repeats;
 
@@ -37,10 +40,23 @@ final class KeyRepeat {
         }
     };
 
-    KeyRepeat(Scheduler scheduler, Consumer<TvCommand> send) {
+    private final Runnable longPress = new Runnable() {
+        @Override public void run() {
+            if (held == null || longStarted || !stillHeld.getAsBoolean()) return;
+            longStarted = true;
+            holdStart.accept(held);
+        }
+    };
+
+    KeyRepeat(Scheduler scheduler, Consumer<TvCommand> send, Consumer<TvCommand> holdStart, Runnable holdEnd) {
         this.scheduler = Objects.requireNonNull(scheduler);
         this.send = Objects.requireNonNull(send);
+        this.holdStart = Objects.requireNonNull(holdStart);
+        this.holdEnd = Objects.requireNonNull(holdEnd);
     }
+
+    /** Only OK has a real long press; every other key is a tap or an arrow repeat. */
+    static boolean longPresses(TvCommand command) { return command == TvCommand.OK; }
 
     /** Only spatial navigation repeats; OK, Home, Back, media and app keys stay single presses. */
     static boolean repeats(TvCommand command) {
@@ -51,17 +67,18 @@ final class KeyRepeat {
     void press(TvCommand command, BooleanSupplier stillHeld) {
         stop();
         repeats = 0;
-        if (!repeats(command)) return;
+        if (!repeats(command) && !longPresses(command)) return;
         held = command;
         this.stillHeld = Objects.requireNonNull(stillHeld);
-        scheduler.post(tick, DELAY_MILLIS);
+        if (longPresses(command)) scheduler.post(longPress, LONG_PRESS_MILLIS);
+        else scheduler.post(tick, DELAY_MILLIS);
     }
 
-    /** Ends the hold; true when it already sent repeats, so the release must not add a press. */
+    /** Ends the hold; true when it already repeated or long-pressed, so release adds no press. */
     boolean release() {
-        boolean repeated = repeats > 0;
+        boolean handled = repeats > 0 || longStarted;
         stop();
-        return repeated;
+        return handled;
     }
 
     /**
@@ -97,5 +114,7 @@ final class KeyRepeat {
         held = null;
         stillHeld = () -> false;
         scheduler.cancel(tick);
+        scheduler.cancel(longPress);
+        if (longStarted) { longStarted = false; holdEnd.run(); }
     }
 }

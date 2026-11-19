@@ -42,6 +42,8 @@ public final class RemoteConnectionService extends Service {
         boolean makeVisible(long token) { return runtime.makeVisible(token); }
         void move(long token, long epoch, int dx, int dy) { runtime.move(token, epoch, dx, dy); }
         void click(long token, long epoch) { runtime.click(token, epoch); }
+        void tvHoldStart(long token, long epoch, TvCommand command) { runtime.tvHoldStart(token, epoch, command); }
+        void tvHoldEnd() { runtime.tvHoldEnd(); }
         void scroll(long token, long epoch, MouseReport.Direction direction) { runtime.scroll(token, epoch, direction); }
         void tvCommand(long token, long epoch, TvCommand command) { runtime.tvCommand(token, epoch, command); }
         void scrollTouchDown(long token, long epoch) { runtime.scrollTouchDown(token, epoch); }

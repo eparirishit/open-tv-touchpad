@@ -275,3 +275,23 @@ no extra press. OK, Home, Back, volume, play/pause and Netflix stay single press
 A true long press (Remote v2 START_LONG/END_LONG, e.g. long-press OK for a context
 menu) is not implemented: a lost END_LONG could leave a key held on the TV, so it
 needs its own design, release guarantees and XK03H testing.
+
+## OK long press (2026-11-18)
+
+Owner approved ("Yes, build it"). Supersedes the "true long press is not
+implemented" note above, for OK only. Holding OK for 500ms sends one Remote v2
+START_LONG for KEYCODE_DPAD_CENTER through the normal admission, epoch, spacing
+and freshness checks. The client then holds OK on the TV for at least 800ms (so a
+quick lift still registers as a long press) and at most 1500ms, writing END_LONG
+when the finger lifts after the minimum, or at the maximum without a lift. A tap
+under 500ms stays one SHORT press; a release after a long press adds no tap.
+While OK is held no other key or second hold is accepted.
+
+Release guarantee without weakening admission: END_LONG is written only under
+the same epoch as its START_LONG. If input is revoked (pause, focus loss, hidden
+surface), the session stops, or the release write fails while OK is held, the TV
+connection closes immediately instead of sending an unadmitted release. A START
+still queued when the finger lifts is dropped, so no hold reaches the TV.
+Hardware check pending: confirm the XK03H releases a held key when the control
+connection closes. Arrows keep hold-to-repeat; other keys stay single presses.
+Shipped as 0.24.

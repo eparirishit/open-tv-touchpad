@@ -32,7 +32,9 @@ public class KeyRepeatTest {
 
     private final FakeScheduler clock = new FakeScheduler();
     private final List<TvCommand> sent = new ArrayList<>();
-    private final KeyRepeat repeat = new KeyRepeat(clock, sent::add);
+    private final List<String> holds = new ArrayList<>();
+    private final KeyRepeat repeat = new KeyRepeat(clock, sent::add,
+            command -> holds.add("start " + command), () -> holds.add("end"));
     private final AtomicBoolean pressed = new AtomicBoolean(true);
 
     @Test public void shortTapSendsNothingExtraAndAllowsTheClick() {
@@ -93,9 +95,50 @@ public class KeyRepeatTest {
         clock.advance(10_000);
         assertTrue(sent.isEmpty());
         repeat.press(TvCommand.DOWN, pressed::get);
-        repeat.press(TvCommand.OK, pressed::get);
+        repeat.press(TvCommand.HOME, pressed::get);
         clock.advance(10_000);
-        assertTrue("A non-repeating press replaces the arrow hold", sent.isEmpty());
+        assertTrue("A plain tap key replaces the arrow hold", sent.isEmpty() && holds.isEmpty());
         assertFalse(repeat.release());
+    }
+
+    @Test public void heldOkStartsOneLongPressAndEveryEndPathReleasesIt() {
+        repeat.press(TvCommand.OK, pressed::get);
+        clock.advance(KeyRepeat.LONG_PRESS_MILLIS - 1);
+        assertTrue(holds.isEmpty());
+        clock.advance(1);
+        assertEquals(List.of("start OK"), holds);
+        clock.advance(5_000);
+        assertEquals("One start per hold, no repeats", List.of("start OK"), holds);
+        assertTrue(sent.isEmpty());
+        assertTrue("Release after a long press adds no tap", repeat.release());
+        assertEquals(List.of("start OK", "end"), holds);
+        repeat.release(); repeat.stop();
+        assertEquals("Release is requested once", 2, holds.size());
+
+        holds.clear();
+        repeat.press(TvCommand.OK, pressed::get); clock.advance(KeyRepeat.LONG_PRESS_MILLIS);
+        repeat.stop();
+        assertEquals("Pause, focus loss and cancel release too", List.of("start OK", "end"), holds);
+
+        holds.clear();
+        repeat.press(TvCommand.OK, pressed::get); clock.advance(KeyRepeat.LONG_PRESS_MILLIS);
+        repeat.press(TvCommand.DOWN, pressed::get);
+        assertEquals("A new touch releases the previous hold", List.of("start OK", "end"), holds);
+    }
+
+    @Test public void quickOrSlidOffOkNeverStartsALongPress() {
+        repeat.press(TvCommand.OK, pressed::get);
+        clock.advance(KeyRepeat.LONG_PRESS_MILLIS - 1);
+        assertFalse("A tap keeps its single press", repeat.release());
+        pressed.set(false);
+        repeat.press(TvCommand.OK, pressed::get);
+        clock.advance(5_000);
+        assertTrue("No long press once the finger left the button", holds.isEmpty());
+        assertFalse(repeat.release());
+    }
+
+    @Test public void onlyOkLongPresses() {
+        for (TvCommand command : TvCommand.values())
+            assertEquals(command.name(), command == TvCommand.OK, KeyRepeat.longPresses(command));
     }
 }

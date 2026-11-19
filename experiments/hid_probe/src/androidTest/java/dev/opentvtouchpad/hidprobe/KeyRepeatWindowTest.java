@@ -21,6 +21,7 @@ import static org.junit.Assert.*;
 public class KeyRepeatWindowTest {
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
     private final List<TvCommand> sent = new ArrayList<>();
+    private final List<String> holds = new ArrayList<>();
     private RemoteScreen screen;
     private KeyRepeat repeat;
 
@@ -34,7 +35,7 @@ public class KeyRepeatWindowTest {
             repeat = new KeyRepeat(new KeyRepeat.Scheduler() {
                 @Override public void post(Runnable task, long delayMillis) { handler.postDelayed(task, delayMillis); }
                 @Override public void cancel(Runnable task) { handler.removeCallbacks(task); }
-            }, sent::add);
+            }, sent::add, command -> holds.add("start " + command), () -> holds.add("end"));
             for (TvCommand command : TvCommand.values()) {
                 Button button = screen.tvButtons.get(command);
                 button.setEnabled(true);
@@ -83,14 +84,17 @@ public class KeyRepeatWindowTest {
         return count[0];
     }
 
-    @Test public void heldArrowRepeatsInAnAttachedWindowAndTapStaysSingle() {
+    @Test public void heldArrowRepeatsAndHeldOkLongPressesInAnAttachedWindow() {
         Activity activity = launch();
         try {
             assertEquals("A quick tap is one press", 1, hold(TvCommand.DOWN, 50));
             int held = hold(TvCommand.DOWN, 1_100);
             assertTrue("A one-second hold repeats several times, got " + held, held >= 4);
             assertTrue("Repeats stay bounded by the interval, got " + held, held <= 7);
-            assertEquals("OK does not repeat", 1, hold(TvCommand.OK, 1_100));
+            assertEquals("A quick OK tap is one press", 1, hold(TvCommand.OK, 50));
+            assertEquals("A held OK sends no tap", 0, hold(TvCommand.OK, 1_100));
+            instrumentation.runOnMainSync(() -> assertEquals("Held OK long-presses once and releases on lift",
+                    List.of("start OK", "end"), holds));
         } finally { instrumentation.runOnMainSync(activity::finish); }
     }
 }
