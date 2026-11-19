@@ -131,3 +131,6 @@ owner changed sensitivity in between). No foreground service started on launch.
 No unpair, reset, data clear, uninstall or projector input was performed.
 Pending owner hardware checks: long-press OK opens the projector's long-press
 action, and the XK03H releases a held OK when the control connection closes.
+
+Owner hardware check (2026-11-18): long-press OK works on the projector with 0.24.
+The release-on-disconnect behaviour (switching apps mid-hold) has not been reported.
