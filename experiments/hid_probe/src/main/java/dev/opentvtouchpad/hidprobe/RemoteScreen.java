@@ -120,7 +120,9 @@ public final class RemoteScreen {
         add(statusCard, connect);
 
         remotePage = column();
-        add(content, remotePage);
+        // Remote and Touchpad pages take the viewport space left under the status card, so
+        // collapsing the card (or a tall phone) gives the D-pad and touchpad more room.
+        content.addView(remotePage, fill());
         for (TvCommand command : TvCommand.values()) {
             String label = switch (command) {
                 case UP -> "Up";
@@ -162,7 +164,7 @@ public final class RemoteScreen {
         addRow(remotePage, tvButtons.get(TvCommand.BACK), tvButtons.get(TvCommand.HOME), tvButtons.get(TvCommand.NETFLIX));
         Dpad dpad = new Dpad();
         cards.add(dpad);
-        LinearLayout.LayoutParams dpadSize = new LinearLayout.LayoutParams(-1, -2);
+        LinearLayout.LayoutParams dpadSize = new LinearLayout.LayoutParams(-1, 0, 1);
         dpadSize.gravity = Gravity.CENTER_HORIZONTAL;
         dpadSize.bottomMargin = dp(20);
         dpadSize.topMargin = dp(8);
@@ -170,11 +172,13 @@ public final class RemoteScreen {
         addRow(remotePage, tvButtons.get(TvCommand.VOLUME_DOWN), tvButtons.get(TvCommand.PLAY_PAUSE), tvButtons.get(TvCommand.VOLUME_UP));
 
         padPage = column();
-        add(content, padPage);
+        content.addView(padPage, fill());
         touchpad = new TouchpadView(context, move, tap);
         boolean landscape = context.getResources().getConfiguration().screenWidthDp
                 > context.getResources().getConfiguration().screenHeightDp;
-        padPage.addView(touchpad, new LinearLayout.LayoutParams(-1, dp(landscape ? 180 : 240)));
+        // Never smaller than the established pad; grows into free space when the page fills.
+        touchpad.setMinimumHeight(dp(landscape ? 180 : 240));
+        padPage.addView(touchpad, new LinearLayout.LayoutParams(-1, 0, 1));
         for (MouseReport.Direction direction : MouseReport.Direction.values()) {
             String label = switch (direction) {
                 case UP -> "Scroll up";
@@ -452,7 +456,7 @@ public final class RemoteScreen {
         status.setBackground(shape(color("#EEF2F7", "#20262D"), Color.TRANSPARENT, 12));
         sensitivity.setProgressTintList(ColorStateList.valueOf(color("#2F6FEB", "#6AA8FF")));
         sensitivity.setThumbTintList(ColorStateList.valueOf(color("#2F6FEB", "#6AA8FF")));
-        for (View card : cards) card.setBackground(shape(color("#FFFFFF", "#181B1F"), color("#E1E4E8", "#2C323A"), card instanceof Dpad ? 120 : 24));
+        for (View card : cards) card.setBackground(shape(color("#FFFFFF", "#181B1F"), color("#E1E4E8", "#2C323A"), card instanceof Dpad ? 1000 : 24));
         for (View track : tracks) track.setBackground(shape(color("#E9ECF0", "#181B1F"), Color.TRANSPARENT, 28));
         for (Button button : controls) styleButton(button);
         setupView.applyPalette(dark);
@@ -608,6 +612,12 @@ public final class RemoteScreen {
 
     private void addRow(LinearLayout parent, View... children) { add(parent, row(children)); }
 
+    private LinearLayout.LayoutParams fill() {
+        LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(-1, 0, 1);
+        size.bottomMargin = dp(12);
+        return size;
+    }
+
     private LinearLayout row(View... children) {
         LinearLayout row = new LinearLayout(context);
         row.setGravity(Gravity.CENTER_VERTICAL);
@@ -664,7 +674,12 @@ public final class RemoteScreen {
             }
         }
         @Override protected void onMeasure(int widthSpec, int heightSpec) {
-            int size = Math.min(dp(240), Math.max(0, MeasureSpec.getSize(widthSpec) - dp(40)));
+            int width = Math.max(0, MeasureSpec.getSize(widthSpec) - dp(40));
+            // The established 240dp size is the floor; scrolling measurement (UNSPECIFIED) keeps it,
+            // and a page stretched to the viewport lets the circle grow into the free height.
+            int size = Math.min(dp(240), width);
+            if (MeasureSpec.getMode(heightSpec) != MeasureSpec.UNSPECIFIED)
+                size = Math.max(size, Math.min(Math.min(width, dp(340)), MeasureSpec.getSize(heightSpec)));
             setMeasuredDimension(size, size);
             for (int i = 0; i < getChildCount(); i++) {
                 int target = i == 4 ? size / 3 : size * 4 / 15;
