@@ -468,6 +468,29 @@ public class TvRemoteClientTest {
         assertEquals(0, events.failed.get());
     }
 
+    @Test public void okLongPressMinimumStartsAfterTheStartFrameIsWritten() throws Exception {
+        Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
+        TvRemoteClient client = connected(io, events, socket);
+        socket.outputGate = new CountDownLatch(1);
+        assertTrue(client.startHold(TvCommand.OK, visibility.epoch()));
+        await(socket.outputEntered::get);
+        long writeDelay = 200;
+        now.addAndGet(writeDelay);
+        client.endHold();
+        socket.outputGate.countDown();
+        await(() -> socket.flushes.get() >= 3);
+        socket.feed(TvControlProtocolTest.ping(7));
+        await(() -> socket.flushes.get() >= 4);
+        assertEquals(RemoteDirection.START_LONG, key(socket, 2).getDirection());
+
+        now.addAndGet(TvRemoteClient.MIN_HOLD_MILLIS - writeDelay);
+        Thread.sleep(80);
+        assertEquals("Queue and write delay do not count toward the hold", 4, socket.messages().size());
+        now.addAndGet(writeDelay);
+        await(() -> socket.messages().size() == 5);
+        assertEquals(RemoteDirection.END_LONG, key(socket, 4).getDirection());
+    }
+
     @Test public void okLongPressAutoReleasesAtTheMaximumWithoutALift() throws Exception {
         Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
         TvRemoteClient client = connected(io, events, socket);
@@ -480,6 +503,25 @@ public class TvRemoteClientTest {
         assertEquals(RemoteDirection.END_LONG, key(socket, 3).getDirection());
         client.endHold(); Thread.sleep(80);
         assertEquals("A later lift sends no second release", 4, socket.messages().size());
+    }
+
+    @Test public void liftWhileAutomaticReleaseIsWritingDoesNotSendItTwice() throws Exception {
+        Native io = new Native(); Events events = new Events(); FakeSocket socket = io.control();
+        TvRemoteClient client = connected(io, events, socket);
+        assertTrue(client.startHold(TvCommand.OK, visibility.epoch()));
+        await(() -> socket.flushes.get() >= 3);
+        socket.feed(TvControlProtocolTest.ping(7));
+        await(() -> socket.flushes.get() >= 4);
+        socket.outputGate = new CountDownLatch(1);
+        now.addAndGet(TvRemoteClient.MAX_HOLD_MILLIS);
+        await(socket.outputEntered::get);
+        client.endHold();
+        Thread.sleep(80);
+        socket.outputGate.countDown();
+        await(() -> !client.holding());
+        Thread.sleep(80);
+        assertEquals("Lifting during an automatic release adds no second END_LONG", 5, socket.messages().size());
+        assertEquals(RemoteDirection.END_LONG, key(socket, 4).getDirection());
     }
 
     @Test public void onlyOkHoldsAndNothingElseIsSentWhileHeld() throws Exception {

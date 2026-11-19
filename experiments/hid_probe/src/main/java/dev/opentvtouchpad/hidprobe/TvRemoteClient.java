@@ -53,12 +53,8 @@ final class TvRemoteClient {
     private char[] code;
     private TvCommand pending;
     private dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteDirection pendingDirection;
-    /*
-     * OK long press. QUEUED: START_LONG waits in the pending slot. SENT: START_LONG was handed to
-     * the writer, so the TV may hold OK until END_LONG is written. The release is written only
-     * under normal admission; if it cannot be, the connection closes instead (never a bypass).
-     */
-    private enum Hold { NONE, QUEUED, SENT }
+    /** The TV may hold OK while START_LONG is being written or after it completes. */
+    private enum Hold { NONE, QUEUED, WRITING_START, SENT }
     static final long MIN_HOLD_MILLIS = 800, MAX_HOLD_MILLIS = 1500;
     private Hold hold = Hold.NONE;
     private boolean releaseRequested, releasePending;
@@ -138,9 +134,7 @@ final class TvRemoteClient {
         synchronized (gate) {
             if (hold != Hold.NONE) return false;
             if (!queue(command, epoch, dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteDirection.START_LONG)) return false;
-            long now = clock.getAsLong();
             hold = Hold.QUEUED; holdEpoch = epoch; releaseRequested = false; releasePending = false;
-            releaseAfter = now + MIN_HOLD_MILLIS; holdUntil = now + MAX_HOLD_MILLIS;
             return true;
         }
     }
@@ -149,7 +143,7 @@ final class TvRemoteClient {
     void endHold() {
         synchronized (gate) {
             if (hold == Hold.QUEUED) { pending = null; hold = Hold.NONE; }
-            else if (hold == Hold.SENT) releaseRequested = true;
+            else if (hold != Hold.NONE && !releasePending) releaseRequested = true;
             gate.notifyAll();
         }
     }
@@ -181,8 +175,8 @@ final class TvRemoteClient {
         synchronized (gate) {
             pending = null;
             if (hold == Hold.QUEUED) hold = Hold.NONE;
-            // A sent START_LONG cannot be released without admission; close instead of holding OK.
-            if (inFlightUser != null || hold == Hold.SENT) terminate(true);
+            // Close if START_LONG may have reached the TV and release is no longer admitted.
+            if (inFlightUser != null || hold != Hold.NONE) terminate(true);
             gate.notifyAll();
         }
     }
@@ -373,7 +367,6 @@ final class TvRemoteClient {
                     requireLive();
                     if (!replies.isEmpty()) frame = replies.removeFirst();
                     else if (releasePending) {
-                        releasePending = false;
                         if (!visibility.accepts(holdEpoch)) throw new IOException("TV release without admission");
                         frame = new Frame(socket, TvCommand.OK.message(
                                 dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteDirection.END_LONG).toByteArray(),
@@ -387,7 +380,7 @@ final class TvRemoteClient {
                             continue;
                         }
                         frame = new Frame(socket, command.message(pendingDirection).toByteArray(), true, pendingAt, pendingEpoch);
-                        if (start) hold = Hold.SENT;
+                        if (start) hold = Hold.WRITING_START;
                     }
                     if (frame.socket != socket) throw new IOException("Stale TV writer");
                     writeUntil = clock.getAsLong()+2000;
@@ -430,7 +423,18 @@ final class TvRemoteClient {
                         if (frame.started && !visibility.accepts(frame.epoch)) terminate(true);
                         writeUntil = 0; frame.done = true;
                         if (inFlightUser == frame) inFlightUser = null;
-                        if (frame.release && !stopped) hold = Hold.NONE;
+                        if (hold == Hold.WRITING_START) {
+                            hold = frame.started ? Hold.SENT : Hold.NONE;
+                            if (frame.started) {
+                                long sentAt = clock.getAsLong();
+                                releaseAfter = sentAt + MIN_HOLD_MILLIS;
+                                holdUntil = sentAt + MAX_HOLD_MILLIS;
+                            }
+                        }
+                        if (frame.release && !stopped) {
+                            hold = Hold.NONE;
+                            releasePending = false;
+                        }
                         if (!frame.user) outstandingReplies--;
                         gate.notifyAll();
                     }
@@ -471,7 +475,7 @@ final class TvRemoteClient {
                         long now = clock.getAsLong();
                         // Release on lift after the minimum hold, and always by the maximum hold.
                         if (releaseRequested && now >= releaseAfter || now >= holdUntil) {
-                            releasePending = true; releaseRequested = false; holdUntil = Long.MAX_VALUE;
+                            releasePending = true; releaseRequested = false;
                             gate.notifyAll();
                         }
                     }
