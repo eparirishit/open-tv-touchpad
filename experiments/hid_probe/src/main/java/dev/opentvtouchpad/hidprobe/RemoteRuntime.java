@@ -266,6 +266,15 @@ final class RemoteRuntime {
     void click(long token, long epoch) { if (acceptsInput(token, epoch)) click(); }
     void scroll(long token, long epoch, MouseReport.Direction direction) { if (acceptsInput(token, epoch)) scroll(direction); }
     void tvCommand(long token, long epoch, TvCommand command) { if (acceptsInput(token, epoch)) tvCommand(command, epoch); }
+    /** OK long press start: ordinary input admission, like any TV key. */
+    void tvHoldStart(long token, long epoch, TvCommand command) {
+        if (!acceptsInput(token, epoch)) return;
+        cancelGesture();
+        if (!canAttempt() || !run.ready() || run.tv == null) return;
+        run.tv.startHold(command, epoch);
+    }
+    /** Release is always accepted: the client writes it under admission or closes the connection. */
+    void tvHoldEnd() { if (run != null && run.tv != null) run.tv.endHold(); }
     void scrollTouchDown(long token, long epoch) { if (acceptsInput(token, epoch) && run != null) run.scrolling.touchDown(); }
     private void cancelGesture() { gestureRevision++; }
     private void clearTvCode() { codeRevision++; }

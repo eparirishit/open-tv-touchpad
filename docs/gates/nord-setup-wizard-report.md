@@ -95,3 +95,52 @@ recovery with accurate copy. Never treat a fixture result as a hardware PASS.
 N4 lock/return,30-minute retention/expiry, loss/recovery and endurance/battery gates
 remain as recorded in [daily-use readiness](n4-readiness.md). No public release
 or daily-use readiness is claimed by this candidate.
+
+## 0.23 delivery (2026-11-18)
+
+0.23-design-alignment (versionCode 23) from source commit aa1d0d7 was installed in
+place on the Nord (Android 12); APK SHA-256 prefix d17f88410f9b0b76. The design
+alignment, collapsible status card, larger D-pad/touchpad and D-pad hold-to-repeat
+are included. An earlier 0.23 build from before the last two commits had already
+been installed; both share versionCode 23, so compare APK hashes, not versions.
+
+Prechecks: the app showed "Stopped. Enrollment retained. Native teardown
+completed." and no foreground connection service was running. The candidate was
+explicitly signed with the same local debug key as the installed APK, after a
+worktree build had produced a different signer; Android would have rejected that
+build as an update. Both enrollment records and the two preference files were
+byte-identical (SHA-256) before install, after install and after launch. After
+launch no foreground service started and the app showed the saved projector as
+disconnected. The default ADB server again reported no route to the reachable
+debugging port; a separate loopback ADB server connected. No unpair, reset, data
+clear, uninstall or projector input was performed. Hardware checks of the new
+behavior are pending the owner's test.
+
+## 0.24 delivery (2026-11-18)
+
+0.24-ok-long-press (versionCode 24) from source commit bd5fc72 was installed in
+place on the Nord; APK SHA-256 prefix 90984be2d8f266ef, signed with the same local
+debug key as the installed app. Adds OK long press (START_LONG/END_LONG with an
+800–1500ms TV-side hold and fail-closed release) on top of 0.23.
+
+Prechecks: the app showed "Stopped. Enrollment retained. Native teardown
+completed." with no foreground service. Both enrollment records and both
+preference files were byte-identical before install, after install and after
+launch (the touchpad preference differs from the 0.23 record only because the
+owner changed sensitivity in between). No foreground service started on launch.
+No unpair, reset, data clear, uninstall or projector input was performed.
+Pending owner hardware checks: long-press OK opens the projector's long-press
+action, and the XK03H releases a held OK when the control connection closes.
+
+Owner hardware check (2026-11-18): long-press OK works on the projector with 0.24.
+The release-on-disconnect behaviour (switching apps mid-hold) has not been reported.
+
+## 0.25 delivery (2026-11-18)
+
+0.25-touchpad-controls (versionCode 25) from source commit a19e977 was installed in
+place on the Nord; APK SHA-256 prefix dd4cc0b402962a2f, signed with the same local
+debug key. Adds the touchpad controls card and 56dp remote/scroll buttons on top
+of 0.24. Prechecks: app stopped with native teardown completed and no foreground
+service. Both enrollment records and both preference files were byte-identical
+before install, after install and after launch; no service started on launch. No
+unpair, reset, data clear, uninstall or projector input was performed.

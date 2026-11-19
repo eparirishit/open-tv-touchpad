@@ -258,3 +258,50 @@ like other navigation. Every new connection starts collapsed. Any loss of
 connection expands the card automatically, so failure, recovery and permission
 text is never hidden. Stop stays in the header. Presentation only: no admission,
 transport or lifecycle change. Shipped as 0.23-design-alignment.
+
+## Larger controls and D-pad hold-to-repeat (2026-11-18)
+
+Owner request. The Remote and Touchpad pages fill the height left under the status
+card, so collapsing the card (or a tall phone) grows the D-pad (up to 340dp, still
+a circle) and the touchpad. Neither ever drops below the earlier 240dp; short or
+landscape screens keep the scrolling layout.
+
+Holding a D-pad arrow repeats it: first repeat after 400ms, then every 150ms, at
+most 200 repeats per hold. Each repeat is an ordinary complete SHORT key press
+through the existing admission, epoch, 100ms spacing and freshness checks, so
+nothing is ever held down on the TV. Repeats stop on release, slide-off, cancel,
+page change, disabled controls, pause or focus loss; a release after repeats adds
+no extra press. OK, Home, Back, volume, play/pause and Netflix stay single presses.
+A true long press (Remote v2 START_LONG/END_LONG, e.g. long-press OK for a context
+menu) is not implemented: a lost END_LONG could leave a key held on the TV, so it
+needs its own design, release guarantees and XK03H testing.
+
+## OK long press (2026-11-18)
+
+Owner approved ("Yes, build it"). Supersedes the "true long press is not
+implemented" note above, for OK only. Holding OK for 500ms sends one Remote v2
+START_LONG for KEYCODE_DPAD_CENTER through the normal admission, epoch, spacing
+and freshness checks. The client then holds OK on the TV for at least 800ms (so a
+quick lift still registers as a long press) and at most 1500ms, writing END_LONG
+when the finger lifts after the minimum, or at the maximum without a lift. A tap
+under 500ms stays one SHORT press; a release after a long press adds no tap.
+While OK is held no other key or second hold is accepted.
+
+Release guarantee without weakening admission: END_LONG is written only under
+the same epoch as its START_LONG. If input is revoked (pause, focus loss, hidden
+surface), the session stops, or the release write fails while OK is held, the TV
+connection closes immediately instead of sending an unadmitted release. A START
+still queued when the finger lifts is dropped, so no hold reaches the TV.
+Hardware check pending: confirm the XK03H releases a held key when the control
+connection closes. Arrows keep hold-to-repeat; other keys stay single presses.
+Shipped as 0.24.
+
+## Touchpad controls card and larger buttons (2026-11-18)
+
+Owner request. Scroll and touchpad sensitivity move into one card in the app's
+card style below the pad: an uppercase "Scroll" section label with the four scroll
+buttons, a divider, then a "Touchpad sensitivity" label with the current value in
+a blue chip, the unchanged 0.5×–2× slider and "Slower"/"Faster" captions. The
+slider keeps its accessible name and value; the chip and captions are visual only.
+The Back/Home/Netflix row, the volume/play row and the scroll buttons grow from
+48dp to 56dp with 26dp icons. Presentation only. Shipped as 0.25.

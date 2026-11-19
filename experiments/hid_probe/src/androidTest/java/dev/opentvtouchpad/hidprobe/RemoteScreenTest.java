@@ -198,6 +198,50 @@ public class RemoteScreenTest {
         });
     }
 
+    @Test public void collapsedStatusGivesDpadAndTouchpadTheFreedSpace() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            Context c=context(390,844,1f); float density=c.getResources().getDisplayMetrics().density;
+            RemoteScreen screen=new RemoteScreen(c,(x,y)->{},()->{});
+            View ok=screen.tvButtons.get(TvCommand.OK);
+            layout(screen,c,390,844);
+            int disconnectedOk=ok.getWidth();
+            assertTrue("Never smaller than the 240dp D-pad",disconnectedOk>=(int)(80*density));
+            screen.setConnected(true); screen.setTvConnected(true); layout(screen,c,390,844);
+            int collapsedOk=ok.getWidth();
+            assertTrue("Collapsed card grows the D-pad",collapsedOk>disconnectedOk);
+            reachable(screen,screen.tvButtons.get(TvCommand.VOLUME_UP));
+            screen.statusSummary.performClick(); layout(screen,c,390,844);
+            assertTrue("Expanding gives the space back",ok.getWidth()<collapsedOk);
+            screen.statusSummary.performClick();
+            screen.showTouchpad(true); layout(screen,c,390,844);
+            int collapsedPad=screen.touchpad.getHeight();
+            assertTrue("Touchpad never below 240dp",collapsedPad>=(int)(240*density));
+            for (Button control : screen.scrollButtons.values()) reachable(screen,control);
+            screen.statusSummary.performClick(); layout(screen,c,390,844);
+            assertTrue("Collapsed card grows the touchpad",collapsedPad>screen.touchpad.getHeight());
+            assertTrue(screen.touchpad.getHeight()>=(int)(240*density));
+        });
+    }
+
+    @Test public void remoteRowsAndScrollUseLargerTargets() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            Context c=context(390,844,1f); float density=c.getResources().getDisplayMetrics().density;
+            RemoteScreen screen=new RemoteScreen(c,(x,y)->{},()->{});
+            layout(screen,c,390,844);
+            for (TvCommand command : new TvCommand[]{TvCommand.BACK,TvCommand.HOME,TvCommand.NETFLIX,
+                    TvCommand.VOLUME_DOWN,TvCommand.PLAY_PAUSE,TvCommand.VOLUME_UP})
+                assertTrue(command+" is 56dp",screen.tvButtons.get(command).getHeight()>=(int)(56*density));
+            screen.showTouchpad(true); layout(screen,c,390,844);
+            for (Button scroll : screen.scrollButtons.values()) {
+                assertTrue("Scroll is 56dp",scroll.getHeight()>=(int)(56*density));
+                reachable(screen,scroll);
+            }
+            assertTrue("Slider is visible",visible(screen,screen.sensitivity));
+            String value=String.format(java.util.Locale.ROOT,"%.2f×",0.5+screen.sensitivity.getProgress()*0.25);
+            assertNotNull("Sensitivity chip shows the slider value",findText(screen.root,value));
+        });
+    }
+
     @Test public void headerAndDpadMatchRequestedStyleWithoutEnablingInput() {
         InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
             RemoteScreen screen = new RemoteScreen(context(360,800,1f),(x,y)->{},()->{});

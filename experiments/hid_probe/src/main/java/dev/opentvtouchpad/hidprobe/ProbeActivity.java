@@ -38,6 +38,7 @@ public final class ProbeActivity extends Activity {
     private java.util.concurrent.atomic.AtomicBoolean setupVisit = new java.util.concurrent.atomic.AtomicBoolean(true);
     private RemoteScreen screen;
     private TouchpadView touchpad;
+    private KeyRepeat keyRepeat;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -51,13 +52,14 @@ public final class ProbeActivity extends Activity {
         status.setText("Opening remote…");
         bind(connect, this::connectRemote);
         screen.setupView.setActionListener(this::setupAction);
+        keyRepeat = new KeyRepeat(new KeyRepeat.Scheduler() {
+            @Override public void post(Runnable task, long delayMillis) { handler.postDelayed(task, delayMillis); }
+            @Override public void cancel(Runnable task) { handler.removeCallbacks(task); }
+        }, this::tvCommand, this::tvHoldStart, this::tvHoldEnd);
         for (TvCommand command : TvCommand.values()) {
             Button button = screen.tvButtons.get(command);
-            bind(button, () -> tvCommand(command));
-            button.setOnTouchListener((view, event) -> {
-                if (event.getActionMasked() == MotionEvent.ACTION_DOWN) touchpad.cancelGesture();
-                return false;
-            });
+            bind(button, () -> { if (!keyRepeat.consumeClick()) tvCommand(command); });
+            keyRepeat.attach(button, command, touchpad::cancelGesture);
         }
         for (MouseReport.Direction direction : MouseReport.Direction.values()) {
             Button control = screen.scrollButtons.get(direction);
@@ -263,6 +265,17 @@ public final class ProbeActivity extends Activity {
         if (controller != null) controller.scroll(attachment, inputEpoch, direction);
         render();
     }
+    private void tvHoldStart(TvCommand command) {
+        touchpad.cancelGesture();
+        if (controller != null) controller.tvHoldStart(attachment, inputEpoch, command);
+        render();
+    }
+
+    /** Called on every end path, including pause and focus loss, so the TV never keeps OK held. */
+    private void tvHoldEnd() {
+        if (controller != null) controller.tvHoldEnd();
+    }
+
     private void tvCommand(TvCommand command) {
         touchpad.cancelGesture();
         if (controller != null) controller.tvCommand(attachment, inputEpoch, command);
@@ -277,6 +290,7 @@ public final class ProbeActivity extends Activity {
 
     private void pauseControls() {
         inputEpoch = 0;
+        keyRepeat.stop();
         connect.setEnabled(false);
         for (Button button : inputs) button.setEnabled(false);
         touchpad.setEnabled(false);
