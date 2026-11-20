@@ -285,6 +285,29 @@ public class RemoteScreenTest {
         });
     }
 
+    @Test public void connectedStopSharesTheSetupHeaderRow() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            Context c=context(360,800,1f);
+            RemoteScreen screen=new RemoteScreen(c,(x,y)->{},()->{});
+            screen.setConnected(true);
+            screen.showSetup(true);
+            screen.setupView.render(new SetupState.Snapshot(SetupState.Page.OVERVIEW,true,true,true,"","","",0,false,true,1,false));
+            layout(screen,c,360,800);
+            assertTrue("Stop stays reachable in Setup",visible(screen,screen.stop));
+            assertSame("Stop sits in the Setup header row",screen.setupView.back.getParent(),screen.stop.getParent());
+            Rect back=bounds(screen,screen.setupView.back), stop=bounds(screen,screen.stop);
+            assertTrue("Same line as the back button",stop.top < back.bottom && stop.bottom > back.top);
+            screen.showAppearance();
+            layout(screen,c,360,800);
+            assertTrue("Stop stays reachable on Display",visible(screen,screen.stop));
+            screen.showSetup(false);
+            layout(screen,c,360,800);
+            assertTrue(visible(screen,screen.stop));
+            assertTrue("Stop returns before Settings",bounds(screen,screen.stop).right <= bounds(screen,screen.setup).left
+                || screen.root.getLayoutDirection()==View.LAYOUT_DIRECTION_RTL);
+        });
+    }
+
     @Test public void headerAndDpadMatchRequestedStyleWithoutEnablingInput() {
         InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
             RemoteScreen screen = new RemoteScreen(context(360,800,1f),(x,y)->{},()->{});

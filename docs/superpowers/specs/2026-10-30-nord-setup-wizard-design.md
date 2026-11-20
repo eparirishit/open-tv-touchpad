@@ -326,3 +326,19 @@ only; no admission, transport, keyboard-protocol or lifecycle change.
   circle; arrows are 29% (the mockup's 30% would overlap OK) with 28dp icons.
 - Volume and play/pause are 60dp with 12dp gaps.
 Shipped as 0.27.
+
+## Home and Setup polish (2026-11-19)
+
+Owner requests after testing 0.27 on the Nord. Presentation only.
+- The collapsed D-pad grows to about 1.45x (up to 360dp, within 8dp of the content
+  edges), still bounded by the free height; the expanded card keeps 240dp.
+- OK draws its label centred on the glyph box. OEM fonts pad the line box unevenly,
+  which put "OK" visibly off-centre on the Nord.
+- Every button shrinks slightly while pressed and springs back on release
+  (StateListAnimator on scale only; no elevation). Disabled buttons do not move,
+  and the system "Remove animations" setting turns it off.
+- Setup and Display no longer stack a Stop-only app header above their own row: a
+  connected Stop moves to the end of the Setup/Display header row, the app header
+  hides, and the 8dp extra top inset is removed, so the back button, title and
+  content move up to where the app header sits.
+Shipped as 0.28.

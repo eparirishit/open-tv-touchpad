@@ -63,6 +63,7 @@ public final class RemoteScreen {
     private final Dpad dpad;
     private final LinearLayout header, footer;
     private final Button appearanceBack;
+    private final LinearLayout displayHeader;
     private final TextView connection, brand, sensitivityLabel, sensitivityValue;
     private final View controlsDivider;
     private final List<TextView> labels = new ArrayList<>();
@@ -200,7 +201,7 @@ public final class RemoteScreen {
                 case NETFLIX -> R.drawable.ui_netflix;
                 default -> 0;
             };
-            Button control = icon == 0 ? button(label) : iconButton(label, icon);
+            Button control = icon == 0 ? configureButton(new LabelButton(), label) : iconButton(label, icon);
             control.setContentDescription(switch (command) {
                 case UP, DOWN, LEFT, RIGHT -> "TV D-pad " + label.toLowerCase(java.util.Locale.ROOT);
                 case VOLUME_UP -> "TV volume up";
@@ -320,7 +321,7 @@ public final class RemoteScreen {
         // Same round back control and "Setup" row as the wizard header.
         appearanceBack = iconButton("Back to setup", R.drawable.ui_left);
         ((IconButton) appearanceBack).icon.setAutoMirrored(true);
-        LinearLayout displayHeader = new LinearLayout(context);
+        displayHeader = new LinearLayout(context);
         displayHeader.setGravity(Gravity.CENTER_VERTICAL);
         displayHeader.addView(appearanceBack, new LinearLayout.LayoutParams(dp(48), dp(48)));
         TextView displayHeading = text("Setup", 17);
@@ -589,14 +590,29 @@ public final class RemoteScreen {
     }
 
     /**
-     * Setup pages carry their own back/title row, so the app header there keeps only a
-     * connected Stop. Settings leaves Setup through that row or Back, never by disappearing Stop.
+     * Setup and Display carry their own back/title row, so the app header hides there and a
+     * connected Stop moves to the end of that row instead of taking a row of its own.
      */
     private void updateHeader() {
         if (header == null) return;
         brand.setText(showingSetup ? "" : "Open TV");
         setup.setVisibility(showingSetup ? View.GONE : View.VISIBLE);
-        header.setVisibility(showingSetup && !connected ? View.GONE : View.VISIBLE);
+        header.setVisibility(showingSetup ? View.GONE : View.VISIBLE);
+        if (!showingSetup) {
+            setupView.setAccessory(null);
+            moveStop(header, header.indexOfChild(setup));
+        } else if (showingAppearance) {
+            setupView.setAccessory(null);
+            moveStop(displayHeader, displayHeader.getChildCount());
+        } else setupView.setAccessory(stop);
+    }
+
+    private void moveStop(LinearLayout row, int index) {
+        if (stop.getParent() == row) return;
+        if (stop.getParent() instanceof android.view.ViewGroup previous) previous.removeView(stop);
+        LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(-2, -2);
+        size.setMarginStart(dp(6));
+        row.addView(stop, Math.max(0, index), size);
     }
 
     private void updatePages() {
@@ -815,7 +831,7 @@ public final class RemoteScreen {
         button.setMinimumWidth(dp(48));
         button.setPadding(dp(12), dp(12), dp(12), dp(12));
         button.setBackgroundTintList(null);
-        button.setStateListAnimator(null);
+        PressMotion.apply(button);
         controls.add(button);
         return button;
     }
@@ -867,6 +883,23 @@ public final class RemoteScreen {
         return segment;
     }
 
+    /**
+     * Text button whose label is centred on its glyphs. OEM fonts pad the line box unevenly,
+     * which made "OK" sit off-centre on the Nord; the glyph box is the same on every font.
+     */
+    private final class LabelButton extends Button {
+        private final android.graphics.Rect glyphs = new android.graphics.Rect();
+        LabelButton() { super(context); }
+        @Override protected void onDraw(Canvas canvas) {
+            android.text.TextPaint paint = getPaint();
+            paint.setColor(getCurrentTextColor());
+            paint.setTextAlign(android.graphics.Paint.Align.LEFT);
+            String label = getText().toString();
+            paint.getTextBounds(label, 0, label.length(), glyphs);
+            canvas.drawText(label, getWidth() / 2f - glyphs.exactCenterX(), getHeight() / 2f - glyphs.exactCenterY(), paint);
+        }
+    }
+
     /** Keep the accessible/test label while centering a native vector without hidden text spacing. */
     private final class IconButton extends Button {
         private final Drawable icon;
@@ -915,12 +948,12 @@ public final class RemoteScreen {
         void setColors(int surface, int border) { fill.setColor(surface); edge.setColor(border); invalidate(); }
         void setRoomy(boolean roomy) { if (this.roomy != roomy) { this.roomy = roomy; requestLayout(); } }
         @Override protected void onMeasure(int widthSpec, int heightSpec) {
-            int width = Math.max(0, MeasureSpec.getSize(widthSpec) - dp(40));
+            int width = Math.max(0, MeasureSpec.getSize(widthSpec) - dp(16));
             // The established 240dp size is the floor; scrolling measurement (UNSPECIFIED) keeps it,
             // and a page stretched to the viewport lets the circle grow into the free height.
             int size = Math.min(dp(240), width);
             int mode = MeasureSpec.getMode(heightSpec), available = MeasureSpec.getSize(heightSpec);
-            if (roomy && mode != MeasureSpec.UNSPECIFIED) size = Math.max(size, Math.min(Math.min(width, dp(312)), available));
+            if (roomy && mode != MeasureSpec.UNSPECIFIED) size = Math.max(size, Math.min(Math.min(width, dp(360)), available));
             setMeasuredDimension(size, mode == MeasureSpec.EXACTLY ? Math.max(size, available) : size);
             for (int i = 0; i < getChildCount(); i++) {
                 int target = i == 4 ? size * 11 / 30 : size * 29 / 100;

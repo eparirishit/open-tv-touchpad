@@ -60,6 +60,8 @@ public final class SetupScreen {
     private FrameLayout confirmation;
     private View confirmationReturnFocus;
     private Ring ring;
+    private LinearLayout headerRow;
+    private View accessory;
     private View progress;
     private TextView validation, timeline;
 
@@ -71,7 +73,8 @@ public final class SetupScreen {
         scroll.setVerticalScrollBarEnabled(false);
         root.addView(scroll,new FrameLayout.LayoutParams(-1,-1));
         page = column();
-        page.setPadding(dp(8),dp(8),dp(8),dp(12));
+        // No extra top inset: the Setup header row sits where the app header sits.
+        page.setPadding(dp(8),0,dp(8),dp(12));
         scroll.addView(page,new ScrollView.LayoutParams(-1,-2));
         body = column(); actions = column();
         back = button(""); primary = button(""); secondary = button("");
@@ -126,6 +129,15 @@ public final class SetupScreen {
             @Override public void onViewDetachedFromWindow(View v) { pauseControls(); }
         });
         render(new SetupState.Snapshot(SetupState.Page.OVERVIEW,false,false,false,"","","",0,false,false,0,false));
+    }
+
+    /** A control owned elsewhere (the connected Stop) shown at the end of the Setup header row. */
+    void setAccessory(View view) { accessory=view; placeAccessory(); }
+
+    private void placeAccessory() {
+        if(accessory==null || headerRow==null || accessory.getParent()==headerRow) return;
+        LinearLayout.LayoutParams size=new LinearLayout.LayoutParams(-2,-2);size.setMarginStart(dp(8));
+        add(headerRow,accessory,size);
     }
 
     public void setActionListener(BiConsumer<SetupState.Action,String> listener) { this.listener=Objects.requireNonNull(listener); }
@@ -211,6 +223,7 @@ public final class SetupScreen {
             TextView position=label("Step "+step+" of 3",13);position.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
             header.addView(position,new LinearLayout.LayoutParams(-2,-2));
         }
+        headerRow=header;placeAccessory();
         add(page,header);
         if (step>0) {
             LinearLayout row=new LinearLayout(context);
@@ -560,7 +573,7 @@ public final class SetupScreen {
         Button button=new Button(context);button.setText(text);button.setContentDescription(text);button.setAllCaps(false);
         button.setTextSize(16);button.setTypeface(Typeface.DEFAULT,Typeface.BOLD);button.setSingleLine(false);
         button.setMinHeight(dp(48));button.setMinimumHeight(dp(48));button.setMinWidth(dp(48));button.setMinimumWidth(dp(48));
-        button.setPadding(dp(16),dp(12),dp(16),dp(12));button.setBackgroundTintList(null);button.setStateListAnimator(null);
+        button.setPadding(dp(16),dp(12),dp(16),dp(12));button.setBackgroundTintList(null);PressMotion.apply(button);
         buttons.add(button);return button;
     }
     private void add(LinearLayout parent,View child) {
