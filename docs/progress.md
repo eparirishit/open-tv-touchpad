@@ -74,8 +74,21 @@ projector’s paired TLS session opened.
 On the updated build, the owner confirmed text appeared in Play Store search
 on the Horizon and a later D-pad command still worked over the same session.
 The Nord still showed the foreground control service while dozing for more
-than two minutes. Functional return after unlock, Bluetooth-loss recovery,
-30-minute idle expiry, and a full viewing session remain open.
+than two minutes. Functional return after unlock, 30-minute idle expiry, and a
+full viewing session remain open.
+
+### Bluetooth off/on trial
+
+The owner disabled Bluetooth, tapped Connect while it was off, and could not
+connect after turning it back on. Android showed Bluetooth ON, and Open TV
+reported that the previous native teardown was still pending. The exact
+shutdown callback sequence was unavailable by the time diagnostics reattached.
+
+Force stopping and reopening Open TV preserved both enrollments and preferences
+byte for byte. The owner then tapped Connect and confirmed the D-pad worked.
+The native trace showed a saved run, registration, selected connection, and a
+successful neutral report. Recovery after Bluetooth loss still requires an
+app restart in this trial.
 
 ## Guided setup implementation (2026-10-30)
 
