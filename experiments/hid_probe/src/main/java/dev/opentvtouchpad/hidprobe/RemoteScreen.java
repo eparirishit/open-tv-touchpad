@@ -318,17 +318,13 @@ public final class RemoteScreen {
         setupPage.addView(setupView.root, new LinearLayout.LayoutParams(-1, -1));
         displayPage = column();
         add(content, displayPage);
-        // Same round back control and "Setup" row as the wizard header.
+        // Same round back control row as the wizard header; the page title names the screen.
         appearanceBack = iconButton("Back to setup", R.drawable.ui_left);
         ((IconButton) appearanceBack).icon.setAutoMirrored(true);
         displayHeader = new LinearLayout(context);
         displayHeader.setGravity(Gravity.CENTER_VERTICAL);
         displayHeader.addView(appearanceBack, new LinearLayout.LayoutParams(dp(48), dp(48)));
-        TextView displayHeading = text("Setup", 17);
-        displayHeading.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        LinearLayout.LayoutParams headingSize = new LinearLayout.LayoutParams(0, -2, 1);
-        headingSize.setMarginStart(dp(12));
-        displayHeader.addView(displayHeading, headingSize);
+        displayHeader.addView(new View(context), new LinearLayout.LayoutParams(0, 1, 1));
         add(displayPage, displayHeader);
         add(displayPage, text("Display", 22));
         add(displayPage, text("Choose how the app looks. It applies to every screen.", 14));
@@ -667,7 +663,7 @@ public final class RemoteScreen {
         sensitivityValue.setBackground(shape(color("#E8F0FE", "#16233B"), Color.TRANSPARENT, 12));
         controlsDivider.setBackgroundColor(color("#E1E4E8", "#2C323A"));
         for (View card : cards) card.setBackground(shape(color("#FFFFFF", "#181B1F"), color("#E1E4E8", "#2C323A"), 24));
-        dpad.setColors(color("#FFFFFF", "#181B1F"), color("#E1E4E8", "#2C323A"));
+        dpad.setColors(color("#FFFFFF", "#181B1F"), color("#E1E4E8", "#2C323A"), color("#2F6FEB", "#6AA8FF"));
         for (View track : tracks) track.setBackground(shape(color("#E9ECF0", "#181B1F"), Color.TRANSPARENT, 28));
         for (Button button : controls) styleButton(button);
         setupView.applyPalette(dark);
@@ -945,7 +941,28 @@ public final class RemoteScreen {
             }
         }
         private boolean roomy;
-        void setColors(int surface, int border) { fill.setColor(surface); edge.setColor(border); invalidate(); }
+        // Press glow per arrow (UP, DOWN, LEFT, RIGHT): the whole wedge from the rim to OK lights up.
+        private final float[] glow = new float[4];
+        private final android.animation.ValueAnimator[] glowMotion = new android.animation.ValueAnimator[4];
+        private final android.graphics.Paint glowPaint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        private final android.graphics.Path wedge = new android.graphics.Path();
+        void setColors(int surface, int border, int accent) {
+            fill.setColor(surface); edge.setColor(border); glowPaint.setColor(accent); invalidate();
+        }
+        @Override public void childDrawableStateChanged(View child) {
+            super.childDrawableStateChanged(child);
+            int index = indexOfChild(child);
+            if (index < 0 || index > 3) return;
+            float target = child.isPressed() && child.isEnabled() ? 1f : 0f;
+            if (glowMotion[index] != null) glowMotion[index].cancel();
+            if (glow[index] == target) return;
+            android.animation.ValueAnimator motion = android.animation.ValueAnimator.ofFloat(glow[index], target);
+            motion.setDuration(target > 0 ? 90 : 240);
+            motion.setInterpolator(new android.view.animation.DecelerateInterpolator());
+            motion.addUpdateListener(update -> { glow[index] = (float) update.getAnimatedValue(); invalidate(); });
+            glowMotion[index] = motion;
+            motion.start();
+        }
         void setRoomy(boolean roomy) { if (this.roomy != roomy) { this.roomy = roomy; requestLayout(); } }
         @Override protected void onMeasure(int widthSpec, int heightSpec) {
             int width = Math.max(0, MeasureSpec.getSize(widthSpec) - dp(16));
@@ -965,6 +982,19 @@ public final class RemoteScreen {
         @Override protected void onDraw(android.graphics.Canvas canvas) {
             float radius = getMeasuredWidth() / 2f, inset = edge.getStrokeWidth() / 2f;
             canvas.drawCircle(radius, top() + radius, radius - inset, fill);
+            float okRadius = getMeasuredWidth() * 11 / 60f + dp(4);
+            for (int i = 0; i < 4; i++) {
+                if (glow[i] <= 0) continue;
+                // Quarter wedge centred on the arrow: up, down, left, right.
+                float centre = i == 0 ? 270 : i == 1 ? 90 : i == 2 ? 180 : 0;
+                float outer = radius - inset, cy = top() + radius;
+                wedge.reset();
+                wedge.arcTo(radius - outer, cy - outer, radius + outer, cy + outer, centre - 45, 90, true);
+                wedge.arcTo(radius - okRadius, cy - okRadius, radius + okRadius, cy + okRadius, centre + 45, -90, false);
+                wedge.close();
+                glowPaint.setAlpha(Math.round(glow[i] * 46));
+                canvas.drawPath(wedge, glowPaint);
+            }
             canvas.drawCircle(radius, top() + radius, radius - inset, edge);
         }
         @Override protected void onLayout(boolean changed, int left, int top, int right, int bottom) {

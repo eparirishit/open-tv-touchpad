@@ -308,6 +308,32 @@ public class RemoteScreenTest {
         });
     }
 
+    @Test public void pressedArrowLightsItsWedgeAndFadesOnRelease() throws Exception {
+        android.app.Instrumentation instrumentation=InstrumentationRegistry.getInstrumentation();
+        RemoteScreen[] holder=new RemoteScreen[1]; float[][] glow=new float[1][];
+        instrumentation.runOnMainSync(() -> {
+            Context c=context(390,844,1f);
+            holder[0]=new RemoteScreen(c,(x,y)->{},()->{});
+            layout(holder[0],c,390,844);
+            for (TvCommand command : TvCommand.values()) holder[0].tvButtons.get(command).setEnabled(true);
+            try {
+                View dpad=(View)holder[0].tvButtons.get(TvCommand.UP).getParent();
+                var field=dpad.getClass().getDeclaredField("glow"); field.setAccessible(true);
+                glow[0]=(float[])field.get(dpad);
+            } catch (ReflectiveOperationException e) { throw new AssertionError(e); }
+            holder[0].tvButtons.get(TvCommand.UP).setPressed(true);
+        });
+        Thread.sleep(400);
+        instrumentation.runOnMainSync(() -> {
+            assertEquals("Pressed Up lights its wedge",1f,glow[0][0],0.01f);
+            assertEquals("Other arrows stay dark",0f,glow[0][1],0.01f);
+            capture(holder[0],holder[0].root.getContext(),"dpad-up-pressed");
+            holder[0].tvButtons.get(TvCommand.UP).setPressed(false);
+        });
+        Thread.sleep(600);
+        instrumentation.runOnMainSync(() -> assertEquals("Release fades it out",0f,glow[0][0],0.01f));
+    }
+
     @Test public void headerAndDpadMatchRequestedStyleWithoutEnablingInput() {
         InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
             RemoteScreen screen = new RemoteScreen(context(360,800,1f),(x,y)->{},()->{});

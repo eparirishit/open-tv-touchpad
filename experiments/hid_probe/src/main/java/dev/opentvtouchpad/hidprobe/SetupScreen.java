@@ -77,7 +77,7 @@ public final class SetupScreen {
         page.setPadding(dp(8),0,dp(8),dp(12));
         scroll.addView(page,new ScrollView.LayoutParams(-1,-2));
         body = column(); actions = column();
-        back = button(""); primary = button(""); secondary = button("");
+        back = style(new BackButton(),""); primary = button(""); secondary = button("");
         primary.setMinHeight(dp(56)); quietButtons.add(secondary);
         repairBluetooth = button("Re-pair"); repairTv = button("Re-pair");
         forgetBluetooth = button("Forget Bluetooth projector"); forgetTv = button("Forget TV controls");
@@ -216,9 +216,8 @@ public final class SetupScreen {
         // One prototype header row: round back control, screen name, then the step position.
         LinearLayout header=new LinearLayout(context);header.setGravity(Gravity.CENTER_VERTICAL);
         add(header,back,new LinearLayout.LayoutParams(dp(48),dp(48)));
-        TextView heading=label("Setup",17);heading.setTypeface(Typeface.DEFAULT,Typeface.BOLD);strong.add(heading);
-        LinearLayout.LayoutParams headingSize=new LinearLayout.LayoutParams(0,-2,1);headingSize.setMarginStart(dp(12));
-        header.addView(heading,headingSize);
+        // The page title below names the screen, so the row carries only back, step and Stop.
+        header.addView(new View(context),new LinearLayout.LayoutParams(0,1,1));
         if(step>0) {
             TextView position=label("Step "+step+" of 3",13);position.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
             header.addView(position,new LinearLayout.LayoutParams(-2,-2));
@@ -569,8 +568,9 @@ public final class SetupScreen {
         TextView label=new TextView(context);label.setText(text);label.setTextSize(size);label.setLineSpacing(dp(2),1.12f);
         if(size>=20)label.setTypeface(Typeface.DEFAULT,Typeface.BOLD);labels.add(label);return label;
     }
-    private Button button(String text) {
-        Button button=new Button(context);button.setText(text);button.setContentDescription(text);button.setAllCaps(false);
+    private Button button(String text) { return style(new Button(context),text); }
+    private Button style(Button button,String text) {
+        button.setText(text);button.setContentDescription(text);button.setAllCaps(false);
         button.setTextSize(16);button.setTypeface(Typeface.DEFAULT,Typeface.BOLD);button.setSingleLine(false);
         button.setMinHeight(dp(48));button.setMinimumHeight(dp(48));button.setMinWidth(dp(48));button.setMinimumWidth(dp(48));
         button.setPadding(dp(16),dp(12),dp(16),dp(12));button.setBackgroundTintList(null);PressMotion.apply(button);
@@ -628,10 +628,11 @@ public final class SetupScreen {
             android.graphics.drawable.StateListDrawable background=new android.graphics.drawable.StateListDrawable();
             if(button==back) {
                 // Prototype round back control; keyboard focus keeps a visible accent ring.
-                background.addState(new int[]{-android.R.attr.state_enabled},backShape(disabled,border,muted));
-                background.addState(new int[]{android.R.attr.state_pressed},backShape(pressed,accent,text));
-                background.addState(new int[]{android.R.attr.state_focused},backShape(surface,accent,text));
-                background.addState(new int[]{},backShape(surface,border,text));button.setBackground(background);
+                background.addState(new int[]{-android.R.attr.state_enabled},backShape(disabled,border));
+                background.addState(new int[]{android.R.attr.state_pressed},backShape(pressed,accent));
+                background.addState(new int[]{android.R.attr.state_focused},backShape(surface,accent));
+                background.addState(new int[]{},backShape(surface,border));button.setBackground(background);
+                button.setTextColor(new ColorStateList(new int[][]{{-android.R.attr.state_enabled},{}},new int[]{muted,text}));
                 continue;
             }
             boolean destructive=button==forgetBluetooth || button==forgetTv;
@@ -668,13 +669,24 @@ public final class SetupScreen {
             case PLAIN -> color("#14171A","#F2F4F6");
         };
     }
-    private android.graphics.drawable.Drawable backShape(int fill,int border,int tint) {
+    private GradientDrawable backShape(int fill,int border) {
         GradientDrawable circle=new GradientDrawable();circle.setShape(GradientDrawable.OVAL);
-        circle.setColor(fill);circle.setStroke(dp(1),border);
-        android.graphics.drawable.Drawable chevron=context.getDrawable(R.drawable.ui_left).mutate();
-        chevron.setAutoMirrored(true);chevron.setTint(tint);
-        return new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{
-                circle,new android.graphics.drawable.InsetDrawable(chevron,dp(12))});
+        circle.setColor(fill);circle.setStroke(dp(1),border);return circle;
+    }
+    /**
+     * Round back control. The chevron is drawn as foreground in the current text colour, like
+     * the app's other icon buttons, so it stays visible in dark mode on every device.
+     */
+    private final class BackButton extends Button {
+        private final android.graphics.drawable.Drawable chevron=context.getDrawable(R.drawable.ui_left).mutate();
+        BackButton() { super(context); chevron.setAutoMirrored(true); }
+        @Override protected void onDraw(Canvas canvas) {
+            int size=dp(24),left=(getWidth()-size)/2,top=(getHeight()-size)/2;
+            chevron.setBounds(left,top,left+size,top+size);
+            chevron.setLayoutDirection(getLayoutDirection());
+            chevron.setTint(getCurrentTextColor());
+            chevron.draw(canvas);
+        }
     }
     private GradientDrawable sheetShape(int fill) {
         GradientDrawable shape=new GradientDrawable();shape.setColor(fill);

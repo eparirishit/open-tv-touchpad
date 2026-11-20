@@ -342,3 +342,18 @@ Owner requests after testing 0.27 on the Nord. Presentation only.
   hides, and the 8dp extra top inset is removed, so the back button, title and
   content move up to where the app header sits.
 Shipped as 0.28.
+
+## Setup header, dark back button and D-pad press glow (2026-11-19)
+
+Owner requests after testing 0.28. Presentation only.
+- The Setup and Display header rows no longer repeat "Setup"; the page title below
+  names the screen. The row keeps the round back button (named "Back" / "Back to
+  setup"), the step position and, while connected, Stop.
+- The Setup back chevron is drawn as the button's foreground in the current text
+  colour, like the other icon buttons, instead of inside its background drawable;
+  the theme also sets forceDarkAllowed=false. On the Nord (system dark mode) the
+  background-drawn chevron was not visible.
+- Pressing a D-pad arrow lights the whole quarter wedge from the rim to just outside
+  OK in the accent colour (fades in over 90ms, out over 240ms), on top of the
+  existing press shrink. Disabled arrows do not glow.
+Shipped as 0.29.
