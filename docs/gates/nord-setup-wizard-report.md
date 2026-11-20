@@ -144,3 +144,16 @@ of 0.24. Prechecks: app stopped with native teardown completed and no foreground
 service. Both enrollment records and both preference files were byte-identical
 before install, after install and after launch; no service started on launch. No
 unpair, reset, data clear, uninstall or projector input was performed.
+
+## 0.27 delivery (2026-11-19)
+
+0.27-home-layout (versionCode 27) from source commit bd9af6a was installed in place
+over 0.26-keyboard on the Nord; APK SHA-256 prefix 530315c69141fe47, signed with the
+same local debug key as the installed app. Adds the home-screen alignment with the
+2026-11-19 mockup (status chips and toned message, 56dp collapsed pill, keyboard in
+the top row, mockup D-pad sizing). Prechecks: a retained session was first stopped
+by the owner; the app then showed "Stopped. Enrollment retained. Native teardown
+completed." with no foreground service. Both enrollment records and both preference
+files were byte-identical before install, after install and after launch; no
+service started on launch. No unpair, reset, data clear, uninstall or projector
+input was performed. Owner hardware check of the new layout is pending.
