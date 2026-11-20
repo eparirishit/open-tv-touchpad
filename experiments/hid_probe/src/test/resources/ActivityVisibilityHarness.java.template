@@ -21,6 +21,8 @@ public class ActivityVisibilityHarness extends ActivityBase {
         final java.util.Map<Integer,Button> tvButtons = java.util.Map.of(1,new Button());
         final Button stop=new Button(),tvAddress=new Button(),tvSaveAddress=new Button(),tvPair=new Button(),
             tvCode=new Button(),tvConfirm=new Button(),tvForget=new Button();
+        Object keyboardField = new Object();
+        void setKeyboardState(boolean connected, boolean supported, Object field) { keyboardField = field; }
         void setConnected(boolean value) { if(!value) throw new AssertionError("Loss must not claim a retained link disconnected"); }
     }
     static class SetupView { boolean enabled=true; void pauseControls() { enabled=false; } }
@@ -51,6 +53,7 @@ __ON_FOCUS__
             check(h.released && h.controller == null && h.attachment == 0,"Loss releases the Activity binding so native service teardown can finish while hidden");
             check(h.screen.stop.enabled,"Safety Stop remains available for the retained link");
             check(!h.keyRepeat.held,"Loss stops any D-pad hold before return");
+            check(h.screen.keyboardField == null,"Loss discards any keyboard draft");
         }
     }
 }

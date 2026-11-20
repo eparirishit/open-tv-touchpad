@@ -52,6 +52,7 @@ public final class ProbeActivity extends Activity {
         status.setText("Opening remote…");
         bind(connect, this::connectRemote);
         screen.setupView.setActionListener(this::setupAction);
+        screen.setKeyboardSender(this::sendKeyboardText);
         keyRepeat = new KeyRepeat(new KeyRepeat.Scheduler() {
             @Override public void post(Runnable task, long delayMillis) { handler.postDelayed(task, delayMillis); }
             @Override public void cancel(Runnable task) { handler.removeCallbacks(task); }
@@ -282,6 +283,11 @@ public final class ProbeActivity extends Activity {
         render();
     }
 
+    private boolean sendKeyboardText(TvControlProtocol.ImeField field, String text) {
+        return resumed && hasWindowFocus() && controller != null
+            && controller.tvText(attachment, inputEpoch, field, text);
+    }
+
     private void disableControls() {
         pauseControls();
         screen.stop.setEnabled(false);
@@ -295,6 +301,7 @@ public final class ProbeActivity extends Activity {
         for (Button button : inputs) button.setEnabled(false);
         touchpad.setEnabled(false);
         screen.setupView.pauseControls();
+        screen.setKeyboardState(false, false, null);
         for (Button button : screen.tvButtons.values()) button.setEnabled(false);
     }
 
@@ -320,6 +327,7 @@ public final class ProbeActivity extends Activity {
         screen.stop.setEnabled(snapshot.connected()); screen.setConnected(snapshot.connected());
         screen.setupView.render(snapshot.wizard());
         for (Button button : screen.tvButtons.values()) button.setEnabled(snapshot.tvReady());
+        screen.setKeyboardState(snapshot.tvReady(), snapshot.imeSupported(), snapshot.imeField());
         screen.tvStatus.setText(snapshot.tvStatus()); screen.setTvConnected(snapshot.tvConnected());
         continueSetupUi(snapshot.wizard());
         if (snapshot.releaseBinding()) releaseBinding();
@@ -390,6 +398,7 @@ public final class ProbeActivity extends Activity {
         touchpad.cancelGesture();
         screen.root.cancelPendingInputEvents();
         clearTvCode();
+        screen.setKeyboardState(false, false, null);
         controller = null;
         releaseBinding();
         super.onDestroy();

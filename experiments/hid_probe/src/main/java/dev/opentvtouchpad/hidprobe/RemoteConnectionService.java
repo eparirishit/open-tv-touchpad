@@ -46,6 +46,9 @@ public final class RemoteConnectionService extends Service {
         void tvHoldEnd() { runtime.tvHoldEnd(); }
         void scroll(long token, long epoch, MouseReport.Direction direction) { runtime.scroll(token, epoch, direction); }
         void tvCommand(long token, long epoch, TvCommand command) { runtime.tvCommand(token, epoch, command); }
+        boolean tvText(long token, long epoch, TvControlProtocol.ImeField field, String text) {
+            return runtime.tvText(token, epoch, field, text);
+        }
         void scrollTouchDown(long token, long epoch) { runtime.scrollTouchDown(token, epoch); }
     }
 

@@ -8,12 +8,17 @@ import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.StateListDrawable;
+import android.text.InputFilter;
+import android.text.InputType;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
+import android.view.WindowManager;
+import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -23,6 +28,7 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.function.BiConsumer;
+import java.util.function.BiPredicate;
 
 /** Native presentation only; the Activity owns all session state and action binding. */
 public final class RemoteScreen {
@@ -48,6 +54,10 @@ public final class RemoteScreen {
     private final Context context;
     private final ScrollView scroll;
     private final LinearLayout remotePage, padPage, setupPage, displayPage;
+    private final LinearLayout keyboardPanel;
+    private final EditText keyboardText;
+    private final TextView keyboardError;
+    private final Button keyboard, keyboardSend;
     private final LinearLayout statusCard;
     private final LinearLayout header, footer;
     private final Button appearanceBack;
@@ -60,6 +70,9 @@ public final class RemoteScreen {
     private final List<View> tracks = new ArrayList<>();
     private boolean showingSetup, showingTouchpad, dark, connected, tvConnected, imeVisible, statusExpanded, statusPainted;
     private boolean showingAppearance;
+    private boolean keyboardOpen, securedKeyboardWindow, keyboardConnected, keyboardSupported;
+    private TvControlProtocol.ImeField keyboardField;
+    private BiPredicate<TvControlProtocol.ImeField, String> keyboardSender = (field, text) -> false;
 
     public RemoteScreen(Context context, BiConsumer<Integer, Integer> move, Runnable tap) {
         this.context = context;
@@ -119,6 +132,38 @@ public final class RemoteScreen {
         connect = button("Connect");
         connect.setContentDescription("Connect saved projector");
         add(statusCard, connect);
+
+        keyboard = button("Keyboard");
+        keyboard.setContentDescription("Open phone keyboard for the projector");
+        add(content, keyboard);
+        keyboardPanel = column();
+        keyboardPanel.setPadding(dp(16), dp(12), dp(16), dp(8));
+        cards.add(keyboardPanel);
+        add(content, keyboardPanel);
+        keyboardText = new EditText(context);
+        keyboardText.setHint("Text for the projector");
+        keyboardText.setSingleLine(true);
+        keyboardText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+                | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        keyboardText.setImeOptions(EditorInfo.IME_ACTION_SEND | EditorInfo.IME_FLAG_NO_EXTRACT_UI
+                | EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING);
+        keyboardText.setFilters(new InputFilter[]{new InputFilter.LengthFilter(TvControlProtocol.ImeField.MAX_TEXT_LENGTH)});
+        keyboardText.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);
+        keyboardText.setImportantForContentCapture(View.IMPORTANT_FOR_CONTENT_CAPTURE_NO);
+        keyboardText.setSaveEnabled(false);
+        add(keyboardPanel, keyboardText);
+        keyboardError = text("", 13);
+        keyboardError.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        keyboardError.setVisibility(View.GONE);
+        add(keyboardPanel, keyboardError);
+        Button keyboardCancel = button("Cancel");
+        keyboardSend = button("Send to TV");
+        addRow(keyboardPanel, keyboardCancel, keyboardSend);
+        keyboard.setOnClickListener(view -> openKeyboard());
+        keyboardCancel.setOnClickListener(view -> closeKeyboard());
+        keyboardSend.setOnClickListener(view -> sendKeyboard());
+        keyboardText.setOnEditorActionListener((view, action, event) ->
+                action == EditorInfo.IME_ACTION_SEND && keyboardSend.performClick());
 
         remotePage = column();
         // Remote and Touchpad pages take the viewport space left under the status card, so
@@ -318,7 +363,77 @@ public final class RemoteScreen {
     public void setPageListener(Runnable listener) { pageListener = java.util.Objects.requireNonNull(listener); }
     public boolean inputSurfaceVisible() { return !showingSetup; }
 
+    void setKeyboardSender(BiPredicate<TvControlProtocol.ImeField, String> sender) {
+        keyboardSender = sender;
+    }
+
+    void setKeyboardState(boolean connected, boolean supported, TvControlProtocol.ImeField field) {
+        keyboardConnected = connected;
+        keyboardSupported = supported;
+        if (!connected || !supported) field = null;
+        if (field != keyboardField) {
+            keyboardField = field;
+            closeKeyboard();
+        }
+        updateKeyboardVisibility();
+    }
+
+    private void openKeyboard() {
+        if (showingSetup || keyboardOpen || !keyboardConnected) return;
+        if (keyboardField == null) {
+            android.widget.Toast.makeText(context, keyboardSupported
+                ? "Focus a text field on the projector first."
+                : "The projector didn’t offer phone keyboard input.", android.widget.Toast.LENGTH_LONG).show();
+            return;
+        }
+        touchpad.cancelGesture();
+        if (context instanceof android.app.Activity activity) {
+            android.view.Window window = activity.getWindow();
+            int secure = WindowManager.LayoutParams.FLAG_SECURE;
+            securedKeyboardWindow = (window.getAttributes().flags & secure) == 0;
+            if (securedKeyboardWindow) window.addFlags(secure);
+        }
+        keyboardOpen = true;
+        updatePages();
+        keyboardText.requestFocus();
+        WindowInsetsController ime = keyboardText.getWindowInsetsController();
+        if (ime != null) ime.show(WindowInsets.Type.ime());
+    }
+
+    private void sendKeyboard() {
+        if (!keyboardOpen || keyboardField == null) return;
+        String draft = keyboardText.getText().toString();
+        if (!TvControlProtocol.ImeField.accepts(draft)) {
+            showKeyboardError("Enter a single line of text.");
+        } else if (keyboardSender.test(keyboardField, draft)) {
+            closeKeyboard();
+        } else {
+            showKeyboardError("Couldn’t send. Check the text field on the projector and try again.");
+        }
+    }
+
+    private void showKeyboardError(String message) {
+        keyboardError.setText(message);
+        keyboardError.setVisibility(View.VISIBLE);
+    }
+
+    private void closeKeyboard() {
+        if (!keyboardOpen) return;
+        keyboardOpen = false;
+        keyboardText.getText().clear();
+        keyboardError.setVisibility(View.GONE);
+        WindowInsetsController ime = keyboardText.getWindowInsetsController();
+        if (ime != null) ime.hide(WindowInsets.Type.ime());
+        keyboardText.clearFocus();
+        updatePages();
+        if (securedKeyboardWindow && context instanceof android.app.Activity activity) {
+            activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
+            securedKeyboardWindow = false;
+        }
+    }
+
     public void showSetup(boolean show) {
+        closeKeyboard();
         showingSetup = show;
         showingAppearance = false;
         if (!show) setupView.pauseControls();
@@ -329,6 +444,7 @@ public final class RemoteScreen {
     }
 
     public void showTouchpad(boolean show) {
+        closeKeyboard();
         touchpad.cancelGesture();
         showingTouchpad = show;
         showingSetup = false;
@@ -342,6 +458,7 @@ public final class RemoteScreen {
     public void showAppearance() { showAppearance(true); }
 
     public void showAppearance(boolean show) {
+        closeKeyboard();
         touchpad.cancelGesture();
         showingAppearance = show;
         showingSetup = true;
@@ -433,7 +550,7 @@ public final class RemoteScreen {
     }
 
     private void updateFooter() {
-        footer.setVisibility(showingSetup || imeVisible ? View.GONE : View.VISIBLE);
+        footer.setVisibility(showingSetup || imeVisible || keyboardOpen ? View.GONE : View.VISIBLE);
     }
 
     /**
@@ -450,8 +567,9 @@ public final class RemoteScreen {
     private void updatePages() {
         updateFooter();
         updateHeader();
-        remotePage.setVisibility(!showingSetup && !showingTouchpad ? View.VISIBLE : View.GONE);
-        padPage.setVisibility(!showingSetup && showingTouchpad ? View.VISIBLE : View.GONE);
+        remotePage.setVisibility(!showingSetup && !keyboardOpen && !showingTouchpad ? View.VISIBLE : View.GONE);
+        padPage.setVisibility(!showingSetup && !keyboardOpen && showingTouchpad ? View.VISIBLE : View.GONE);
+        updateKeyboardVisibility();
         setupPage.setVisibility(showingSetup && !showingAppearance ? View.VISIBLE : View.GONE);
         scroll.setVisibility(!showingSetup || showingAppearance ? View.VISIBLE : View.GONE);
         statusCard.setVisibility(showingSetup ? View.GONE : View.VISIBLE);
@@ -461,6 +579,11 @@ public final class RemoteScreen {
         select(remoteTab, !showingSetup && !showingTouchpad);
         select(padTab, !showingSetup && showingTouchpad);
         updateStatusCard();
+    }
+
+    private void updateKeyboardVisibility() {
+        keyboard.setVisibility(!showingSetup && keyboardConnected && !keyboardOpen ? View.VISIBLE : View.GONE);
+        keyboardPanel.setVisibility(keyboardOpen ? View.VISIBLE : View.GONE);
     }
 
     private void select(Button button, boolean selected) {
@@ -484,6 +607,9 @@ public final class RemoteScreen {
                 ? color("#5B636D", "#9AA3AD") : color("#14171A", "#F2F4F6"));
         status.setTextColor(color("#5B636D", "#9AA3AD"));
         status.setBackground(shape(color("#EEF2F7", "#20262D"), Color.TRANSPARENT, 12));
+        keyboardText.setTextColor(color("#14171A", "#F2F4F6"));
+        keyboardText.setHintTextColor(color("#5B636D", "#9AA3AD"));
+        keyboardText.setBackgroundTintList(ColorStateList.valueOf(color("#2F6FEB", "#6AA8FF")));
         sensitivity.setProgressTintList(ColorStateList.valueOf(color("#2F6FEB", "#6AA8FF")));
         sensitivity.setThumbTintList(ColorStateList.valueOf(color("#2F6FEB", "#6AA8FF")));
         sensitivity.setProgressBackgroundTintList(ColorStateList.valueOf(color("#C9CFD6", "#3A414A")));
@@ -534,7 +660,7 @@ public final class RemoteScreen {
         int surface = color("#FFFFFF", "#181B1F");
         int border = color("#E1E4E8", "#2C323A");
         boolean destructive = button == stop;
-        boolean primary = button == connect || button == tvButtons.get(TvCommand.OK)
+        boolean primary = button == connect || button == keyboardSend || button == tvButtons.get(TvCommand.OK)
                 || button == setup && button.isSelected();
         boolean nav = navigation.contains(button) && button != setup;
         int fill = primary ? accent : surface;

@@ -18,6 +18,7 @@ import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
@@ -123,6 +124,47 @@ public class RemoteScreenTest {
             Button found=findButton(group.getChildAt(i),label);if(found!=null)return found;
         }
         return null;
+    }
+
+    @Test public void projectorKeyboardSendsOnlyOnActionAndClearsOnFocusChange() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            Context c = context(390, 580, 1.4f);
+            RemoteScreen screen = new RemoteScreen(c, (x, y) -> fail(), () -> fail());
+            var first = new TvControlProtocol.ImeField(1, 4);
+            var second = new TvControlProtocol.ImeField(1, 5);
+            AtomicInteger sends = new AtomicInteger();
+            screen.setKeyboardSender((field, text) -> {
+                assertSame(second, field);
+                assertEquals("Netflix search", text);
+                sends.incrementAndGet();
+                return true;
+            });
+            Button keyboard = findButton(screen.root, "Keyboard");
+            Button send = findButton(screen.root, "Send to TV");
+            assertEquals(View.GONE, keyboard.getVisibility());
+            screen.setKeyboardState(true, true, null);
+            assertEquals(View.VISIBLE, keyboard.getVisibility());
+            screen.setKeyboardState(true, true, first);
+            assertTrue(keyboard.performClick());
+            EditText editor = (EditText) screen.root.findFocus();
+            assertNotNull(editor);
+            assertFalse(editor.isSaveEnabled());
+            assertEquals(View.IMPORTANT_FOR_AUTOFILL_NO, editor.getImportantForAutofill());
+            assertTrue((editor.getImeOptions() & EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING) != 0);
+            editor.setText("stale draft");
+            assertEquals(0, sends.get());
+            screen.setKeyboardState(true, true, second);
+            assertFalse(visible(screen, editor));
+            assertEquals(0, editor.length());
+            assertTrue(keyboard.performClick());
+            editor.setText("Netflix search");
+            layout(screen, c, 390, 580);
+            reachable(screen, send);
+            assertTrue(send.performClick());
+            assertEquals(1, sends.get());
+            assertEquals(0, editor.length());
+            assertFalse(visible(screen, editor));
+        });
     }
 
     @Test public void prototypeSeparatesRemoteAndTouchpadWithoutAdmittingInput() {

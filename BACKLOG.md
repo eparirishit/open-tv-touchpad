@@ -13,6 +13,10 @@ before implementation.
 - [ ] Define the Android distribution path. The phone app is an opt-in debug
   module with release builds disabled. Plan signing and upgrades around the
   existing pilot so testers retain their saved projector and settings.
+- [ ] Add projector power controls. Verify standby and wake independently on
+  the Horizon, including reachability in standby and behavior after full shutdown.
+- [ ] Add a Google Assistant button. Verify Assistant opens on the Horizon.
+  Evaluate phone microphone permission and an attended voice session separately.
 - [ ] Prove a protected iPhone-to-Horizon pointer path before building the
   complete iOS UI. The first usable iPhone build must open Netflix, select a
   profile, move the pointer, click a title, and scroll in both directions

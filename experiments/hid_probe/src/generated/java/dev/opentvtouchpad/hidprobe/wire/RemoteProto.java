@@ -9260,6 +9260,199 @@ public final class RemoteProto {
     }
   }
 
+  public interface RemoteImeNotificationOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:remote.RemoteImeNotification)
+      com.google.protobuf.MessageLiteOrBuilder {
+  }
+  /**
+   * <pre>
+   * Local receive-only extension for bounded IME notifications. The client does
+   * not need selection or completion payloads to insert user-confirmed text.
+   * </pre>
+   *
+   * Protobuf type {@code remote.RemoteImeNotification}
+   */
+  public  static final class RemoteImeNotification extends
+      com.google.protobuf.GeneratedMessageLite<
+          RemoteImeNotification, RemoteImeNotification.Builder> implements
+      // @@protoc_insertion_point(message_implements:remote.RemoteImeNotification)
+      RemoteImeNotificationOrBuilder {
+    private RemoteImeNotification() {
+    }
+    public static dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data);
+    }
+    public static dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data, extensionRegistry);
+    }
+    public static dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data);
+    }
+    public static dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data, extensionRegistry);
+    }
+    public static dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data);
+    }
+    public static dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, data, extensionRegistry);
+    }
+    public static dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input);
+    }
+    public static dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input, extensionRegistry);
+    }
+
+    public static dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return parseDelimitedFrom(DEFAULT_INSTANCE, input);
+    }
+
+    public static dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
+    }
+    public static dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input);
+    }
+    public static dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+          DEFAULT_INSTANCE, input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() {
+      return (Builder) DEFAULT_INSTANCE.createBuilder();
+    }
+    public static Builder newBuilder(dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification prototype) {
+      return DEFAULT_INSTANCE.createBuilder(prototype);
+    }
+
+    /**
+     * <pre>
+     * Local receive-only extension for bounded IME notifications. The client does
+     * not need selection or completion payloads to insert user-confirmed text.
+     * </pre>
+     *
+     * Protobuf type {@code remote.RemoteImeNotification}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageLite.Builder<
+          dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification, Builder> implements
+        // @@protoc_insertion_point(builder_implements:remote.RemoteImeNotification)
+        dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotificationOrBuilder {
+      // Construct using dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification.newBuilder()
+      private Builder() {
+        super(DEFAULT_INSTANCE);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:remote.RemoteImeNotification)
+    }
+    @java.lang.Override
+    @java.lang.SuppressWarnings({"ThrowNull"})
+    protected final java.lang.Object dynamicMethod(
+        com.google.protobuf.GeneratedMessageLite.MethodToInvoke method,
+        java.lang.Object arg0, java.lang.Object arg1) {
+      switch (method) {
+        case NEW_MUTABLE_INSTANCE: {
+          return new dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification();
+        }
+        case NEW_BUILDER: {
+          return new Builder();
+        }
+        case BUILD_MESSAGE_INFO: {
+            java.lang.Object[] objects = null;
+            java.lang.String info =
+                "\u0000\u0000";
+            return newMessageInfo(DEFAULT_INSTANCE, info, objects);
+        }
+        case GET_DEFAULT_INSTANCE: {
+          return DEFAULT_INSTANCE;
+        }
+        case GET_PARSER: {
+          com.google.protobuf.Parser<dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification> parser = PARSER;
+          if (parser == null) {
+            synchronized (dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification.class) {
+              parser = PARSER;
+              if (parser == null) {
+                parser =
+                    new DefaultInstanceBasedParser<dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification>(
+                        DEFAULT_INSTANCE);
+                PARSER = parser;
+              }
+            }
+          }
+          return parser;
+        }
+        case GET_MEMOIZED_IS_INITIALIZED: {
+          return (byte) 1;
+        }
+        // SET_MEMOIZED_IS_INITIALIZED is never called for this message.
+        // So it can do anything. Combine with default case for smaller codegen.
+        case SET_MEMOIZED_IS_INITIALIZED:
+      }
+      // Should never happen. Generates tight code to throw an exception.
+      throw null;
+    }
+
+
+    // @@protoc_insertion_point(class_scope:remote.RemoteImeNotification)
+    private static final dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification DEFAULT_INSTANCE;
+    static {
+      RemoteImeNotification defaultInstance = new RemoteImeNotification();
+      // New instances are implicitly immutable so no need to make
+      // immutable.
+      DEFAULT_INSTANCE = defaultInstance;
+      com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
+        RemoteImeNotification.class, defaultInstance);
+    }
+
+    public static dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static volatile com.google.protobuf.Parser<RemoteImeNotification> PARSER;
+
+    public static com.google.protobuf.Parser<RemoteImeNotification> parser() {
+      return DEFAULT_INSTANCE.getParserForType();
+    }
+  }
+
   public interface RemoteEditInfoOrBuilder extends
       // @@protoc_insertion_point(interface_extends:remote.RemoteEditInfo)
       com.google.protobuf.MessageLiteOrBuilder {
@@ -14624,6 +14817,39 @@ public final class RemoteProto {
     dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeShowRequest getRemoteImeShowRequest();
 
     /**
+     * <code>.remote.RemoteImeNotification remote_ime_selection = 23;</code>
+     * @return Whether the remoteImeSelection field is set.
+     */
+    boolean hasRemoteImeSelection();
+    /**
+     * <code>.remote.RemoteImeNotification remote_ime_selection = 23;</code>
+     * @return The remoteImeSelection.
+     */
+    dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification getRemoteImeSelection();
+
+    /**
+     * <code>.remote.RemoteImeNotification remote_ime_reset = 24;</code>
+     * @return Whether the remoteImeReset field is set.
+     */
+    boolean hasRemoteImeReset();
+    /**
+     * <code>.remote.RemoteImeNotification remote_ime_reset = 24;</code>
+     * @return The remoteImeReset.
+     */
+    dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification getRemoteImeReset();
+
+    /**
+     * <code>.remote.RemoteImeNotification remote_ime_completions = 29;</code>
+     * @return Whether the remoteImeCompletions field is set.
+     */
+    boolean hasRemoteImeCompletions();
+    /**
+     * <code>.remote.RemoteImeNotification remote_ime_completions = 29;</code>
+     * @return The remoteImeCompletions.
+     */
+    dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification getRemoteImeCompletions();
+
+    /**
      * <code>.remote.RemoteVoiceBegin remote_voice_begin = 30;</code>
      * @return Whether the remoteVoiceBegin field is set.
      */
@@ -15156,6 +15382,147 @@ public final class RemoteProto {
       bitField0_ = (bitField0_ & ~0x00000100);
     }
 
+    public static final int REMOTE_IME_SELECTION_FIELD_NUMBER = 23;
+    private dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification remoteImeSelection_;
+    /**
+     * <code>.remote.RemoteImeNotification remote_ime_selection = 23;</code>
+     */
+    @java.lang.Override
+    public boolean hasRemoteImeSelection() {
+      return ((bitField0_ & 0x00000200) != 0);
+    }
+    /**
+     * <code>.remote.RemoteImeNotification remote_ime_selection = 23;</code>
+     */
+    @java.lang.Override
+    public dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification getRemoteImeSelection() {
+      return remoteImeSelection_ == null ? dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification.getDefaultInstance() : remoteImeSelection_;
+    }
+    /**
+     * <code>.remote.RemoteImeNotification remote_ime_selection = 23;</code>
+     */
+    private void setRemoteImeSelection(dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification value) {
+      java.util.Objects.requireNonNull(value);
+      remoteImeSelection_ = value;
+      bitField0_ |= 0x00000200;
+    }
+    /**
+     * <code>.remote.RemoteImeNotification remote_ime_selection = 23;</code>
+     */
+    @java.lang.SuppressWarnings("ReferenceEquality")
+    private void mergeRemoteImeSelection(dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification value) {
+      java.util.Objects.requireNonNull(value);
+      if (remoteImeSelection_ != null &&
+          remoteImeSelection_ != dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification.getDefaultInstance()) {
+        remoteImeSelection_ =
+          dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification.newBuilder(remoteImeSelection_).mergeFrom(value).buildPartial();
+      } else {
+        remoteImeSelection_ = value;
+      }
+      bitField0_ |= 0x00000200;
+    }
+    /**
+     * <code>.remote.RemoteImeNotification remote_ime_selection = 23;</code>
+     */
+    private void clearRemoteImeSelection() {
+      remoteImeSelection_ = null;
+      bitField0_ = (bitField0_ & ~0x00000200);
+    }
+
+    public static final int REMOTE_IME_RESET_FIELD_NUMBER = 24;
+    private dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification remoteImeReset_;
+    /**
+     * <code>.remote.RemoteImeNotification remote_ime_reset = 24;</code>
+     */
+    @java.lang.Override
+    public boolean hasRemoteImeReset() {
+      return ((bitField0_ & 0x00000400) != 0);
+    }
+    /**
+     * <code>.remote.RemoteImeNotification remote_ime_reset = 24;</code>
+     */
+    @java.lang.Override
+    public dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification getRemoteImeReset() {
+      return remoteImeReset_ == null ? dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification.getDefaultInstance() : remoteImeReset_;
+    }
+    /**
+     * <code>.remote.RemoteImeNotification remote_ime_reset = 24;</code>
+     */
+    private void setRemoteImeReset(dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification value) {
+      java.util.Objects.requireNonNull(value);
+      remoteImeReset_ = value;
+      bitField0_ |= 0x00000400;
+    }
+    /**
+     * <code>.remote.RemoteImeNotification remote_ime_reset = 24;</code>
+     */
+    @java.lang.SuppressWarnings("ReferenceEquality")
+    private void mergeRemoteImeReset(dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification value) {
+      java.util.Objects.requireNonNull(value);
+      if (remoteImeReset_ != null &&
+          remoteImeReset_ != dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification.getDefaultInstance()) {
+        remoteImeReset_ =
+          dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification.newBuilder(remoteImeReset_).mergeFrom(value).buildPartial();
+      } else {
+        remoteImeReset_ = value;
+      }
+      bitField0_ |= 0x00000400;
+    }
+    /**
+     * <code>.remote.RemoteImeNotification remote_ime_reset = 24;</code>
+     */
+    private void clearRemoteImeReset() {
+      remoteImeReset_ = null;
+      bitField0_ = (bitField0_ & ~0x00000400);
+    }
+
+    public static final int REMOTE_IME_COMPLETIONS_FIELD_NUMBER = 29;
+    private dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification remoteImeCompletions_;
+    /**
+     * <code>.remote.RemoteImeNotification remote_ime_completions = 29;</code>
+     */
+    @java.lang.Override
+    public boolean hasRemoteImeCompletions() {
+      return ((bitField0_ & 0x00000800) != 0);
+    }
+    /**
+     * <code>.remote.RemoteImeNotification remote_ime_completions = 29;</code>
+     */
+    @java.lang.Override
+    public dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification getRemoteImeCompletions() {
+      return remoteImeCompletions_ == null ? dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification.getDefaultInstance() : remoteImeCompletions_;
+    }
+    /**
+     * <code>.remote.RemoteImeNotification remote_ime_completions = 29;</code>
+     */
+    private void setRemoteImeCompletions(dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification value) {
+      java.util.Objects.requireNonNull(value);
+      remoteImeCompletions_ = value;
+      bitField0_ |= 0x00000800;
+    }
+    /**
+     * <code>.remote.RemoteImeNotification remote_ime_completions = 29;</code>
+     */
+    @java.lang.SuppressWarnings("ReferenceEquality")
+    private void mergeRemoteImeCompletions(dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification value) {
+      java.util.Objects.requireNonNull(value);
+      if (remoteImeCompletions_ != null &&
+          remoteImeCompletions_ != dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification.getDefaultInstance()) {
+        remoteImeCompletions_ =
+          dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification.newBuilder(remoteImeCompletions_).mergeFrom(value).buildPartial();
+      } else {
+        remoteImeCompletions_ = value;
+      }
+      bitField0_ |= 0x00000800;
+    }
+    /**
+     * <code>.remote.RemoteImeNotification remote_ime_completions = 29;</code>
+     */
+    private void clearRemoteImeCompletions() {
+      remoteImeCompletions_ = null;
+      bitField0_ = (bitField0_ & ~0x00000800);
+    }
+
     public static final int REMOTE_VOICE_BEGIN_FIELD_NUMBER = 30;
     private dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteVoiceBegin remoteVoiceBegin_;
     /**
@@ -15163,7 +15530,7 @@ public final class RemoteProto {
      */
     @java.lang.Override
     public boolean hasRemoteVoiceBegin() {
-      return ((bitField0_ & 0x00000200) != 0);
+      return ((bitField0_ & 0x00001000) != 0);
     }
     /**
      * <code>.remote.RemoteVoiceBegin remote_voice_begin = 30;</code>
@@ -15178,7 +15545,7 @@ public final class RemoteProto {
     private void setRemoteVoiceBegin(dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteVoiceBegin value) {
       java.util.Objects.requireNonNull(value);
       remoteVoiceBegin_ = value;
-      bitField0_ |= 0x00000200;
+      bitField0_ |= 0x00001000;
     }
     /**
      * <code>.remote.RemoteVoiceBegin remote_voice_begin = 30;</code>
@@ -15193,14 +15560,14 @@ public final class RemoteProto {
       } else {
         remoteVoiceBegin_ = value;
       }
-      bitField0_ |= 0x00000200;
+      bitField0_ |= 0x00001000;
     }
     /**
      * <code>.remote.RemoteVoiceBegin remote_voice_begin = 30;</code>
      */
     private void clearRemoteVoiceBegin() {
       remoteVoiceBegin_ = null;
-      bitField0_ = (bitField0_ & ~0x00000200);
+      bitField0_ = (bitField0_ & ~0x00001000);
     }
 
     public static final int REMOTE_VOICE_PAYLOAD_FIELD_NUMBER = 31;
@@ -15210,7 +15577,7 @@ public final class RemoteProto {
      */
     @java.lang.Override
     public boolean hasRemoteVoicePayload() {
-      return ((bitField0_ & 0x00000400) != 0);
+      return ((bitField0_ & 0x00002000) != 0);
     }
     /**
      * <code>.remote.RemoteVoicePayload remote_voice_payload = 31;</code>
@@ -15225,7 +15592,7 @@ public final class RemoteProto {
     private void setRemoteVoicePayload(dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteVoicePayload value) {
       java.util.Objects.requireNonNull(value);
       remoteVoicePayload_ = value;
-      bitField0_ |= 0x00000400;
+      bitField0_ |= 0x00002000;
     }
     /**
      * <code>.remote.RemoteVoicePayload remote_voice_payload = 31;</code>
@@ -15240,14 +15607,14 @@ public final class RemoteProto {
       } else {
         remoteVoicePayload_ = value;
       }
-      bitField0_ |= 0x00000400;
+      bitField0_ |= 0x00002000;
     }
     /**
      * <code>.remote.RemoteVoicePayload remote_voice_payload = 31;</code>
      */
     private void clearRemoteVoicePayload() {
       remoteVoicePayload_ = null;
-      bitField0_ = (bitField0_ & ~0x00000400);
+      bitField0_ = (bitField0_ & ~0x00002000);
     }
 
     public static final int REMOTE_VOICE_END_FIELD_NUMBER = 32;
@@ -15257,7 +15624,7 @@ public final class RemoteProto {
      */
     @java.lang.Override
     public boolean hasRemoteVoiceEnd() {
-      return ((bitField0_ & 0x00000800) != 0);
+      return ((bitField0_ & 0x00004000) != 0);
     }
     /**
      * <code>.remote.RemoteVoiceEnd remote_voice_end = 32;</code>
@@ -15272,7 +15639,7 @@ public final class RemoteProto {
     private void setRemoteVoiceEnd(dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteVoiceEnd value) {
       java.util.Objects.requireNonNull(value);
       remoteVoiceEnd_ = value;
-      bitField0_ |= 0x00000800;
+      bitField0_ |= 0x00004000;
     }
     /**
      * <code>.remote.RemoteVoiceEnd remote_voice_end = 32;</code>
@@ -15287,14 +15654,14 @@ public final class RemoteProto {
       } else {
         remoteVoiceEnd_ = value;
       }
-      bitField0_ |= 0x00000800;
+      bitField0_ |= 0x00004000;
     }
     /**
      * <code>.remote.RemoteVoiceEnd remote_voice_end = 32;</code>
      */
     private void clearRemoteVoiceEnd() {
       remoteVoiceEnd_ = null;
-      bitField0_ = (bitField0_ & ~0x00000800);
+      bitField0_ = (bitField0_ & ~0x00004000);
     }
 
     public static final int REMOTE_START_FIELD_NUMBER = 40;
@@ -15304,7 +15671,7 @@ public final class RemoteProto {
      */
     @java.lang.Override
     public boolean hasRemoteStart() {
-      return ((bitField0_ & 0x00001000) != 0);
+      return ((bitField0_ & 0x00008000) != 0);
     }
     /**
      * <code>.remote.RemoteStart remote_start = 40;</code>
@@ -15319,7 +15686,7 @@ public final class RemoteProto {
     private void setRemoteStart(dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteStart value) {
       java.util.Objects.requireNonNull(value);
       remoteStart_ = value;
-      bitField0_ |= 0x00001000;
+      bitField0_ |= 0x00008000;
     }
     /**
      * <code>.remote.RemoteStart remote_start = 40;</code>
@@ -15334,14 +15701,14 @@ public final class RemoteProto {
       } else {
         remoteStart_ = value;
       }
-      bitField0_ |= 0x00001000;
+      bitField0_ |= 0x00008000;
     }
     /**
      * <code>.remote.RemoteStart remote_start = 40;</code>
      */
     private void clearRemoteStart() {
       remoteStart_ = null;
-      bitField0_ = (bitField0_ & ~0x00001000);
+      bitField0_ = (bitField0_ & ~0x00008000);
     }
 
     public static final int REMOTE_SET_VOLUME_LEVEL_FIELD_NUMBER = 50;
@@ -15351,7 +15718,7 @@ public final class RemoteProto {
      */
     @java.lang.Override
     public boolean hasRemoteSetVolumeLevel() {
-      return ((bitField0_ & 0x00002000) != 0);
+      return ((bitField0_ & 0x00010000) != 0);
     }
     /**
      * <code>.remote.RemoteSetVolumeLevel remote_set_volume_level = 50;</code>
@@ -15366,7 +15733,7 @@ public final class RemoteProto {
     private void setRemoteSetVolumeLevel(dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteSetVolumeLevel value) {
       java.util.Objects.requireNonNull(value);
       remoteSetVolumeLevel_ = value;
-      bitField0_ |= 0x00002000;
+      bitField0_ |= 0x00010000;
     }
     /**
      * <code>.remote.RemoteSetVolumeLevel remote_set_volume_level = 50;</code>
@@ -15381,14 +15748,14 @@ public final class RemoteProto {
       } else {
         remoteSetVolumeLevel_ = value;
       }
-      bitField0_ |= 0x00002000;
+      bitField0_ |= 0x00010000;
     }
     /**
      * <code>.remote.RemoteSetVolumeLevel remote_set_volume_level = 50;</code>
      */
     private void clearRemoteSetVolumeLevel() {
       remoteSetVolumeLevel_ = null;
-      bitField0_ = (bitField0_ & ~0x00002000);
+      bitField0_ = (bitField0_ & ~0x00010000);
     }
 
     public static final int REMOTE_ADJUST_VOLUME_LEVEL_FIELD_NUMBER = 51;
@@ -15398,7 +15765,7 @@ public final class RemoteProto {
      */
     @java.lang.Override
     public boolean hasRemoteAdjustVolumeLevel() {
-      return ((bitField0_ & 0x00004000) != 0);
+      return ((bitField0_ & 0x00020000) != 0);
     }
     /**
      * <code>.remote.RemoteAdjustVolumeLevel remote_adjust_volume_level = 51;</code>
@@ -15413,7 +15780,7 @@ public final class RemoteProto {
     private void setRemoteAdjustVolumeLevel(dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteAdjustVolumeLevel value) {
       java.util.Objects.requireNonNull(value);
       remoteAdjustVolumeLevel_ = value;
-      bitField0_ |= 0x00004000;
+      bitField0_ |= 0x00020000;
     }
     /**
      * <code>.remote.RemoteAdjustVolumeLevel remote_adjust_volume_level = 51;</code>
@@ -15428,14 +15795,14 @@ public final class RemoteProto {
       } else {
         remoteAdjustVolumeLevel_ = value;
       }
-      bitField0_ |= 0x00004000;
+      bitField0_ |= 0x00020000;
     }
     /**
      * <code>.remote.RemoteAdjustVolumeLevel remote_adjust_volume_level = 51;</code>
      */
     private void clearRemoteAdjustVolumeLevel() {
       remoteAdjustVolumeLevel_ = null;
-      bitField0_ = (bitField0_ & ~0x00004000);
+      bitField0_ = (bitField0_ & ~0x00020000);
     }
 
     public static final int REMOTE_SET_PREFERRED_AUDIO_DEVICE_FIELD_NUMBER = 60;
@@ -15445,7 +15812,7 @@ public final class RemoteProto {
      */
     @java.lang.Override
     public boolean hasRemoteSetPreferredAudioDevice() {
-      return ((bitField0_ & 0x00008000) != 0);
+      return ((bitField0_ & 0x00040000) != 0);
     }
     /**
      * <code>.remote.RemoteSetPreferredAudioDevice remote_set_preferred_audio_device = 60;</code>
@@ -15460,7 +15827,7 @@ public final class RemoteProto {
     private void setRemoteSetPreferredAudioDevice(dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteSetPreferredAudioDevice value) {
       java.util.Objects.requireNonNull(value);
       remoteSetPreferredAudioDevice_ = value;
-      bitField0_ |= 0x00008000;
+      bitField0_ |= 0x00040000;
     }
     /**
      * <code>.remote.RemoteSetPreferredAudioDevice remote_set_preferred_audio_device = 60;</code>
@@ -15475,14 +15842,14 @@ public final class RemoteProto {
       } else {
         remoteSetPreferredAudioDevice_ = value;
       }
-      bitField0_ |= 0x00008000;
+      bitField0_ |= 0x00040000;
     }
     /**
      * <code>.remote.RemoteSetPreferredAudioDevice remote_set_preferred_audio_device = 60;</code>
      */
     private void clearRemoteSetPreferredAudioDevice() {
       remoteSetPreferredAudioDevice_ = null;
-      bitField0_ = (bitField0_ & ~0x00008000);
+      bitField0_ = (bitField0_ & ~0x00040000);
     }
 
     public static final int REMOTE_RESET_PREFERRED_AUDIO_DEVICE_FIELD_NUMBER = 61;
@@ -15492,7 +15859,7 @@ public final class RemoteProto {
      */
     @java.lang.Override
     public boolean hasRemoteResetPreferredAudioDevice() {
-      return ((bitField0_ & 0x00010000) != 0);
+      return ((bitField0_ & 0x00080000) != 0);
     }
     /**
      * <code>.remote.RemoteResetPreferredAudioDevice remote_reset_preferred_audio_device = 61;</code>
@@ -15507,7 +15874,7 @@ public final class RemoteProto {
     private void setRemoteResetPreferredAudioDevice(dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteResetPreferredAudioDevice value) {
       java.util.Objects.requireNonNull(value);
       remoteResetPreferredAudioDevice_ = value;
-      bitField0_ |= 0x00010000;
+      bitField0_ |= 0x00080000;
     }
     /**
      * <code>.remote.RemoteResetPreferredAudioDevice remote_reset_preferred_audio_device = 61;</code>
@@ -15522,14 +15889,14 @@ public final class RemoteProto {
       } else {
         remoteResetPreferredAudioDevice_ = value;
       }
-      bitField0_ |= 0x00010000;
+      bitField0_ |= 0x00080000;
     }
     /**
      * <code>.remote.RemoteResetPreferredAudioDevice remote_reset_preferred_audio_device = 61;</code>
      */
     private void clearRemoteResetPreferredAudioDevice() {
       remoteResetPreferredAudioDevice_ = null;
-      bitField0_ = (bitField0_ & ~0x00010000);
+      bitField0_ = (bitField0_ & ~0x00080000);
     }
 
     public static final int REMOTE_APP_LINK_LAUNCH_REQUEST_FIELD_NUMBER = 90;
@@ -15539,7 +15906,7 @@ public final class RemoteProto {
      */
     @java.lang.Override
     public boolean hasRemoteAppLinkLaunchRequest() {
-      return ((bitField0_ & 0x00020000) != 0);
+      return ((bitField0_ & 0x00100000) != 0);
     }
     /**
      * <code>.remote.RemoteAppLinkLaunchRequest remote_app_link_launch_request = 90;</code>
@@ -15554,7 +15921,7 @@ public final class RemoteProto {
     private void setRemoteAppLinkLaunchRequest(dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteAppLinkLaunchRequest value) {
       java.util.Objects.requireNonNull(value);
       remoteAppLinkLaunchRequest_ = value;
-      bitField0_ |= 0x00020000;
+      bitField0_ |= 0x00100000;
     }
     /**
      * <code>.remote.RemoteAppLinkLaunchRequest remote_app_link_launch_request = 90;</code>
@@ -15569,14 +15936,14 @@ public final class RemoteProto {
       } else {
         remoteAppLinkLaunchRequest_ = value;
       }
-      bitField0_ |= 0x00020000;
+      bitField0_ |= 0x00100000;
     }
     /**
      * <code>.remote.RemoteAppLinkLaunchRequest remote_app_link_launch_request = 90;</code>
      */
     private void clearRemoteAppLinkLaunchRequest() {
       remoteAppLinkLaunchRequest_ = null;
-      bitField0_ = (bitField0_ & ~0x00020000);
+      bitField0_ = (bitField0_ & ~0x00100000);
     }
 
     public static dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteMessage parseFrom(
@@ -16100,6 +16467,147 @@ public final class RemoteProto {
       }
 
       /**
+       * <code>.remote.RemoteImeNotification remote_ime_selection = 23;</code>
+       */
+      @java.lang.Override
+      public boolean hasRemoteImeSelection() {
+        return instance.hasRemoteImeSelection();
+      }
+      /**
+       * <code>.remote.RemoteImeNotification remote_ime_selection = 23;</code>
+       */
+      @java.lang.Override
+      public dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification getRemoteImeSelection() {
+        return instance.getRemoteImeSelection();
+      }
+      /**
+       * <code>.remote.RemoteImeNotification remote_ime_selection = 23;</code>
+       */
+      public Builder setRemoteImeSelection(dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification value) {
+        copyOnWrite();
+        instance.setRemoteImeSelection(value);
+        return this;
+        }
+      /**
+       * <code>.remote.RemoteImeNotification remote_ime_selection = 23;</code>
+       */
+      public Builder setRemoteImeSelection(
+          dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification.Builder builderForValue) {
+        copyOnWrite();
+        instance.setRemoteImeSelection(builderForValue.build());
+        return this;
+      }
+      /**
+       * <code>.remote.RemoteImeNotification remote_ime_selection = 23;</code>
+       */
+      public Builder mergeRemoteImeSelection(dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification value) {
+        copyOnWrite();
+        instance.mergeRemoteImeSelection(value);
+        return this;
+      }
+      /**
+       * <code>.remote.RemoteImeNotification remote_ime_selection = 23;</code>
+       */
+      public Builder clearRemoteImeSelection() {  copyOnWrite();
+        instance.clearRemoteImeSelection();
+        return this;
+      }
+
+      /**
+       * <code>.remote.RemoteImeNotification remote_ime_reset = 24;</code>
+       */
+      @java.lang.Override
+      public boolean hasRemoteImeReset() {
+        return instance.hasRemoteImeReset();
+      }
+      /**
+       * <code>.remote.RemoteImeNotification remote_ime_reset = 24;</code>
+       */
+      @java.lang.Override
+      public dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification getRemoteImeReset() {
+        return instance.getRemoteImeReset();
+      }
+      /**
+       * <code>.remote.RemoteImeNotification remote_ime_reset = 24;</code>
+       */
+      public Builder setRemoteImeReset(dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification value) {
+        copyOnWrite();
+        instance.setRemoteImeReset(value);
+        return this;
+        }
+      /**
+       * <code>.remote.RemoteImeNotification remote_ime_reset = 24;</code>
+       */
+      public Builder setRemoteImeReset(
+          dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification.Builder builderForValue) {
+        copyOnWrite();
+        instance.setRemoteImeReset(builderForValue.build());
+        return this;
+      }
+      /**
+       * <code>.remote.RemoteImeNotification remote_ime_reset = 24;</code>
+       */
+      public Builder mergeRemoteImeReset(dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification value) {
+        copyOnWrite();
+        instance.mergeRemoteImeReset(value);
+        return this;
+      }
+      /**
+       * <code>.remote.RemoteImeNotification remote_ime_reset = 24;</code>
+       */
+      public Builder clearRemoteImeReset() {  copyOnWrite();
+        instance.clearRemoteImeReset();
+        return this;
+      }
+
+      /**
+       * <code>.remote.RemoteImeNotification remote_ime_completions = 29;</code>
+       */
+      @java.lang.Override
+      public boolean hasRemoteImeCompletions() {
+        return instance.hasRemoteImeCompletions();
+      }
+      /**
+       * <code>.remote.RemoteImeNotification remote_ime_completions = 29;</code>
+       */
+      @java.lang.Override
+      public dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification getRemoteImeCompletions() {
+        return instance.getRemoteImeCompletions();
+      }
+      /**
+       * <code>.remote.RemoteImeNotification remote_ime_completions = 29;</code>
+       */
+      public Builder setRemoteImeCompletions(dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification value) {
+        copyOnWrite();
+        instance.setRemoteImeCompletions(value);
+        return this;
+        }
+      /**
+       * <code>.remote.RemoteImeNotification remote_ime_completions = 29;</code>
+       */
+      public Builder setRemoteImeCompletions(
+          dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification.Builder builderForValue) {
+        copyOnWrite();
+        instance.setRemoteImeCompletions(builderForValue.build());
+        return this;
+      }
+      /**
+       * <code>.remote.RemoteImeNotification remote_ime_completions = 29;</code>
+       */
+      public Builder mergeRemoteImeCompletions(dev.opentvtouchpad.hidprobe.wire.RemoteProto.RemoteImeNotification value) {
+        copyOnWrite();
+        instance.mergeRemoteImeCompletions(value);
+        return this;
+      }
+      /**
+       * <code>.remote.RemoteImeNotification remote_ime_completions = 29;</code>
+       */
+      public Builder clearRemoteImeCompletions() {  copyOnWrite();
+        instance.clearRemoteImeCompletions();
+        return this;
+      }
+
+      /**
        * <code>.remote.RemoteVoiceBegin remote_voice_begin = 30;</code>
        */
       @java.lang.Override
@@ -16548,6 +17056,9 @@ public final class RemoteProto {
               "remoteImeKeyInject_",
               "remoteImeBatchEdit_",
               "remoteImeShowRequest_",
+              "remoteImeSelection_",
+              "remoteImeReset_",
+              "remoteImeCompletions_",
               "remoteVoiceBegin_",
               "remoteVoicePayload_",
               "remoteVoiceEnd_",
@@ -16559,10 +17070,11 @@ public final class RemoteProto {
               "remoteAppLinkLaunchRequest_",
             };
             java.lang.String info =
-                "\u0000\u0012\u0000\u0001\u0001Z\u0012\u0000\u0000\u0000\u0001\u1009\u0000\u0002\u1009" +
+                "\u0000\u0015\u0000\u0001\u0001Z\u0015\u0000\u0000\u0000\u0001\u1009\u0000\u0002\u1009" +
                 "\u0001\u0003\u1009\u0002\b\u1009\u0003\t\u1009\u0004\n\u1009\u0005\u0014\u1009\u0006" +
-                "\u0015\u1009\u0007\u0016\u1009\b\u001e\u1009\t\u001f\u1009\n \u1009\u000b(\u1009" +
-                "\f2\u1009\r3\u1009\u000e<\u1009\u000f=\u1009\u0010Z\u1009\u0011";
+                "\u0015\u1009\u0007\u0016\u1009\b\u0017\u1009\t\u0018\u1009\n\u001d\u1009\u000b\u001e" +
+                "\u1009\f\u001f\u1009\r \u1009\u000e(\u1009\u000f2\u1009\u00103\u1009\u0011<\u1009" +
+                "\u0012=\u1009\u0013Z\u1009\u0014";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         case GET_DEFAULT_INSTANCE: {

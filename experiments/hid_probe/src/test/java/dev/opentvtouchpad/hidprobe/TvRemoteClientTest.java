@@ -82,6 +82,64 @@ public class TvRemoteClientTest {
         assertEquals(1, events.failed.get()); assertEquals(0, io.created.get());
     }
 
+    @Test public void sendsOneBoundedTextInsertToTheActiveField() throws Exception {
+        Native io = new Native();
+        FakeSocket socket = io.control();
+        TvRemoteClient client = keyboardConnected(io, socket);
+        TvControlProtocol.ImeField field = client.imeField();
+        long epoch = visibility.epoch();
+        assertFalse(client.submitText(field, "a\nb", epoch));
+        assertFalse(client.submitText(field, "x".repeat(257), epoch));
+        assertFalse(client.submitText(field, "a", epoch + 1));
+        assertTrue(client.submitText(field, "Café 🎬", epoch));
+        await(() -> socket.messages().size() == 3);
+        var batch = TvControlProtocolTest.parse(socket.messages().get(2)).getRemoteImeBatchEdit();
+        assertEquals(12, batch.getImeCounter());
+        assertEquals(8, batch.getFieldCounter());
+        assertEquals(1, batch.getEditInfoCount());
+        assertEquals(1, batch.getEditInfo(0).getInsert());
+        var selection = batch.getEditInfo(0).getTextFieldStatus();
+        assertEquals("Café 🎬", selection.getValue());
+        assertEquals(7, selection.getStart());
+        assertEquals(7, selection.getEnd());
+    }
+
+    @Test public void fieldChangeFencesTextEvenAfterWriterTakesIt() throws Exception {
+        Native io = new Native();
+        FakeSocket socket = io.control();
+        TvRemoteClient client = keyboardConnected(io, socket);
+        TvControlProtocol.ImeField old = client.imeField();
+        socket.outputGate = new CountDownLatch(1);
+        assertTrue(client.submitText(old, "draft", visibility.epoch()));
+        await(socket.outputEntered::get);
+        socket.feed(TvControlProtocolTest.field(12, 9));
+        await(() -> client.imeField() != null && client.imeField() != old);
+        socket.outputGate.countDown();
+        now.addAndGet(100);
+        assertFalse(client.submitText(old, "draft", visibility.epoch()));
+        assertTrue(client.submitText(client.imeField(), "new draft", visibility.epoch()));
+        await(() -> socket.messages().size() == 3);
+        var batch = TvControlProtocolTest.parse(socket.messages().get(2)).getRemoteImeBatchEdit();
+        assertEquals(9, batch.getFieldCounter());
+        assertEquals("new draft", batch.getEditInfo(0).getTextFieldStatus().getValue());
+    }
+
+    @Test public void imeNotificationsAfterSendingKeepTheTvConnectionUsable() throws Exception {
+        Native io = new Native();
+        FakeSocket socket = io.control();
+        TvRemoteClient client = keyboardConnected(io, socket);
+        assertTrue(client.submitText(client.imeField(), "search", visibility.epoch()));
+        await(() -> socket.messages().size() == 3);
+        socket.feed(new byte[]{(byte)0xba, 1, 4, 16, 6, 24, 6}); // Selection, field 23
+        socket.feed(new byte[]{(byte)0xea, 1, 2, 8, 1}); // Completions, field 29
+        socket.feed(new byte[]{(byte)0xc2, 1, 0}); // Reset, field 24
+        socket.feed(TvControlProtocolTest.ping(42));
+        await(() -> socket.messages().size() == 4);
+        assertTrue(client.ready());
+        assertNull(client.imeField());
+        assertEquals(42, TvControlProtocolTest.parse(socket.messages().get(3)).getRemotePingResponse().getVal1());
+    }
+
     @Test public void stopBeforeStartAndDuringKeyGenerationPreventsLateEnrollment() throws Exception {
         Native io = new Native(); Events events = new Events();
         TvRemoteClient stopped = client(io, events);
@@ -821,6 +879,16 @@ public class TvRemoteClientTest {
     }
     private TvRemoteClient connected(Native io, Events events, FakeSocket socket) throws Exception {
         TvRemoteClient c = client(io, events); c.connect(record()); socket.handshakeMessages(); await(c::ready); return c;
+    }
+    private TvRemoteClient keyboardConnected(Native io, FakeSocket socket) throws Exception {
+        TvRemoteClient client = client(io, new Events());
+        client.connect(record());
+        socket.feed(TvControlProtocolTest.configure(615));
+        socket.feed(TvControlProtocolTest.active());
+        socket.feed(TvControlProtocolTest.start());
+        socket.feed(TvControlProtocolTest.field(12, 8));
+        await(() -> client.imeField() != null);
+        return client;
     }
     private byte[] fingerprint() throws Exception { return MessageDigest.getInstance("SHA-256").digest(certificate.getEncoded()); }
     private TvEnrollment.Record record() throws Exception { return new TvEnrollment.Record("10.0.0.2", fingerprint(), certificate.getEncoded()); }

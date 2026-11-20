@@ -1,5 +1,12 @@
 # Capabilities
 
+## Android 0.26 keyboard pilot
+
+When connected, Keyboard is available on Remote and Touchpad. The projector
+must provide a focused text field. **Send to TV** uses the existing paired
+Remote v2 link, and the draft clears when the field or app focus changes.
+[Keyboard instructions](nord-daily-use.md) · [Pilot evidence](progress.md#android-026-keyboard-pilot-2026-11-19)
+
 ## Guided setup candidate — hardware acceptance pending
 
 Version0.22 adds a resumable native Bluetooth/address/TV-pairing wizard, real
