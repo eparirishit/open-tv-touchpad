@@ -59,6 +59,8 @@ public final class RemoteScreen {
     private final TextView keyboardError;
     private final Button keyboard, keyboardSend;
     private final LinearLayout statusCard;
+    private final LinearLayout statusChips;
+    private final Dpad dpad;
     private final LinearLayout header, footer;
     private final Button appearanceBack;
     private final TextView connection, brand, sensitivityLabel, sensitivityValue;
@@ -83,7 +85,9 @@ public final class RemoteScreen {
 
         header = new LinearLayout(context);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        brand = text("Open TV", 22);
+        // Mockup spacing: content sits 20dp from the screen edges (12dp root + 8dp here).
+        header.setPadding(dp(8), 0, dp(8), 0);
+        brand = text("Open TV", 24);
         brand.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         header.addView(brand, new LinearLayout.LayoutParams(0, -2, 1));
         setup = iconButton("Setup", R.drawable.ui_setup);
@@ -103,29 +107,30 @@ public final class RemoteScreen {
         scroll.setFillViewport(true);
         root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
         LinearLayout content = column();
-        content.setPadding(0, dp(12), 0, dp(4));
+        content.setPadding(dp(8), dp(12), dp(8), dp(4));
         scroll.addView(content, new ScrollView.LayoutParams(-1, -2));
         statusCard = column();
         statusCard.setPadding(dp(16), dp(14), dp(16), dp(2));
-        cards.add(statusCard);
         add(content, statusCard);
         // Shown only while the run is fully connected; it collapses the card to this one row.
         statusSummary = button("Connected");
         statusSummary.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
         statusSummary.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        statusSummary.setTextSize(14);
-        statusSummary.setPadding(0, dp(4), 0, dp(4));
+        statusSummary.setTextSize(15);
+        statusSummary.setPadding(0, 0, 0, 0);
+        statusSummary.setMinHeight(dp(56));
+        statusSummary.setMinimumHeight(dp(56));
         add(statusCard, statusSummary);
-        connection = text("Mouse: disconnected", 14);
-        connection.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        connection.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
-        add(statusCard, connection);
-        tvStatus = text("TV: not paired", 14);
-        tvStatus.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        tvStatus.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
-        add(statusCard, tvStatus);
+        // Mouse and TV states are separate pill chips; they stack when there is no room side by side.
+        statusChips = new ChipRow();
+        connection = chip("Mouse: disconnected");
+        tvStatus = chip("TV: not paired");
+        statusChips.addView(connection);
+        statusChips.addView(tvStatus);
+        add(statusCard, statusChips);
         status = text("Connect your saved projector, or open Settings for setup.", 13);
         status.setPadding(dp(12), dp(10), dp(12), dp(10));
+        status.setCompoundDrawablePadding(dp(10));
         status.setLineSpacing(dp(2), 1.1f);
         status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         add(statusCard, status);
@@ -133,9 +138,8 @@ public final class RemoteScreen {
         connect.setContentDescription("Connect saved projector");
         add(statusCard, connect);
 
-        keyboard = button("Keyboard");
+        keyboard = iconButton("Keyboard", R.drawable.ui_keyboard);
         keyboard.setContentDescription("Open phone keyboard for the projector");
-        add(content, keyboard);
         keyboardPanel = column();
         keyboardPanel.setPadding(dp(16), dp(12), dp(16), dp(8));
         cards.add(keyboardPanel);
@@ -209,15 +213,23 @@ public final class RemoteScreen {
         }
         for (TvCommand command : new TvCommand[]{TvCommand.BACK, TvCommand.HOME, TvCommand.NETFLIX,
                 TvCommand.VOLUME_DOWN, TvCommand.PLAY_PAUSE, TvCommand.VOLUME_UP}) large(tvButtons.get(command));
-        addRow(remotePage, tvButtons.get(TvCommand.BACK), tvButtons.get(TvCommand.HOME), tvButtons.get(TvCommand.NETFLIX));
-        Dpad dpad = new Dpad();
-        cards.add(dpad);
+        large(keyboard);
+        for (TvCommand command : new TvCommand[]{TvCommand.VOLUME_DOWN, TvCommand.PLAY_PAUSE, TvCommand.VOLUME_UP})
+            large(tvButtons.get(command), 60);
+        for (TvCommand command : new TvCommand[]{TvCommand.UP, TvCommand.DOWN, TvCommand.LEFT, TvCommand.RIGHT})
+            ((IconButton) tvButtons.get(command)).iconSize = 28;
+        tvButtons.get(TvCommand.OK).setTextSize(20);
+        tvButtons.get(TvCommand.OK).setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        add(remotePage, row(12, tvButtons.get(TvCommand.BACK), tvButtons.get(TvCommand.HOME),
+                tvButtons.get(TvCommand.NETFLIX), keyboard));
+        dpad = new Dpad();
+        // The D-pad takes the remaining height and centres its circle, spacing the rows evenly.
         LinearLayout.LayoutParams dpadSize = new LinearLayout.LayoutParams(-1, 0, 1);
         dpadSize.gravity = Gravity.CENTER_HORIZONTAL;
-        dpadSize.bottomMargin = dp(20);
-        dpadSize.topMargin = dp(8);
+        dpadSize.bottomMargin = dp(12);
         remotePage.addView(dpad, dpadSize);
-        addRow(remotePage, tvButtons.get(TvCommand.VOLUME_DOWN), tvButtons.get(TvCommand.PLAY_PAUSE), tvButtons.get(TvCommand.VOLUME_UP));
+        add(remotePage, row(12, tvButtons.get(TvCommand.VOLUME_DOWN), tvButtons.get(TvCommand.PLAY_PAUSE),
+                tvButtons.get(TvCommand.VOLUME_UP)));
 
         padPage = column();
         content.addView(padPage, fill());
@@ -332,7 +344,10 @@ public final class RemoteScreen {
         remoteTab = button("Remote");
         padTab = button("Touchpad");
         footer = segment(remoteTab, padTab);
-        root.addView(footer, new LinearLayout.LayoutParams(-1, -2));
+        LinearLayout.LayoutParams footerSize = new LinearLayout.LayoutParams(-1, -2);
+        footerSize.setMarginStart(dp(8));
+        footerSize.setMarginEnd(dp(8));
+        root.addView(footer, footerSize);
         root.setOnApplyWindowInsetsListener((view, insets) -> {
             android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.ime());
             root.setPadding(padding + bars.left, padding + bars.top,
@@ -508,10 +523,21 @@ public final class RemoteScreen {
         int text = color("#14171A", "#F2F4F6");
         int ready = color("#1F8A4C", "#4ADE80");
         connection.setText(connected ? "Mouse: connected" : "Mouse: disconnected");
-        connection.setTextColor(text);
+        for (TextView chip : new TextView[]{connection, tvStatus}) {
+            chip.setTextColor(text);
+            chip.setBackground(shape(color("#E9ECF0", "#23282E"), Color.TRANSPARENT, 16));
+        }
         statusDot(connection, dot(connected ? ready : color("#8A929C", "#7C858F")), null);
-        tvStatus.setTextColor(text);
         statusDot(tvStatus, dot(tvConnected ? ready : color("#C27803", "#F4C675")), null);
+        // Message tone: green with a check while connected, amber with an info mark otherwise.
+        int toneFill = connected ? color("#E3F4EA", "#14281C") : color("#FFF4DC", "#2A2417");
+        int toneText = connected ? color("#14532D", "#86EFAC") : color("#5C3D00", "#F4C675");
+        status.setTextColor(toneText);
+        status.setBackground(shape(toneFill, Color.TRANSPARENT, 16));
+        Drawable mark = context.getDrawable(connected ? R.drawable.ui_check_circle : R.drawable.ui_info).mutate();
+        mark.setBounds(0, 0, dp(20), dp(20));
+        mark.setColorFilter(new android.graphics.PorterDuffColorFilter(toneText, android.graphics.PorterDuff.Mode.SRC_IN));
+        status.setCompoundDrawablesRelative(mark, null, null, null);
         updateStatusCard();
     }
 
@@ -526,14 +552,23 @@ public final class RemoteScreen {
         statusSummary.setContentDescription(statusSummary.getText() + (collapsed ? ". Show details" : ". Hide details"));
         statusSummary.setStateDescription(collapsed ? "Collapsed" : "Expanded");
         int details = collapsed ? View.GONE : View.VISIBLE;
-        for (View detail : new View[]{connection, tvStatus, status}) detail.setVisibility(details);
+        for (View detail : new View[]{statusChips, status}) detail.setVisibility(details);
+        // Collapsed it is a single 56dp pill; expanded it is the regular card.
+        if (collapsed) statusCard.setPadding(dp(18), 0, dp(14), 0);
+        else statusCard.setPadding(dp(16), dp(14), dp(16), dp(2));
+        statusCard.setBackground(shape(color("#FFFFFF", "#181B1F"), color("#E1E4E8", "#2C323A"), collapsed ? 28 : 24));
+        ((LinearLayout.LayoutParams) statusSummary.getLayoutParams()).bottomMargin = collapsed ? 0 : dp(12);
+        if (dpad != null) dpad.setRoomy(collapsed);
         connect.setVisibility(collapsed || showingSetup ? View.GONE : View.VISIBLE);
         Drawable chevron = context.getDrawable(collapsed ? R.drawable.ui_down : R.drawable.ui_up).mutate();
         chevron.setBounds(0, 0, dp(20), dp(20));
         // A colour filter survives TextView re-applying its (empty) compound tint list.
         chevron.setColorFilter(new android.graphics.PorterDuffColorFilter(color("#5B636D", "#9AA3AD"),
                 android.graphics.PorterDuff.Mode.SRC_IN));
-        statusDot(statusSummary, dot(color("#1F8A4C", "#4ADE80")), chevron);
+        GradientDrawable live = dot(color("#1F8A4C", "#4ADE80"));
+        live.setBounds(0, 0, dp(10), dp(10));
+        statusDot(statusSummary, live, chevron);
+        statusSummary.setCompoundDrawablePadding(dp(12));
     }
 
     private GradientDrawable dot(int fill) {
@@ -582,7 +617,8 @@ public final class RemoteScreen {
     }
 
     private void updateKeyboardVisibility() {
-        keyboard.setVisibility(!showingSetup && keyboardConnected && !keyboardOpen ? View.VISIBLE : View.GONE);
+        // Always in the top row like the other TV keys; usable only while the TV is connected.
+        keyboard.setEnabled(keyboardConnected);
         keyboardPanel.setVisibility(keyboardOpen ? View.VISIBLE : View.GONE);
     }
 
@@ -605,8 +641,6 @@ public final class RemoteScreen {
         root.setBackgroundColor(color("#F4F5F7", "#0E1012"));
         for (TextView label : labels) label.setTextColor(label.getTextSize() <= 14 * context.getResources().getDisplayMetrics().scaledDensity
                 ? color("#5B636D", "#9AA3AD") : color("#14171A", "#F2F4F6"));
-        status.setTextColor(color("#5B636D", "#9AA3AD"));
-        status.setBackground(shape(color("#EEF2F7", "#20262D"), Color.TRANSPARENT, 12));
         keyboardText.setTextColor(color("#14171A", "#F2F4F6"));
         keyboardText.setHintTextColor(color("#5B636D", "#9AA3AD"));
         keyboardText.setBackgroundTintList(ColorStateList.valueOf(color("#2F6FEB", "#6AA8FF")));
@@ -616,7 +650,8 @@ public final class RemoteScreen {
         sensitivityValue.setTextColor(color("#1B3E8A", "#9CC3FF"));
         sensitivityValue.setBackground(shape(color("#E8F0FE", "#16233B"), Color.TRANSPARENT, 12));
         controlsDivider.setBackgroundColor(color("#E1E4E8", "#2C323A"));
-        for (View card : cards) card.setBackground(shape(color("#FFFFFF", "#181B1F"), color("#E1E4E8", "#2C323A"), card instanceof Dpad ? 1000 : 24));
+        for (View card : cards) card.setBackground(shape(color("#FFFFFF", "#181B1F"), color("#E1E4E8", "#2C323A"), 24));
+        dpad.setColors(color("#FFFFFF", "#181B1F"), color("#E1E4E8", "#2C323A"));
         for (View track : tracks) track.setBackground(shape(color("#E9ECF0", "#181B1F"), Color.TRANSPARENT, 28));
         for (Button button : controls) styleButton(button);
         setupView.applyPalette(dark);
@@ -739,11 +774,23 @@ public final class RemoteScreen {
     private Button iconButton(String label, int resource) { return configureButton(new IconButton(resource), label); }
 
     /** Main remote rows and scroll controls use a larger 56dp target with a 26dp icon. */
-    private Button large(Button button) {
-        if (button instanceof IconButton icon) { icon.target = 56; icon.iconSize = 26; }
-        button.setMinHeight(dp(56));
-        button.setMinimumHeight(dp(56));
+    private Button large(Button button) { return large(button, 56); }
+
+    private Button large(Button button, int height) {
+        if (button instanceof IconButton icon) { icon.target = height; icon.iconSize = 26; }
+        button.setMinHeight(dp(height));
+        button.setMinimumHeight(dp(height));
         return button;
+    }
+
+    /** Status chip: dot, short state text, rounded track background. */
+    private TextView chip(String label) {
+        TextView chip = text(label, 13);
+        chip.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        chip.setPadding(dp(12), dp(6), dp(12), dp(6));
+        chip.setGravity(Gravity.CENTER_VERTICAL);
+        chip.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        return chip;
     }
 
     /** Small uppercase heading, matching the Setup section labels. */
@@ -795,12 +842,14 @@ public final class RemoteScreen {
         return size;
     }
 
-    private LinearLayout row(View... children) {
+    private LinearLayout row(View... children) { return row(8, children); }
+
+    private LinearLayout row(int gap, View... children) {
         LinearLayout row = new LinearLayout(context);
         row.setGravity(Gravity.CENTER_VERTICAL);
         for (int i = 0; i < children.length; i++) {
             LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(0, -2, 1);
-            if (i + 1 < children.length) size.setMarginEnd(dp(8));
+            if (i + 1 < children.length) size.setMarginEnd(dp(gap));
             row.addView(children[i], size);
         }
         return row;
@@ -811,7 +860,7 @@ public final class RemoteScreen {
         segment.setPadding(dp(4), dp(4), dp(4), dp(4));
         for (Button button : buttons) {
             button.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-            button.setTextSize(14);
+            button.setTextSize(15);
             button.setPadding(dp(6), dp(10), dp(6), dp(10));
         }
         tracks.add(segment);
@@ -844,30 +893,50 @@ public final class RemoteScreen {
     }
 
     /** A bounded circle with disjoint cardinal targets and an 80dp center at its normal 240dp size. */
+    /**
+     * The circle draws itself so the view can take the full remaining height while the circle
+     * stays round and centred. OK is 37% of the circle and arrows 29% (the mockup's 30% would
+     * overlap OK by a few pixels; targets stay disjoint). Mockup sizing: 240dp, and up to 1.3x
+     * while the status card is collapsed, bounded by the free height and width.
+     */
     private final class Dpad extends FrameLayout {
+        private final android.graphics.Paint fill = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        private final android.graphics.Paint edge = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
         Dpad() {
             super(context);
+            setWillNotDraw(false);
+            edge.setStyle(android.graphics.Paint.Style.STROKE);
+            edge.setStrokeWidth(dp(1));
             for (TvCommand command : new TvCommand[]{TvCommand.UP, TvCommand.DOWN, TvCommand.LEFT, TvCommand.RIGHT, TvCommand.OK}) {
                 addView(tvButtons.get(command), new FrameLayout.LayoutParams(dp(64), dp(64)));
             }
         }
+        private boolean roomy;
+        void setColors(int surface, int border) { fill.setColor(surface); edge.setColor(border); invalidate(); }
+        void setRoomy(boolean roomy) { if (this.roomy != roomy) { this.roomy = roomy; requestLayout(); } }
         @Override protected void onMeasure(int widthSpec, int heightSpec) {
             int width = Math.max(0, MeasureSpec.getSize(widthSpec) - dp(40));
             // The established 240dp size is the floor; scrolling measurement (UNSPECIFIED) keeps it,
             // and a page stretched to the viewport lets the circle grow into the free height.
             int size = Math.min(dp(240), width);
-            if (MeasureSpec.getMode(heightSpec) != MeasureSpec.UNSPECIFIED)
-                size = Math.max(size, Math.min(Math.min(width, dp(340)), MeasureSpec.getSize(heightSpec)));
-            setMeasuredDimension(size, size);
+            int mode = MeasureSpec.getMode(heightSpec), available = MeasureSpec.getSize(heightSpec);
+            if (roomy && mode != MeasureSpec.UNSPECIFIED) size = Math.max(size, Math.min(Math.min(width, dp(312)), available));
+            setMeasuredDimension(size, mode == MeasureSpec.EXACTLY ? Math.max(size, available) : size);
             for (int i = 0; i < getChildCount(); i++) {
-                int target = i == 4 ? size / 3 : size * 4 / 15;
+                int target = i == 4 ? size * 11 / 30 : size * 29 / 100;
                 getChildAt(i).measure(MeasureSpec.makeMeasureSpec(target, MeasureSpec.EXACTLY),
                         MeasureSpec.makeMeasureSpec(target, MeasureSpec.EXACTLY));
             }
         }
+        private int top() { return (getMeasuredHeight() - getMeasuredWidth()) / 2; }
+        @Override protected void onDraw(android.graphics.Canvas canvas) {
+            float radius = getMeasuredWidth() / 2f, inset = edge.getStrokeWidth() / 2f;
+            canvas.drawCircle(radius, top() + radius, radius - inset, fill);
+            canvas.drawCircle(radius, top() + radius, radius - inset, edge);
+        }
         @Override protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
             int size = getMeasuredWidth();
-            int inset = size / 30;
+            int inset = size / 40, offset = top();
             for (int i = 0; i < getChildCount(); i++) {
                 View child = getChildAt(i);
                 int target = child.getMeasuredWidth();
@@ -877,8 +946,37 @@ public final class RemoteScreen {
                 if (i == 1) y = size - target - inset;
                 if (i == 2) x = inset;
                 if (i == 3) x = size - target - inset;
-                child.layout(x, y, x + target, y + target);
+                child.layout(x, offset + y, x + target, offset + y + target);
             }
+        }
+    }
+
+    /** Lays chips out side by side, or stacked when they do not fit the width. */
+    private final class ChipRow extends LinearLayout {
+        private Boolean laidOut;
+        ChipRow() { super(context); }
+        @Override protected void onMeasure(int widthSpec, int heightSpec) {
+            int total = 0, visible = 0;
+            for (int i = 0; i < getChildCount(); i++) {
+                View child = getChildAt(i);
+                if (child.getVisibility() == GONE) continue;
+                child.measure(MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED), MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
+                total += child.getMeasuredWidth();
+                visible++;
+            }
+            total += Math.max(0, visible - 1) * dp(8);
+            boolean stack = MeasureSpec.getMode(widthSpec) != MeasureSpec.UNSPECIFIED && total > MeasureSpec.getSize(widthSpec);
+            // Only re-flow when switching between side by side and stacked.
+            if (laidOut == null || laidOut != stack) {
+                laidOut = stack;
+                setOrientation(stack ? VERTICAL : HORIZONTAL);
+                for (int i = 0; i < getChildCount(); i++) {
+                LayoutParams size = new LayoutParams(-2, -2);
+                if (i + 1 < getChildCount()) { if (stack) size.bottomMargin = dp(8); else size.setMarginEnd(dp(8)); }
+                getChildAt(i).setLayoutParams(size);
+                }
+            }
+            super.onMeasure(widthSpec, heightSpec);
         }
     }
 

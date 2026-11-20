@@ -305,3 +305,24 @@ a blue chip, the unchanged 0.5×–2× slider and "Slower"/"Faster" captions. Th
 slider keeps its accessible name and value; the chip and captions are visual only.
 The Back/Home/Netflix row, the volume/play row and the scroll buttons grow from
 48dp to 56dp with 26dp icons. Presentation only. Shipped as 0.25.
+
+## Home screen aligned with the 2026-11-19 mockup (2026-11-19)
+
+Owner request, against `design/open-tv-android-app/Main.dc.html`. Presentation
+only; no admission, transport, keyboard-protocol or lifecycle change.
+
+- Content sits 20dp from the screen edges; the title is 24sp; the tab labels 15sp.
+- Expanded status card: Mouse and TV states are pill chips (stacking when they do
+  not fit), and the message sits in a toned box with an icon: amber with an info
+  mark while disconnected, green with a check while connected. The full message
+  stays visible (the mockup's two-line clamp is not used, so recovery steps are
+  never hidden). Connect stays the single action.
+- Collapsed status is one 56dp pill: green dot, summary text, chevron.
+- The top row is Back, Home, Netflix and the keyboard as a fourth icon button
+  (56dp, 12dp gaps). The keyboard stays in place on the Remote tab and is enabled
+  only while the TV is connected; its text entry panel is unchanged.
+- The D-pad is 240dp, growing up to 1.3x (312dp) while the card is collapsed,
+  bounded by the free space, and centred between the rows. OK is 37% of the
+  circle; arrows are 29% (the mockup's 30% would overlap OK) with 28dp icons.
+- Volume and play/pause are 60dp with 12dp gaps.
+Shipped as 0.27.

@@ -141,9 +141,10 @@ public class RemoteScreenTest {
             });
             Button keyboard = findButton(screen.root, "Keyboard");
             Button send = findButton(screen.root, "Send to TV");
-            assertEquals(View.GONE, keyboard.getVisibility());
+            // The keyboard sits in the top remote row and is usable only once the TV is connected.
+            assertFalse(keyboard.isEnabled());
             screen.setKeyboardState(true, true, null);
-            assertEquals(View.VISIBLE, keyboard.getVisibility());
+            assertTrue(keyboard.isEnabled());
             screen.setKeyboardState(true, true, first);
             assertTrue(keyboard.performClick());
             EditText editor = (EditText) screen.root.findFocus();
