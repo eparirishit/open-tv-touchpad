@@ -168,3 +168,15 @@ Both enrollment records and both preference files were byte-identical before
 install, after install and after launch; no service started on launch. A later
 owner-driven screenshot showed the connected Stop sharing the Display header row on
 the Nord. No unpair, reset, data clear, uninstall or projector input was performed.
+
+## 0.29 delivery (2026-11-19)
+
+0.29-dpad-glow (versionCode 29) from source commit 257677d was installed in place over
+0.28 on the Nord; APK SHA-256 prefix 8f11a102d9a64e9d, same local debug signer. Adds
+the simplified Setup/Display header, the foreground-drawn dark-mode back chevron
+with forceDarkAllowed=false, the D-pad arrow press glow and the "Type on TV"
+keyboard screen. Prechecks: no foreground service. Both enrollment records and both
+preference files were byte-identical before install, after install and after
+launch; no service started on launch. No unpair, reset, data clear, uninstall or
+projector input was performed. Owner checks pending: dark-mode back button on the
+Nord, press glow feel, and Type on TV with a focused projector text field.
