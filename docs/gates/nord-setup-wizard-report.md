@@ -157,3 +157,14 @@ completed." with no foreground service. Both enrollment records and both prefere
 files were byte-identical before install, after install and after launch; no
 service started on launch. No unpair, reset, data clear, uninstall or projector
 input was performed. Owner hardware check of the new layout is pending.
+
+## 0.28 delivery (2026-11-19)
+
+0.28-home-polish (versionCode 28) from source commit 940240b was installed in place
+over 0.27 on the Nord; APK SHA-256 prefix e4afbf4b44f1a19e, same local debug signer.
+Adds the larger collapsed D-pad, glyph-centred OK label, press motion and Stop in the
+Setup/Display header row. Prechecks: owner stopped the app; no foreground service.
+Both enrollment records and both preference files were byte-identical before
+install, after install and after launch; no service started on launch. A later
+owner-driven screenshot showed the connected Stop sharing the Display header row on
+the Nord. No unpair, reset, data clear, uninstall or projector input was performed.
