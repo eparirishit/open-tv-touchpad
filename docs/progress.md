@@ -5,8 +5,10 @@
 As of November 19, 2026, the Android phone pilot on `main` is
 **0.25-touchpad-controls**. The Nord installation preserved its two enrollments
 and both preference files. Long-press OK worked on the Horizon in the 0.24
-hardware trial. Held-key release on disconnect and the existing lock, reconnect,
-and endurance checks still need hardware evidence.
+hardware trial. On the stability build, the owner confirmed reconnecting after
+a Tailscale toggle, OK release during an app interruption, and saved reconnect
+after Stop. Locked retention, Bluetooth-loss cleanup, and endurance still need
+hardware evidence.
 [Delivery report](gates/nord-setup-wizard-report.md#025-delivery-2026-11-18)
 · [Daily-use readiness](gates/n4-readiness.md)
 
@@ -39,11 +41,41 @@ Both enrollment files and both preference files had identical checksums before
 installation, after installation, and after launch. Open TV resumed in the
 foreground.
 
-Live verification is pending. Verify normal OK hold and release on the
-Horizon, then leave the app during a hold and verify the projector releases
-the key. Follow with lock and return, connection loss and explicit reconnect,
-and Stop with observed native teardown. The
+The owner reported that toggling Tailscale dropped the Open TV session and that
+tapping Connect restored the connection. Native teardown confirmation and
+Bluetooth-loss recovery still need separate trials.
+
+The owner confirmed that OK released when interrupting the app during a hold,
+that controls worked after reopening, and that Stop followed by Connect reused
+the saved pairings. A separate observed Stop produced the selected disconnect,
+unregister, and native teardown-complete events on the Nord.
+Locked retention, idle expiry, and viewing endurance are still open. The
 [daily-use readiness checklist](gates/n4-readiness.md) still applies.
+
+## Android 0.26 keyboard pilot (2026-11-19)
+
+The connected Remote and Touchpad screens offer a Keyboard button. A focused
+projector field opens the phone’s text composer, and Send uses the existing
+paired TLS session. The first Nord build inserted text in the Horizon’s Play
+Store search field, then the session ended and native teardown completed. The
+updated build handles Remote v2 selection, reset, and completion notifications.
+A regression verifies the session responds to ping after this notification
+sequence and drops the stale field on reset.
+
+Source `5dc55fd`. 240 unit tests and 63 Android 12 emulator tests passed. The
+live-only handshake diagnostic is separate. The debug build passed lint with
+zero errors and was installed on the Nord after teardown. The signer matched,
+the installed APK matched SHA-256
+`8084559fbf7aa945cd6a29cdf466552a0659f09de70947bdba6c710feb3a060a`,
+and both enrollments and preference files matched before install and after
+launch. Saved connection reached native Bluetooth connected state after the
+projector’s paired TLS session opened.
+
+On the updated build, the owner confirmed text appeared in Play Store search
+on the Horizon and a later D-pad command still worked over the same session.
+The Nord still showed the foreground control service while dozing for more
+than two minutes. Functional return after unlock, Bluetooth-loss recovery,
+30-minute idle expiry, and a full viewing session remain open.
 
 ## Guided setup implementation (2026-10-30)
 
