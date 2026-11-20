@@ -32,11 +32,18 @@ Source `c434f12`, debug APK SHA-256
 regressions in the unit suite. The opt-in projector diagnostic was skipped.
 Both APKs built and lint reported zero errors.
 
-The Nord was unavailable over ADB, so this build has not been installed on it.
-Verify normal OK hold and release on the Horizon, then leave the app during a
-hold and verify the projector releases the key. Follow with lock and return,
-connection loss and explicit reconnect, and Stop with observed native teardown.
-The [daily-use readiness checklist](gates/n4-readiness.md) still applies.
+The stability build was installed in place on the OnePlus Nord (Android 12)
+over its previously paired wireless debugging connection. The signer matched
+the installed 0.25 pilot, and the installed APK matched the SHA-256 above.
+Both enrollment files and both preference files had identical checksums before
+installation, after installation, and after launch. Open TV resumed in the
+foreground.
+
+Live verification is pending. Verify normal OK hold and release on the
+Horizon, then leave the app during a hold and verify the projector releases
+the key. Follow with lock and return, connection loss and explicit reconnect,
+and Stop with observed native teardown. The
+[daily-use readiness checklist](gates/n4-readiness.md) still applies.
 
 ## Guided setup implementation (2026-10-30)
 
