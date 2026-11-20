@@ -57,7 +57,8 @@ public final class RemoteScreen {
     private final LinearLayout keyboardPanel;
     private final EditText keyboardText;
     private final TextView keyboardError;
-    private final Button keyboard, keyboardSend;
+    private final Button keyboard, keyboardSend, keyboardBack;
+    private final TextView keyboardChip;
     private final LinearLayout statusCard;
     private final LinearLayout statusChips;
     private final Dpad dpad;
@@ -141,16 +142,38 @@ public final class RemoteScreen {
 
         keyboard = iconButton("Keyboard", R.drawable.ui_keyboard);
         keyboard.setContentDescription("Open phone keyboard for the projector");
+        // "Type on TV" screen from the 2026-11-19 keyboard mockup: it replaces the remote while open.
         keyboardPanel = column();
-        keyboardPanel.setPadding(dp(16), dp(12), dp(16), dp(8));
-        cards.add(keyboardPanel);
         add(content, keyboardPanel);
+        LinearLayout keyboardHeader = new LinearLayout(context);
+        keyboardHeader.setGravity(Gravity.CENTER_VERTICAL);
+        keyboardBack = iconButton("Back to remote", R.drawable.ui_left);
+        ((IconButton) keyboardBack).icon.setAutoMirrored(true);
+        keyboardHeader.addView(keyboardBack, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        TextView keyboardTitle = text("Type on TV", 24);
+        keyboardTitle.setAccessibilityHeading(true);
+        LinearLayout.LayoutParams titleSize = new LinearLayout.LayoutParams(0, -2, 1);
+        titleSize.setMarginStart(dp(12));
+        keyboardHeader.addView(keyboardTitle, titleSize);
+        keyboardChip = chip("TV connected");
+        keyboardHeader.addView(keyboardChip, new LinearLayout.LayoutParams(-2, -2));
+        add(keyboardPanel, keyboardHeader);
+        // Text is sent only on Search on TV, so the help text says so.
+        add(keyboardPanel, text("Open a search box on the projector, type here, then tap Search on TV.", 14));
         keyboardText = new EditText(context);
-        keyboardText.setHint("Text for the projector");
-        keyboardText.setSingleLine(true);
+        keyboardText.setHint("Start typing");
+        keyboardText.setTextSize(22);
+        keyboardText.setGravity(Gravity.TOP | Gravity.START);
+        keyboardText.setPadding(dp(16), dp(14), dp(16), dp(14));
         keyboardText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
                 | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-        keyboardText.setImeOptions(EditorInfo.IME_ACTION_SEND | EditorInfo.IME_FLAG_NO_EXTRACT_UI
+        // The no-learning input type resets to one monospace line; restore the mockup's box:
+        // regular font, 96dp tall, wrapping visually while Enter still submits (no newlines).
+        keyboardText.setTypeface(Typeface.DEFAULT);
+        keyboardText.setHorizontallyScrolling(false);
+        keyboardText.setMaxLines(4);
+        keyboardText.setMinHeight(dp(96));
+        keyboardText.setImeOptions(EditorInfo.IME_ACTION_SEARCH | EditorInfo.IME_FLAG_NO_EXTRACT_UI
                 | EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING);
         keyboardText.setFilters(new InputFilter[]{new InputFilter.LengthFilter(TvControlProtocol.ImeField.MAX_TEXT_LENGTH)});
         keyboardText.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);
@@ -161,14 +184,20 @@ public final class RemoteScreen {
         keyboardError.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         keyboardError.setVisibility(View.GONE);
         add(keyboardPanel, keyboardError);
-        Button keyboardCancel = button("Cancel");
-        keyboardSend = button("Send to TV");
-        addRow(keyboardPanel, keyboardCancel, keyboardSend);
+        Button keyboardClear = button("Clear");
+        keyboardSend = button("Search on TV");
+        LinearLayout keyboardActions = row(keyboardClear, keyboardSend);
+        ((LinearLayout.LayoutParams) keyboardSend.getLayoutParams()).weight = 2;
+        add(keyboardPanel, keyboardActions);
         keyboard.setOnClickListener(view -> openKeyboard());
-        keyboardCancel.setOnClickListener(view -> closeKeyboard());
+        keyboardBack.setOnClickListener(view -> closeKeyboard());
+        keyboardClear.setOnClickListener(view -> {
+            keyboardText.getText().clear();
+            keyboardError.setVisibility(View.GONE);
+        });
         keyboardSend.setOnClickListener(view -> sendKeyboard());
         keyboardText.setOnEditorActionListener((view, action, event) ->
-                action == EditorInfo.IME_ACTION_SEND && keyboardSend.performClick());
+                (action == EditorInfo.IME_ACTION_SEARCH || action == EditorInfo.IME_ACTION_SEND) && keyboardSend.performClick());
 
         remotePage = column();
         // Remote and Touchpad pages take the viewport space left under the status card, so
@@ -593,7 +622,7 @@ public final class RemoteScreen {
         if (header == null) return;
         brand.setText(showingSetup ? "" : "Open TV");
         setup.setVisibility(showingSetup ? View.GONE : View.VISIBLE);
-        header.setVisibility(showingSetup ? View.GONE : View.VISIBLE);
+        header.setVisibility(showingSetup || keyboardOpen ? View.GONE : View.VISIBLE);
         if (!showingSetup) {
             setupView.setAccessory(null);
             moveStop(header, header.indexOfChild(setup));
@@ -619,7 +648,7 @@ public final class RemoteScreen {
         updateKeyboardVisibility();
         setupPage.setVisibility(showingSetup && !showingAppearance ? View.VISIBLE : View.GONE);
         scroll.setVisibility(!showingSetup || showingAppearance ? View.VISIBLE : View.GONE);
-        statusCard.setVisibility(showingSetup ? View.GONE : View.VISIBLE);
+        statusCard.setVisibility(showingSetup || keyboardOpen ? View.GONE : View.VISIBLE);
         displayPage.setVisibility(showingSetup && showingAppearance ? View.VISIBLE : View.GONE);
         setup.setContentDescription(showingSetup ? (showingTouchpad ? "Show touchpad" : "Show remote") : "Show setup");
         select(setup, showingSetup);
@@ -655,7 +684,15 @@ public final class RemoteScreen {
                 ? color("#5B636D", "#9AA3AD") : color("#14171A", "#F2F4F6"));
         keyboardText.setTextColor(color("#14171A", "#F2F4F6"));
         keyboardText.setHintTextColor(color("#5B636D", "#9AA3AD"));
-        keyboardText.setBackgroundTintList(ColorStateList.valueOf(color("#2F6FEB", "#6AA8FF")));
+        keyboardText.setBackgroundTintList(null);
+        GradientDrawable box = new GradientDrawable();
+        box.setColor(color("#FFFFFF", "#181B1F"));
+        box.setStroke(dp(2), color("#2F6FEB", "#6AA8FF"));
+        box.setCornerRadius(dp(22));
+        keyboardText.setBackground(box);
+        keyboardChip.setTextColor(color("#14171A", "#F2F4F6"));
+        keyboardChip.setBackground(shape(color("#E9ECF0", "#23282E"), Color.TRANSPARENT, 16));
+        statusDot(keyboardChip, dot(color("#1F8A4C", "#4ADE80")), null);
         sensitivity.setProgressTintList(ColorStateList.valueOf(color("#2F6FEB", "#6AA8FF")));
         sensitivity.setThumbTintList(ColorStateList.valueOf(color("#2F6FEB", "#6AA8FF")));
         sensitivity.setProgressBackgroundTintList(ColorStateList.valueOf(color("#C9CFD6", "#3A414A")));
@@ -738,7 +775,7 @@ public final class RemoteScreen {
             foreground = text;
             border = Color.TRANSPARENT;
         }
-        boolean roundBack = button == appearanceBack;
+        boolean roundBack = button == appearanceBack || button == keyboardBack;
         if (roundBack) {
             fill = surface;
             foreground = text;

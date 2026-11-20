@@ -357,3 +357,18 @@ Owner requests after testing 0.28. Presentation only.
   OK in the accent colour (fades in over 90ms, out over 240ms), on top of the
   existing press shrink. Disabled arrows do not glow.
 Shipped as 0.29.
+
+## Type on TV screen (2026-11-19)
+
+Owner request, against `design/open-tv-android-app/Keyboard.dc.html` and the "keys"
+screen in `Main.dc.html`. Presentation only: the keyboard protocol, send-on-action,
+no-learning/autofill/saved-state input and close-on-field-change are unchanged.
+The keyboard button opens a full "Type on TV" screen in place of the remote: the
+app header, status card and tabs hide; a round "Back to remote" button, a 24sp
+title and a green "TV connected" chip head it; a muted line explains the flow; a
+96dp text box with a 2dp accent border shows 22sp text that wraps (Enter still
+submits, no newlines); Clear empties the draft and Search on TV sends it. The
+phone's own keyboard is used with a Search action key; the mockup's drawn keyboard
+stands for it. Deviation: the mockup says typed text "appears on the TV" live, but
+text is sent only on Search on TV, so the help text says "type here, then tap
+Search on TV". Included in 0.29.

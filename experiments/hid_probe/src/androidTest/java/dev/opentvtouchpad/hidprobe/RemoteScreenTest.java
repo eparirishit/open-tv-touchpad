@@ -140,7 +140,7 @@ public class RemoteScreenTest {
                 return true;
             });
             Button keyboard = findButton(screen.root, "Keyboard");
-            Button send = findButton(screen.root, "Send to TV");
+            Button send = findButton(screen.root, "Search on TV");
             // The keyboard sits in the top remote row and is usable only once the TV is connected.
             assertFalse(keyboard.isEnabled());
             screen.setKeyboardState(true, true, null);
@@ -332,6 +332,38 @@ public class RemoteScreenTest {
         });
         Thread.sleep(600);
         instrumentation.runOnMainSync(() -> assertEquals("Release fades it out",0f,glow[0][0],0.01f));
+    }
+
+    @Test public void typeOnTvScreenReplacesTheRemoteLikeTheMockup() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            Context c=context(390,844,1f);
+            RemoteScreen screen=new RemoteScreen(c,(x,y)->fail(),()->fail());
+            screen.setConnected(true); screen.setTvConnected(true);
+            screen.setKeyboardState(true,true,new TvControlProtocol.ImeField(1,4));
+            for (boolean dark : new boolean[]{false,true}) {
+                screen.setDark(dark);
+                assertTrue(findButton(screen.root,"Keyboard").performClick());
+                EditText editor=(EditText)screen.root.findFocus();
+                editor.setText("Stranger Th");
+                layout(screen,c,390,844);
+                assertTrue(hasText(screen.root,"Type on TV"));
+                assertFalse("App header hides",visible(screen,screen.setup));
+                assertFalse("Status card hides",visible(screen,screen.statusSummary));
+                assertFalse("Tabs hide",visible(screen,screen.remoteTab));
+                assertTrue((editor.getImeOptions() & EditorInfo.IME_MASK_ACTION)==EditorInfo.IME_ACTION_SEARCH);
+                assertEquals("Enter submits; no newline input",0,editor.getInputType() & android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+                assertTrue("Mockup's tall text box",editor.getHeight()>=(int)(96*c.getResources().getDisplayMetrics().density));
+                reachable(screen,findButton(screen.root,"Search on TV"));
+                capture(screen,c,"keyboard-"+(dark?"dark":"light"));
+                findButton(screen.root,"Clear").performClick();
+                assertEquals("Clear empties the draft only",0,editor.length());
+                assertTrue("Clear keeps the screen open",visible(screen,editor));
+                findButton(screen.root,"Back to remote").performClick();
+                layout(screen,c,390,844);
+                assertFalse(visible(screen,editor));
+                assertTrue("Back returns to the remote",visible(screen,screen.tvButtons.get(TvCommand.OK)));
+            }
+        });
     }
 
     @Test public void headerAndDpadMatchRequestedStyleWithoutEnablingInput() {
