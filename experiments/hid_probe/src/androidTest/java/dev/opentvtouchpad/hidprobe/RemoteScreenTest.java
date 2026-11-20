@@ -18,6 +18,7 @@ import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
@@ -123,6 +124,48 @@ public class RemoteScreenTest {
             Button found=findButton(group.getChildAt(i),label);if(found!=null)return found;
         }
         return null;
+    }
+
+    @Test public void projectorKeyboardSendsOnlyOnActionAndClearsOnFocusChange() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            Context c = context(390, 580, 1.4f);
+            RemoteScreen screen = new RemoteScreen(c, (x, y) -> fail(), () -> fail());
+            var first = new TvControlProtocol.ImeField(1, 4);
+            var second = new TvControlProtocol.ImeField(1, 5);
+            AtomicInteger sends = new AtomicInteger();
+            screen.setKeyboardSender((field, text) -> {
+                assertSame(second, field);
+                assertEquals("Netflix search", text);
+                sends.incrementAndGet();
+                return true;
+            });
+            Button keyboard = findButton(screen.root, "Keyboard");
+            Button send = findButton(screen.root, "Search on TV");
+            // The keyboard sits in the top remote row and is usable only once the TV is connected.
+            assertFalse(keyboard.isEnabled());
+            screen.setKeyboardState(true, true, null);
+            assertTrue(keyboard.isEnabled());
+            screen.setKeyboardState(true, true, first);
+            assertTrue(keyboard.performClick());
+            EditText editor = (EditText) screen.root.findFocus();
+            assertNotNull(editor);
+            assertFalse(editor.isSaveEnabled());
+            assertEquals(View.IMPORTANT_FOR_AUTOFILL_NO, editor.getImportantForAutofill());
+            assertTrue((editor.getImeOptions() & EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING) != 0);
+            editor.setText("stale draft");
+            assertEquals(0, sends.get());
+            screen.setKeyboardState(true, true, second);
+            assertFalse(visible(screen, editor));
+            assertEquals(0, editor.length());
+            assertTrue(keyboard.performClick());
+            editor.setText("Netflix search");
+            layout(screen, c, 390, 580);
+            reachable(screen, send);
+            assertTrue(send.performClick());
+            assertEquals(1, sends.get());
+            assertEquals(0, editor.length());
+            assertFalse(visible(screen, editor));
+        });
     }
 
     @Test public void prototypeSeparatesRemoteAndTouchpadWithoutAdmittingInput() {
@@ -239,6 +282,87 @@ public class RemoteScreenTest {
             assertTrue("Slider is visible",visible(screen,screen.sensitivity));
             String value=String.format(java.util.Locale.ROOT,"%.2f×",0.5+screen.sensitivity.getProgress()*0.25);
             assertNotNull("Sensitivity chip shows the slider value",findText(screen.root,value));
+        });
+    }
+
+    @Test public void connectedStopSharesTheSetupHeaderRow() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            Context c=context(360,800,1f);
+            RemoteScreen screen=new RemoteScreen(c,(x,y)->{},()->{});
+            screen.setConnected(true);
+            screen.showSetup(true);
+            screen.setupView.render(new SetupState.Snapshot(SetupState.Page.OVERVIEW,true,true,true,"","","",0,false,true,1,false));
+            layout(screen,c,360,800);
+            assertTrue("Stop stays reachable in Setup",visible(screen,screen.stop));
+            assertSame("Stop sits in the Setup header row",screen.setupView.back.getParent(),screen.stop.getParent());
+            Rect back=bounds(screen,screen.setupView.back), stop=bounds(screen,screen.stop);
+            assertTrue("Same line as the back button",stop.top < back.bottom && stop.bottom > back.top);
+            screen.showAppearance();
+            layout(screen,c,360,800);
+            assertTrue("Stop stays reachable on Display",visible(screen,screen.stop));
+            screen.showSetup(false);
+            layout(screen,c,360,800);
+            assertTrue(visible(screen,screen.stop));
+            assertTrue("Stop returns before Settings",bounds(screen,screen.stop).right <= bounds(screen,screen.setup).left
+                || screen.root.getLayoutDirection()==View.LAYOUT_DIRECTION_RTL);
+        });
+    }
+
+    @Test public void pressedArrowLightsItsWedgeAndFadesOnRelease() throws Exception {
+        android.app.Instrumentation instrumentation=InstrumentationRegistry.getInstrumentation();
+        RemoteScreen[] holder=new RemoteScreen[1]; float[][] glow=new float[1][];
+        instrumentation.runOnMainSync(() -> {
+            Context c=context(390,844,1f);
+            holder[0]=new RemoteScreen(c,(x,y)->{},()->{});
+            layout(holder[0],c,390,844);
+            for (TvCommand command : TvCommand.values()) holder[0].tvButtons.get(command).setEnabled(true);
+            try {
+                View dpad=(View)holder[0].tvButtons.get(TvCommand.UP).getParent();
+                var field=dpad.getClass().getDeclaredField("glow"); field.setAccessible(true);
+                glow[0]=(float[])field.get(dpad);
+            } catch (ReflectiveOperationException e) { throw new AssertionError(e); }
+            holder[0].tvButtons.get(TvCommand.UP).setPressed(true);
+        });
+        Thread.sleep(400);
+        instrumentation.runOnMainSync(() -> {
+            assertEquals("Pressed Up lights its wedge",1f,glow[0][0],0.01f);
+            assertEquals("Other arrows stay dark",0f,glow[0][1],0.01f);
+            capture(holder[0],holder[0].root.getContext(),"dpad-up-pressed");
+            holder[0].tvButtons.get(TvCommand.UP).setPressed(false);
+        });
+        Thread.sleep(600);
+        instrumentation.runOnMainSync(() -> assertEquals("Release fades it out",0f,glow[0][0],0.01f));
+    }
+
+    @Test public void typeOnTvScreenReplacesTheRemoteLikeTheMockup() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            Context c=context(390,844,1f);
+            RemoteScreen screen=new RemoteScreen(c,(x,y)->fail(),()->fail());
+            screen.setConnected(true); screen.setTvConnected(true);
+            screen.setKeyboardState(true,true,new TvControlProtocol.ImeField(1,4));
+            for (boolean dark : new boolean[]{false,true}) {
+                screen.setDark(dark);
+                assertTrue(findButton(screen.root,"Keyboard").performClick());
+                EditText editor=(EditText)screen.root.findFocus();
+                editor.setText("Stranger Th");
+                layout(screen,c,390,844);
+                assertTrue(hasText(screen.root,"Type on TV"));
+                assertFalse("App header hides",visible(screen,screen.setup));
+                assertFalse("Status card hides",visible(screen,screen.statusSummary));
+                assertFalse("Tabs hide",visible(screen,screen.remoteTab));
+                assertTrue((editor.getImeOptions() & EditorInfo.IME_MASK_ACTION)==EditorInfo.IME_ACTION_SEARCH);
+                assertEquals("Enter submits; no newline input",0,editor.getInputType() & android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+                assertTrue("Mockup's tall text box",editor.getHeight()>=(int)(96*c.getResources().getDisplayMetrics().density));
+                reachable(screen,findButton(screen.root,"Search on TV"));
+                capture(screen,c,"keyboard-"+(dark?"dark":"light"));
+                findButton(screen.root,"Clear").performClick();
+                assertEquals("Clear empties the draft only",0,editor.length());
+                assertTrue("Clear keeps the screen open",visible(screen,editor));
+                findButton(screen.root,"Back to remote").performClick();
+                layout(screen,c,390,844);
+                assertFalse(visible(screen,editor));
+                assertTrue("Back returns to the remote",visible(screen,screen.tvButtons.get(TvCommand.OK)));
+            }
         });
     }
 

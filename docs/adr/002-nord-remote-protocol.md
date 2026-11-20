@@ -12,8 +12,10 @@ crypto provider or Gradle protobuf plugin is introduced.
 
 The reviewed Mac adapter remains the behavioral reference; its upstream Python
 library is not embedded. Wire schemas come from androidtvremote2 v0.3.2, commit
-`3f30c275615fc5eb11b4a2da4fe33a02cbb4fd66`. Local changes only set Java package/class
-names. Preserve upstream comments and Apache-2.0 license. Protobuf uses BSD-3-Clause;
+`3f30c275615fc5eb11b4a2da4fe33a02cbb4fd66`. Local changes set Java package/class
+names and recognize three [receive-only IME notifications](https://github.com/sonalder-darlene/libremote-android-tv/blob/main/PROTOCOL.md#remote-port-6466)
+for selection, reset, and completions. The client reads their types and discards
+their payloads. Preserve upstream comments and Apache-2.0 license. Protobuf uses BSD-3-Clause;
 license text is retained alongside upstream license and source/artifact hash manifest
 under `experiments/hid_probe/third_party/`. Generated schemas expose more messages
 than N3; only the closed application command API may reach the network.

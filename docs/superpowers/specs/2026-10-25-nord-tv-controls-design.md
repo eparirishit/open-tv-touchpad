@@ -170,10 +170,18 @@ upstream release/support records. Before adoption, record exact artifacts, hashe
 license and advisory results in a dependency ADR. No hand-written protobuf parser,
 TLS implementation, certificate encoder or novel cryptographic construction.
 
-Use only the required handshake, ping, key and app-link protocol behavior; no
-voice, IME/text, microphone, clipboard, power or arbitrary launch input. Ignore
-bounded informational messages without displaying/persisting their app/device
-metadata. Unexpected pairing-state messages fail; no generic command escape hatch.
+Use the required handshake, ping, key and app-link protocol behavior. The
+November 19 keyboard request adds optional Remote v2 IME text insertion to a
+saved, established control connection. The phone composes a single line of up
+to 256 UTF‑16 code units and sends it only on explicit Send. The request carries
+the TV's reported field and app counters and goes through the same input epoch,
+bounded writer, and rate limit as TV buttons. A draft and any queued write are
+discarded when admission or the reported field changes. Peer text and labels
+stay in the parser. App drafts stay out of logs, saved state, and autofill.
+
+The existing TV commands and the bounded text insertion form the complete input
+vocabulary. Ignore bounded informational messages without displaying or
+persisting peer metadata. Unexpected pairing-state messages fail.
 
 Builder limits to verify, not claims already measured:
 - One TLS socket at a time, replacing pairing with verified control sequentially.

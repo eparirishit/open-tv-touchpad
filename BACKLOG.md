@@ -1,5 +1,38 @@
 # Backlog
 
+## Proposed mobile roadmap
+
+The [current status](docs/progress.md#current-status) records the Android pilot
+and independent browser hub checks. The items below need scope and design review
+before implementation.
+
+- [ ] Stabilize the Android pilot on the merged 0.25 baseline. Verify fresh
+  pairing, lock/return, reconnect after loss, release during a held key, and a
+  normal viewing session. Test a second Android phone and design a
+  TV-buttons-only mode for phones without the Bluetooth HID Device profile.
+- [ ] Define the Android distribution path. The phone app is an opt-in debug
+  module with release builds disabled. Plan signing and upgrades around the
+  existing pilot so testers retain their saved projector and settings.
+- [ ] Add projector power controls. Verify standby and wake independently on
+  the Horizon, including reachability in standby and behavior after full shutdown.
+- [ ] Add a Google Assistant button. Verify Assistant opens on the Horizon.
+  Evaluate phone microphone permission and an attended voice session separately.
+- [ ] Prove a protected iPhone-to-Horizon pointer path before building the
+  complete iOS UI. The first usable iPhone build must open Netflix, select a
+  profile, move the pointer, click a title, and scroll in both directions
+  without relying on the Nord. Verify that input stops when control ends or the
+  connection drops. Apple gives third-party iOS apps no supported way to
+  publish a [Bluetooth HID over GATT service](https://developer.apple.com/forums/thread/858265).
+- [ ] Add the iOS TV controls alongside the verified pointer path. Prototype
+  the Wi-Fi remote with SwiftUI, Network framework and Keychain. Verify
+  on-screen-code pairing, peer validation, reconnect, D-pad, Home/Back, volume,
+  playback and the Netflix shortcut on a real iPhone and this Horizon.
+- [ ] Share command fixtures and acceptance cases between Android and iOS.
+  Include wrong-code and wrong-peer rejection, reconnect, and input cancellation
+  when a controller leaves the foreground.
+- [ ] Finish the browser hub's device and certificate checks if browser access
+  becomes a priority. Track them separately from native mobile delivery.
+
 ## Guided setup (approved2026-10-30)
 
 - [x] Review the supplied wizard prototype and current native pairing flow.
@@ -27,7 +60,7 @@
 - [x] R1: extract/review service/runtime ownership with existing behavior unchanged;
   b1d3256 plus verified permission correction62d0e6a.
 - [x] R2: candidate kernel/caller integration verified and re-reviewed; published
-  in draft PR11 and installed0.21 with both enrollment records preserved.
+  in merged PR #11 and installed0.21 with both enrollment records preserved.
 - [x] Diagnose0.21 short Home-return loss: owner-approved Open TV-only background
   activity resolves observed Hans freeze; same APK passes return control and Stop.
 - [ ] R3: Nord lock/return, idle expiry and loss/revocation proofs remain.

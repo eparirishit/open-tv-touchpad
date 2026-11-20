@@ -1,5 +1,95 @@
 # Project Progress
 
+## Current status
+
+As of November 19, 2026, the Android phone pilot on `main` is
+**0.25-touchpad-controls**. The Nord installation preserved its two enrollments
+and both preference files. Long-press OK worked on the Horizon in the 0.24
+hardware trial. On the stability build, the owner confirmed reconnecting after
+a Tailscale toggle, OK release during an app interruption, and saved reconnect
+after Stop. Locked retention, Bluetooth-loss cleanup, and endurance still need
+hardware evidence.
+[Delivery report](gates/nord-setup-wizard-report.md#025-delivery-2026-11-18)
+· [Daily-use readiness](gates/n4-readiness.md)
+
+The browser hub has enrollment and controller UI code. Projector input remains
+disabled until its protected transport and browser trust checks pass.
+[Transport status](gates/h1a-report.md) · [Browser status](gates/h1b-report.md)
+
+The first usable iPhone build must support browsing Netflix with a touchpad.
+A protected pointer path still needs verification on the Horizon. See the
+[mobile roadmap](../BACKLOG.md#proposed-mobile-roadmap).
+
+## Android 0.25 stability follow-up (2026-11-19)
+
+Two regression tests reproduced an early OK release after a slow write and a
+duplicate release when the finger lifted while automatic release was writing.
+The timer now starts after the START_LONG write finishes. One END_LONG remains
+pending until its write finishes. Losing input admission during a hold still
+closes the connection.
+
+Source `c434f12`, debug APK SHA-256
+`0a74fd44e7085756de88fa16174e42c2029d3e52ef3c55cd30328cb84deca576`.
+236 unit tests and 62 Android 12 emulator tests passed, including both new
+regressions in the unit suite. The opt-in projector diagnostic was skipped.
+Both APKs built and lint reported zero errors.
+
+The stability build was installed in place on the OnePlus Nord (Android 12)
+over its previously paired wireless debugging connection. The signer matched
+the installed 0.25 pilot, and the installed APK matched the SHA-256 above.
+Both enrollment files and both preference files had identical checksums before
+installation, after installation, and after launch. Open TV resumed in the
+foreground.
+
+The owner reported that toggling Tailscale dropped the Open TV session and that
+tapping Connect restored the connection. Native teardown confirmation and
+Bluetooth-loss recovery still need separate trials.
+
+The owner confirmed that OK released when interrupting the app during a hold,
+that controls worked after reopening, and that Stop followed by Connect reused
+the saved pairings. A separate observed Stop produced the selected disconnect,
+unregister, and native teardown-complete events on the Nord.
+Locked retention, idle expiry, and viewing endurance are still open. The
+[daily-use readiness checklist](gates/n4-readiness.md) still applies.
+
+## Android 0.26 keyboard pilot (2026-11-19)
+
+The connected Remote and Touchpad screens offer a Keyboard button. A focused
+projector field opens the phone’s text composer, and Send uses the existing
+paired TLS session. The first Nord build inserted text in the Horizon’s Play
+Store search field, then the session ended and native teardown completed. The
+updated build handles Remote v2 selection, reset, and completion notifications.
+A regression verifies the session responds to ping after this notification
+sequence and drops the stale field on reset.
+
+Source `5dc55fd`. 240 unit tests and 63 Android 12 emulator tests passed. The
+live-only handshake diagnostic is separate. The debug build passed lint with
+zero errors and was installed on the Nord after teardown. The signer matched,
+the installed APK matched SHA-256
+`8084559fbf7aa945cd6a29cdf466552a0659f09de70947bdba6c710feb3a060a`,
+and both enrollments and preference files matched before install and after
+launch. Saved connection reached native Bluetooth connected state after the
+projector’s paired TLS session opened.
+
+On the updated build, the owner confirmed text appeared in Play Store search
+on the Horizon and a later D-pad command still worked over the same session.
+The Nord still showed the foreground control service while dozing for more
+than two minutes. Functional return after unlock, 30-minute idle expiry, and a
+full viewing session remain open.
+
+### Bluetooth off/on trial
+
+The owner disabled Bluetooth, tapped Connect while it was off, and could not
+connect after turning it back on. Android showed Bluetooth ON, and Open TV
+reported that the previous native teardown was still pending. The exact
+shutdown callback sequence was unavailable by the time diagnostics reattached.
+
+Force stopping and reopening Open TV preserved both enrollments and preferences
+byte for byte. The owner then tapped Connect and confirmed the D-pad worked.
+The native trace showed a saved run, registration, selected connection, and a
+successful neutral report. Recovery after Bluetooth loss still requires an
+app restart in this trial.
+
 ## Guided setup implementation (2026-10-30)
 
 The approved native wizard replaces the repeated manual Start/Stop journey with
@@ -531,16 +621,14 @@ and authorized browser-only H1B implementation. H1A remains NOT PASSED; no
 plaintext product exception is authorized. The accepted design supersedes the
 earlier proposed-status descriptions below for this hub work only.
 
-## Current Status
+## Original hub proposal (historical)
 
 The user selected local-only phone/laptop access with per-device certificate trust,
 no account and no VPN. The [hub design](superpowers/specs/2026-10-24-local-pwa-hub-design.md)
-and [seven-stage plan](superpowers/plans/2026-10-24-local-pwa-hub.md) are drafted.
-Builder/security findings have explicit lifecycle and recovery rules. D1 remains
-an owner decision: require proven protected projector transport, or explicitly
-accept the existing unencrypted ADB hop for a trusted-LAN beta. Local HTTPS does
-not resolve that hop. No product listener, trust installation or product backend
-has been added. H1A/H1B/H2/H3 have not passed.
+and [seven-stage plan](superpowers/plans/2026-10-24-local-pwa-hub.md) described
+two projector transport options. The owner later selected protected transport.
+The [H1A report](gates/h1a-report.md) records that decision and the remaining
+transport evidence.
 
 On 2026-10-24 the user approved a separate unified-remote hub proof (H0).
 The isolated native Mac window has passed the scoped H0 functional proof.

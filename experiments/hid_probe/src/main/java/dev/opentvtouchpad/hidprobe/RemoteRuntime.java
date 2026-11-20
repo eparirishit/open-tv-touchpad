@@ -53,7 +53,8 @@ final class RemoteRuntime {
             boolean start, boolean visible, boolean confirm, boolean connect, boolean ready,
             boolean tvAddressEnabled, boolean tvPair, boolean tvCode, boolean tvForget,
             boolean tvReady, boolean tvConnected, String tvStatus, long codeRevision,
-            long gestureRevision, boolean releaseBinding, boolean destroyed, long inputEpoch, boolean connected, SetupState.Snapshot wizard) {}
+            long gestureRevision, boolean releaseBinding, boolean destroyed, long inputEpoch, boolean connected,
+            SetupState.Snapshot wizard, boolean imeSupported, TvControlProtocol.ImeField imeField) {}
 
     static RemoteRuntime forService(RemoteConnectionService service) {
         // Late native completion and failure latches belong to this process's sole runtime.
@@ -266,6 +267,15 @@ final class RemoteRuntime {
     void click(long token, long epoch) { if (acceptsInput(token, epoch)) click(); }
     void scroll(long token, long epoch, MouseReport.Direction direction) { if (acceptsInput(token, epoch)) scroll(direction); }
     void tvCommand(long token, long epoch, TvCommand command) { if (acceptsInput(token, epoch)) tvCommand(command, epoch); }
+    boolean tvText(long token, long epoch, TvControlProtocol.ImeField field, String text) {
+        try {
+            return acceptsInput(token, epoch) && canAttempt() && run.ready() && run.tv != null
+                && run.tv.submitText(field, text, epoch);
+        } catch (SecurityException | IllegalStateException failure) {
+            stop("Connection permission or state lost.");
+            return false;
+        }
+    }
     /** OK long press start: ordinary input admission, like any TV key. */
     void tvHoldStart(long token, long epoch, TvCommand command) {
         if (!acceptsInput(token, epoch)) return;
@@ -291,6 +301,7 @@ final class RemoteRuntime {
         boolean code = attended() && registered && run.tv != null && run.tv.needsCode();
         boolean tvActive = run != null && run.ownership.active() && run.tv != null;
         boolean tvConnected = tvActive && run.tv.ready();
+        TvControlProtocol.ImeField imeField = ready && tvConnected ? run.tv.imeField() : null;
         String tvStatus = tvEnrollment.state() == TvEnrollment.State.UNUSABLE ? "TV: enrollment unusable"
             : tvActive ? tvConnected ? "TV: connected" : code ? "TV: code required" : "TV: connecting"
                 : tvEnrollment.state() == TvEnrollment.State.VALID ? "TV: paired, disconnected" : "TV: not paired";
@@ -307,7 +318,8 @@ final class RemoteRuntime {
             attached && resumed && !pendingTvForget,
             ready && run.tvMode == TvEnrollment.State.VALID && run.tv != null,
             tvConnected, tvStatus, codeRevision, gestureRevision, windowStarted && run != null && run.stopping, serviceDestroyed,
-            attached ? inputVisibility.epoch() : 0, connected, wizardSnapshot());
+            attached ? inputVisibility.epoch() : 0, connected, wizardSnapshot(),
+            ready && tvConnected && run.tv.imeSupported(), imeField);
     }
 
     long deadlineMillis() { return lifetime.deadlineMillis(); }

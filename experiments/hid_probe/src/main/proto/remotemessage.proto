@@ -67,6 +67,10 @@ message RemoteImeShowRequest {
   RemoteTextFieldStatus remote_text_field_status = 2;
 }
 
+// Local receive-only extension for bounded IME notifications. The client does
+// not need selection or completion payloads to insert user-confirmed text.
+message RemoteImeNotification {}
+
 message RemoteEditInfo {
   int32 insert = 1;
   RemoteImeObject text_field_status = 2;
@@ -899,6 +903,9 @@ message RemoteMessage {
   RemoteImeKeyInject remote_ime_key_inject = 20;
   RemoteImeBatchEdit remote_ime_batch_edit = 21;
   RemoteImeShowRequest remote_ime_show_request = 22;
+  RemoteImeNotification remote_ime_selection = 23;
+  RemoteImeNotification remote_ime_reset = 24;
+  RemoteImeNotification remote_ime_completions = 29;
   RemoteVoiceBegin remote_voice_begin = 30;
   RemoteVoicePayload remote_voice_payload = 31;
   RemoteVoiceEnd remote_voice_end = 32;

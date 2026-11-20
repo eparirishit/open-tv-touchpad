@@ -144,3 +144,39 @@ of 0.24. Prechecks: app stopped with native teardown completed and no foreground
 service. Both enrollment records and both preference files were byte-identical
 before install, after install and after launch; no service started on launch. No
 unpair, reset, data clear, uninstall or projector input was performed.
+
+## 0.27 delivery (2026-11-19)
+
+0.27-home-layout (versionCode 27) from source commit bd9af6a was installed in place
+over 0.26-keyboard on the Nord; APK SHA-256 prefix 530315c69141fe47, signed with the
+same local debug key as the installed app. Adds the home-screen alignment with the
+2026-11-19 mockup (status chips and toned message, 56dp collapsed pill, keyboard in
+the top row, mockup D-pad sizing). Prechecks: a retained session was first stopped
+by the owner; the app then showed "Stopped. Enrollment retained. Native teardown
+completed." with no foreground service. Both enrollment records and both preference
+files were byte-identical before install, after install and after launch; no
+service started on launch. No unpair, reset, data clear, uninstall or projector
+input was performed. Owner hardware check of the new layout is pending.
+
+## 0.28 delivery (2026-11-19)
+
+0.28-home-polish (versionCode 28) from source commit 940240b was installed in place
+over 0.27 on the Nord; APK SHA-256 prefix e4afbf4b44f1a19e, same local debug signer.
+Adds the larger collapsed D-pad, glyph-centred OK label, press motion and Stop in the
+Setup/Display header row. Prechecks: owner stopped the app; no foreground service.
+Both enrollment records and both preference files were byte-identical before
+install, after install and after launch; no service started on launch. A later
+owner-driven screenshot showed the connected Stop sharing the Display header row on
+the Nord. No unpair, reset, data clear, uninstall or projector input was performed.
+
+## 0.29 delivery (2026-11-19)
+
+0.29-dpad-glow (versionCode 29) from source commit 257677d was installed in place over
+0.28 on the Nord; APK SHA-256 prefix 8f11a102d9a64e9d, same local debug signer. Adds
+the simplified Setup/Display header, the foreground-drawn dark-mode back chevron
+with forceDarkAllowed=false, the D-pad arrow press glow and the "Type on TV"
+keyboard screen. Prechecks: no foreground service. Both enrollment records and both
+preference files were byte-identical before install, after install and after
+launch; no service started on launch. No unpair, reset, data clear, uninstall or
+projector input was performed. Owner checks pending: dark-mode back button on the
+Nord, press glow feel, and Type on TV with a focused projector text field.

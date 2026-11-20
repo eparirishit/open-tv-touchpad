@@ -7,12 +7,12 @@ import static org.junit.Assert.*;
 
 public class TvControlProtocolTest {
     @Test public void negotiatesOnlySupportedFeaturesAndWaitsForOrderedStart() throws Exception {
-        TvControlProtocol protocol = new TvControlProtocol();
+        TvControlProtocol protocol = new TvControlProtocol(true);
         RemoteMessage reply = parse(protocol.receive(configure(1023)));
-        assertEquals(611, reply.getRemoteConfigure().getCode1());
+        assertEquals(615, reply.getRemoteConfigure().getCode1());
         assertFalse(protocol.ready());
         reply = parse(protocol.receive(active()));
-        assertEquals(611, reply.getRemoteSetActive().getActive());
+        assertEquals(615, reply.getRemoteSetActive().getActive());
         assertFalse(protocol.ready());
         assertNull(protocol.receive(start()));
         assertTrue(protocol.ready());
@@ -20,16 +20,16 @@ public class TvControlProtocolTest {
 
     @Test public void missingKeysOrAppLinkAndOutOfOrderMessagesFail() throws Exception {
         for (int features : new int[]{0, 2, 512})
-            assertThrows(IOException.class, () -> new TvControlProtocol().receive(configure(features)));
-        assertThrows(IOException.class, () -> new TvControlProtocol().receive(start()));
-        assertThrows(IOException.class, () -> new TvControlProtocol().receive(active()));
-        TvControlProtocol protocol = new TvControlProtocol();
+            assertThrows(IOException.class, () -> new TvControlProtocol(true).receive(configure(features)));
+        assertThrows(IOException.class, () -> new TvControlProtocol(true).receive(start()));
+        assertThrows(IOException.class, () -> new TvControlProtocol(true).receive(active()));
+        TvControlProtocol protocol = new TvControlProtocol(true);
         protocol.receive(configure(579));
         assertThrows(IOException.class, () -> protocol.receive(configure(579)));
     }
 
     @Test public void pingAndBoundedInfoDoNotAuthorizeOrCreateInput() throws Exception {
-        TvControlProtocol protocol = new TvControlProtocol();
+        TvControlProtocol protocol = new TvControlProtocol(true);
         RemoteMessage pong = parse(protocol.receive(ping(37)));
         assertEquals(37, pong.getRemotePingResponse().getVal1());
         assertFalse(protocol.ready());
@@ -49,7 +49,34 @@ public class TvControlProtocolTest {
             RemoteMessage.newBuilder().setRemoteConfigure(RemoteConfigure.newBuilder().setCode1(579))
                 .setRemotePingRequest(RemotePingRequest.getDefaultInstance()).build().toByteArray()};
         for (byte[] message : invalid)
-            assertThrows(IOException.class, () -> new TvControlProtocol().receive(message));
+            assertThrows(IOException.class, () -> new TvControlProtocol(true).receive(message));
+    }
+
+    @Test public void keyboardRequiresNegotiatedImeAndAServerReportedField() throws Exception {
+        for (boolean keyboard : new boolean[]{false, true}) {
+            TvControlProtocol protocol = new TvControlProtocol(keyboard);
+            RemoteMessage config = parse(protocol.receive(configure(615)));
+            assertEquals(keyboard ? 615 : 611, config.getRemoteConfigure().getCode1());
+            protocol.receive(active());
+            protocol.receive(start());
+            protocol.receive(RemoteMessage.newBuilder()
+                .setRemoteImeBatchEdit(RemoteImeBatchEdit.newBuilder().setImeCounter(37).setFieldCounter(8))
+                .build().toByteArray());
+            assertNull(protocol.imeField());
+            protocol.receive(field(37, 8));
+            if (keyboard) assertNotNull(protocol.imeField());
+            else assertNull(protocol.imeField());
+            protocol.receive(RemoteMessage.newBuilder().setRemoteImeKeyInject(RemoteImeKeyInject.newBuilder()
+                .setAppInfo(RemoteAppInfo.newBuilder().setCounter(38))).build().toByteArray());
+            assertNull(protocol.imeField());
+        }
+    }
+
+    static byte[] field(int app, int field) {
+        return RemoteMessage.newBuilder().setRemoteImeKeyInject(RemoteImeKeyInject.newBuilder()
+            .setAppInfo(RemoteAppInfo.newBuilder().setCounter(app))
+            .setTextFieldStatus(RemoteTextFieldStatus.newBuilder().setCounterField(field).setValue("local TV value")))
+            .build().toByteArray();
     }
 
     static byte[] configure(int features) {

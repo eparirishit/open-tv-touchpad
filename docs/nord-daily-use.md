@@ -13,6 +13,12 @@ Remote or Touchpad. Both transports must become ready before their controls
 work. Use the pad for Netflix pointer/tap and four scroll buttons; sensitivity
 remains below scrolling. Use Remote for TV navigation, Home, Back and playback.
 
+To type with the 0.26 keyboard build, connect to the projector and focus a text
+field on its screen. Tap **Keyboard** in Open TV. Type on the phone and tap **Send to
+TV** to insert the draft into that field. The draft clears on Send, Cancel,
+app focus loss, disconnect, or a projector field change. Some apps use custom
+fields and may never offer phone keyboard input.
+
 Input works only while a resumed/focused Remote or Touchpad is visible and the
 phone is interactive and unlocked. Opening Setup pauses input. Short app switches
 or locking retain healthy established links for up to30minutes; returning before

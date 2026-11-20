@@ -305,3 +305,70 @@ a blue chip, the unchanged 0.5×–2× slider and "Slower"/"Faster" captions. Th
 slider keeps its accessible name and value; the chip and captions are visual only.
 The Back/Home/Netflix row, the volume/play row and the scroll buttons grow from
 48dp to 56dp with 26dp icons. Presentation only. Shipped as 0.25.
+
+## Home screen aligned with the 2026-11-19 mockup (2026-11-19)
+
+Owner request, against `design/open-tv-android-app/Main.dc.html`. Presentation
+only; no admission, transport, keyboard-protocol or lifecycle change.
+
+- Content sits 20dp from the screen edges; the title is 24sp; the tab labels 15sp.
+- Expanded status card: Mouse and TV states are pill chips (stacking when they do
+  not fit), and the message sits in a toned box with an icon: amber with an info
+  mark while disconnected, green with a check while connected. The full message
+  stays visible (the mockup's two-line clamp is not used, so recovery steps are
+  never hidden). Connect stays the single action.
+- Collapsed status is one 56dp pill: green dot, summary text, chevron.
+- The top row is Back, Home, Netflix and the keyboard as a fourth icon button
+  (56dp, 12dp gaps). The keyboard stays in place on the Remote tab and is enabled
+  only while the TV is connected; its text entry panel is unchanged.
+- The D-pad is 240dp, growing up to 1.3x (312dp) while the card is collapsed,
+  bounded by the free space, and centred between the rows. OK is 37% of the
+  circle; arrows are 29% (the mockup's 30% would overlap OK) with 28dp icons.
+- Volume and play/pause are 60dp with 12dp gaps.
+Shipped as 0.27.
+
+## Home and Setup polish (2026-11-19)
+
+Owner requests after testing 0.27 on the Nord. Presentation only.
+- The collapsed D-pad grows to about 1.45x (up to 360dp, within 8dp of the content
+  edges), still bounded by the free height; the expanded card keeps 240dp.
+- OK draws its label centred on the glyph box. OEM fonts pad the line box unevenly,
+  which put "OK" visibly off-centre on the Nord.
+- Every button shrinks slightly while pressed and springs back on release
+  (StateListAnimator on scale only; no elevation). Disabled buttons do not move,
+  and the system "Remove animations" setting turns it off.
+- Setup and Display no longer stack a Stop-only app header above their own row: a
+  connected Stop moves to the end of the Setup/Display header row, the app header
+  hides, and the 8dp extra top inset is removed, so the back button, title and
+  content move up to where the app header sits.
+Shipped as 0.28.
+
+## Setup header, dark back button and D-pad press glow (2026-11-19)
+
+Owner requests after testing 0.28. Presentation only.
+- The Setup and Display header rows no longer repeat "Setup"; the page title below
+  names the screen. The row keeps the round back button (named "Back" / "Back to
+  setup"), the step position and, while connected, Stop.
+- The Setup back chevron is drawn as the button's foreground in the current text
+  colour, like the other icon buttons, instead of inside its background drawable;
+  the theme also sets forceDarkAllowed=false. On the Nord (system dark mode) the
+  background-drawn chevron was not visible.
+- Pressing a D-pad arrow lights the whole quarter wedge from the rim to just outside
+  OK in the accent colour (fades in over 90ms, out over 240ms), on top of the
+  existing press shrink. Disabled arrows do not glow.
+Shipped as 0.29.
+
+## Type on TV screen (2026-11-19)
+
+Owner request, against `design/open-tv-android-app/Keyboard.dc.html` and the "keys"
+screen in `Main.dc.html`. Presentation only: the keyboard protocol, send-on-action,
+no-learning/autofill/saved-state input and close-on-field-change are unchanged.
+The keyboard button opens a full "Type on TV" screen in place of the remote: the
+app header, status card and tabs hide; a round "Back to remote" button, a 24sp
+title and a green "TV connected" chip head it; a muted line explains the flow; a
+96dp text box with a 2dp accent border shows 22sp text that wraps (Enter still
+submits, no newlines); Clear empties the draft and Search on TV sends it. The
+phone's own keyboard is used with a Search action key; the mockup's drawn keyboard
+stands for it. Deviation: the mockup says typed text "appears on the TV" live, but
+text is sent only on Search on TV, so the help text says "type here, then tap
+Search on TV". Included in 0.29.
